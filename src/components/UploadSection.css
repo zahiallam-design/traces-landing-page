@@ -23,6 +23,15 @@
 .upload-area {
   max-width: 600px;
   margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0 1rem;
+}
+
+@media (max-width: 600px) {
+  .upload-area {
+    padding: 0 0.5rem;
+  }
 }
 
 .upload-dropzone {
@@ -80,6 +89,29 @@
   margin-top: 1.5rem;
   display: grid;
   gap: 0.75rem;
+  max-height: 300px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 0.5rem;
+}
+
+/* Scrollbar styling for file list */
+.file-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.file-list::-webkit-scrollbar-track {
+  background: var(--neutral-bg);
+  border-radius: 3px;
+}
+
+.file-list::-webkit-scrollbar-thumb {
+  background: var(--pastel-green-dark);
+  border-radius: 3px;
+}
+
+.file-list::-webkit-scrollbar-thumb:hover {
+  background: var(--pastel-green);
 }
 
 .file-item {
@@ -90,6 +122,10 @@
   background-color: var(--neutral-bg);
   border-radius: 8px;
   border: 1px solid var(--border-color);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .file-info {

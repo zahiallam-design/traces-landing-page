@@ -36,9 +36,28 @@ function UploadSection({ selectedAlbum, onUploadComplete }) {
       return;
     }
 
-    const newFiles = imageFiles.filter(file => 
-      !selectedFiles.find(f => f.name === file.name && f.size === file.size)
-    );
+    // Handle duplicate file names by adding unique identifiers
+    const newFiles = imageFiles.map(file => {
+      // Check if file with same name and size already exists
+      const existingFile = selectedFiles.find(f => f.name === file.name && f.size === file.size);
+      
+      if (existingFile) {
+        // Create a new File object with a unique name
+        const timestamp = Date.now();
+        const randomSuffix = Math.random().toString(36).substring(2, 8);
+        const fileExtension = file.name.split('.').pop() || 'jpg';
+        const baseName = file.name.replace(/\.[^/.]+$/, '');
+        const uniqueName = `${baseName}_${timestamp}_${randomSuffix}.${fileExtension}`;
+        
+        // Create new File object with unique name
+        return new File([file], uniqueName, { 
+          type: file.type, 
+          lastModified: file.lastModified 
+        });
+      }
+      
+      return file;
+    });
 
     setSelectedFiles(prev => [...prev, ...newFiles]);
   };
