@@ -206,46 +206,53 @@ After deployment completes:
 2. Go to **"Settings"** tab
 3. Click **"Environment Variables"** in the left sidebar
 
-### 6.2 Add Smash API Key
+### 6.2 Add Environment Variables
 
-1. Click **"Add New"**
-2. Key: `VITE_SMASH_API_KEY`
-3. Value: Your actual Smash API key
-4. Environments: Select **Production**, **Preview**, and **Development**
-5. Click **"Save"**
+Add these **7 environment variables** (all required except `VITE_SMASH_REGION`):
 
-### 6.3 Add EmailJS Variables
+**Smash API (2 variables):**
+1. Key: `VITE_SMASH_API_KEY`
+   - Value: Your Smash API key
+   - Environments: **Production**, **Preview**, **Development**
+   - Click **"Save"**
 
-Repeat for each EmailJS variable:
+2. Key: `VITE_SMASH_REGION` (Optional)
+   - Value: `eu-west-3` or `us-east-1`
+   - Default: `eu-west-3` (if not set)
+   - Environments: **Production**, **Preview**, **Development**
+   - Click **"Save"**
 
-**Variable 1:**
-- Key: `VITE_EMAILJS_SERVICE_ID`
-- Value: Your EmailJS Service ID
-- Environments: All
+**EmailJS (4 variables):**
+3. Key: `VITE_EMAILJS_SERVICE_ID`
+   - Value: Your EmailJS Service ID
+   - Environments: **Production**, **Preview**, **Development**
+   - Click **"Save"**
 
-**Variable 2:**
-- Key: `VITE_EMAILJS_TEMPLATE_ID`
-- Value: Your EmailJS Template ID (Business Owner template)
-- Environments: All
+4. Key: `VITE_EMAILJS_TEMPLATE_ID`
+   - Value: Your EmailJS Template ID (Business Owner template)
+   - Environments: **Production**, **Preview**, **Development**
+   - Click **"Save"**
 
-**Variable 3:**
-- Key: `VITE_EMAILJS_CUSTOMER_TEMPLATE_ID`
-- Value: Your EmailJS Customer Template ID (Customer confirmation template)
-- Environments: All
+5. Key: `VITE_EMAILJS_CUSTOMER_TEMPLATE_ID`
+   - Value: Your EmailJS Customer Template ID (Customer confirmation template)
+   - Environments: **Production**, **Preview**, **Development**
+   - Click **"Save"**
 
-**Variable 4:**
-- Key: `VITE_EMAILJS_PUBLIC_KEY`
-- Value: Your EmailJS Public Key
-- Environments: All
+6. Key: `VITE_EMAILJS_PUBLIC_KEY`
+   - Value: Your EmailJS Public Key
+   - Environments: **Production**, **Preview**, **Development**
+   - Click **"Save"**
 
-### 6.4 Add WhatsApp Number
+**WhatsApp (1 variable):**
+7. Key: `VITE_WHATSAPP_NUMBER`
+   - Value: Your WhatsApp number (format: country code + number, no + or spaces)
+   - Example: `1234567890`
+   - Environments: **Production**, **Preview**, **Development**
+   - Click **"Save"**
 
-- Key: `VITE_WHATSAPP_NUMBER`
-- Value: Your WhatsApp number (format: country code + number, no + or spaces)
-- Example: `1234567890`
-- Environments: All
+**📋 See `ENVIRONMENT_VARIABLES.md` for complete reference list**
 
-### 6.5 Redeploy
+### 6.3 Redeploy
 
 After adding environment variables:
 
@@ -360,8 +367,10 @@ Vercel will automatically deploy the update!
 
 **Error**: API keys not working
 - Make sure variable names start with `VITE_`
+- Verify exact variable names match (see `ENVIRONMENT_VARIABLES.md` for complete list)
 - Redeploy after adding variables
 - Check variable values are correct (no extra spaces)
+- Make sure you selected all environments (Production, Preview, Development)
 
 ---
 

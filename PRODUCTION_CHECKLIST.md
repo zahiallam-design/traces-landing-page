@@ -43,11 +43,15 @@ Use this checklist to ensure your landing page is ready for production deploymen
 
 ### Environment Variables
 - [ ] `VITE_SMASH_API_KEY` added in Vercel
+- [ ] `VITE_SMASH_REGION` added in Vercel (optional, defaults to `eu-west-3`)
 - [ ] `VITE_EMAILJS_SERVICE_ID` added in Vercel
 - [ ] `VITE_EMAILJS_TEMPLATE_ID` added in Vercel
+- [ ] `VITE_EMAILJS_CUSTOMER_TEMPLATE_ID` added in Vercel
 - [ ] `VITE_EMAILJS_PUBLIC_KEY` added in Vercel
 - [ ] `VITE_WHATSAPP_NUMBER` added in Vercel
 - [ ] Site redeployed after adding variables
+
+**📋 See `ENVIRONMENT_VARIABLES.md` for complete reference**
 
 ---
 

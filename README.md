@@ -44,20 +44,17 @@ The project uses your custom breakpoint system:
    npm install
    ```
 
-2. **Configure Smash API**:
-   - Open `src/components/UploadSection.jsx`
-   - Replace `YOUR_SMASH_API_KEY` with your actual API key (line 5)
-   - See `SMASH_SETUP.md` for detailed instructions
-
-3. **Configure EmailJS** (Required for receiving orders):
-   - Follow the setup guide in `EMAILJS_SETUP.md`
-   - Create an EmailJS account and configure your email service
-   - Update credentials in `src/services/emailService.js`
-   - This allows you to receive order emails when customers place orders
-
-4. **Configure WhatsApp**:
-   - Open `src/components/Footer.jsx` and `src/components/WhatsAppButton.jsx`
-   - Replace `YOUR_NUMBER` with your WhatsApp number (format: country code + number, no + or spaces)
+2. **Configure Environment Variables** (After deployment):
+   - See `ENVIRONMENT_VARIABLES.md` for complete list
+   - Add all variables in Vercel: Settings → Environment Variables
+   - Required variables:
+     - `VITE_SMASH_API_KEY` - See `SMASH_SETUP.md`
+     - `VITE_EMAILJS_SERVICE_ID` - See `EMAILJS_SETUP.md`
+     - `VITE_EMAILJS_TEMPLATE_ID` - See `EMAILJS_SETUP.md`
+     - `VITE_EMAILJS_CUSTOMER_TEMPLATE_ID` - See `EMAILJS_SETUP.md`
+     - `VITE_EMAILJS_PUBLIC_KEY` - See `EMAILJS_SETUP.md`
+     - `VITE_WHATSAPP_NUMBER` - Your WhatsApp number
+   - Optional: `VITE_SMASH_REGION` (defaults to `eu-west-3`)
 
 5. **Add Logo**:
    - Place your logo as `public/logo.png`
@@ -199,6 +196,9 @@ See `VERCEL_DEPLOYMENT.md` for detailed instructions with screenshots and troubl
 
 ## Support
 
-- For Smash API setup, see `SMASH_SETUP.md`
-- For EmailJS setup, see `EMAILJS_SETUP.md`
+- **Environment Variables**: See `ENVIRONMENT_VARIABLES.md` for complete reference
+- **Smash API Setup**: See `SMASH_SETUP.md`
+- **EmailJS Setup**: See `EMAILJS_SETUP.md`
+- **Deployment**: See `VERCEL_DEPLOYMENT.md`
+- **Git Issues**: See `GIT_SETUP.md`
 

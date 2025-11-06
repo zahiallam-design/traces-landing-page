@@ -35,13 +35,22 @@ Your landing page now uses **Smash API** instead of WeTransfer, allowing custome
 
 1. Go to your Vercel project → **Settings** → **Environment Variables**
 2. Click **"Add New"**
-3. Key: `VITE_SMASH_API_KEY`
-4. Value: Your Smash API key
-5. Environments: Select **Production**, **Preview**, and **Development**
-6. Click **"Save"**
-7. **Redeploy** your site (go to Deployments → Redeploy)
+3. **Variable 1:**
+   - Key: `VITE_SMASH_API_KEY`
+   - Value: Your Smash API key
+   - Environments: Select **Production**, **Preview**, and **Development**
+   - Click **"Save"**
+4. **Variable 2 (Optional):**
+   - Key: `VITE_SMASH_REGION`
+   - Value: `eu-west-3` or `us-east-1`
+   - Default: `eu-west-3` (if not set)
+   - Environments: Select **Production**, **Preview**, and **Development**
+   - Click **"Save"**
+5. **Redeploy** your site (go to Deployments → Redeploy)
 
 **That's it!** The code already uses environment variables, so no code changes needed.
+
+**📋 See `ENVIRONMENT_VARIABLES.md` for complete list of all variables**
 
 ### Step 3: Test the Upload
 

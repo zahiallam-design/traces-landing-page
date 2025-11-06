@@ -146,15 +146,19 @@ const EMAILJS_PUBLIC_KEY = 'your_public_key_here';           // From Step 4
 
 ### Option 2: Use Environment Variables (Recommended for Production)
 
-1. In Vercel (or your hosting), go to Project Settings → Environment Variables
-2. Add these variables:
+1. In Vercel, go to **Project Settings** → **Environment Variables**
+2. Add these **4 EmailJS variables**:
    - `VITE_EMAILJS_SERVICE_ID` = Your Service ID
    - `VITE_EMAILJS_TEMPLATE_ID` = Your Business Owner Template ID
    - `VITE_EMAILJS_CUSTOMER_TEMPLATE_ID` = Your Customer Template ID
    - `VITE_EMAILJS_PUBLIC_KEY` = Your Public Key
-3. Redeploy your site
+3. Set environments to: **Production**, **Preview**, **Development** (for each variable)
+4. Click **"Save"** for each
+5. **Redeploy** your site (Deployments → Redeploy)
 
 The code already supports environment variables, so no code changes needed!
+
+**📋 See `ENVIRONMENT_VARIABLES.md` for complete list of all variables**
 
 ## Step 6: Test Your Setup
 
