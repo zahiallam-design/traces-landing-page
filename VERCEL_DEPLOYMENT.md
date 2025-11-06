@@ -225,10 +225,15 @@ Repeat for each EmailJS variable:
 
 **Variable 2:**
 - Key: `VITE_EMAILJS_TEMPLATE_ID`
-- Value: Your EmailJS Template ID
+- Value: Your EmailJS Template ID (Business Owner template)
 - Environments: All
 
 **Variable 3:**
+- Key: `VITE_EMAILJS_CUSTOMER_TEMPLATE_ID`
+- Value: Your EmailJS Customer Template ID (Customer confirmation template)
+- Environments: All
+
+**Variable 4:**
 - Key: `VITE_EMAILJS_PUBLIC_KEY`
 - Value: Your EmailJS Public Key
 - Environments: All

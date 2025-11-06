@@ -29,28 +29,28 @@ Your landing page now uses **Smash API** instead of WeTransfer, allowing custome
    - `eu-west-3` (Europe - default)
    - `us-east-1` (United States)
 
-### Step 2: Configure Your Landing Page
+### Step 2: Add API Key to Vercel (Production)
 
-1. Open `script.js` in your project
+**For production deployment on Vercel:**
 
-2. Find these lines (around line 15-16):
-   ```javascript
-   const SMASH_API_KEY = 'YOUR_SMASH_API_KEY';
-   const SMASH_REGION = 'eu-west-3';
-   ```
+1. Go to your Vercel project → **Settings** → **Environment Variables**
+2. Click **"Add New"**
+3. Key: `VITE_SMASH_API_KEY`
+4. Value: Your Smash API key
+5. Environments: Select **Production**, **Preview**, and **Development**
+6. Click **"Save"**
+7. **Redeploy** your site (go to Deployments → Redeploy)
 
-3. Replace `YOUR_SMASH_API_KEY` with your actual API key:
-   ```javascript
-   const SMASH_API_KEY = 'your-actual-api-key-here';
-   const SMASH_REGION = 'eu-west-3'; // or 'us-east-1'
-   ```
+**That's it!** The code already uses environment variables, so no code changes needed.
 
 ### Step 3: Test the Upload
 
-1. Open `index.html` in your browser
+1. Visit your live site (or run `npm run dev` locally)
 2. Select an album size
 3. Try uploading photos using the upload area
 4. Check the browser console for any errors
+
+**Note**: The Smash SDK is already integrated in the code. You just need to add your API key!
 
 ## How It Works
 
@@ -86,7 +86,9 @@ You can use the `smashTransferUrl` to download the photos when processing the or
 ## Troubleshooting
 
 ### "Please configure your Smash API key"
-- Make sure you've replaced `YOUR_SMASH_API_KEY` with your actual key in `script.js`
+- Make sure you've added `VITE_SMASH_API_KEY` in Vercel environment variables
+- Or if testing locally, check `src/components/UploadSection.jsx` has the key set
+- After adding in Vercel, make sure to redeploy
 
 ### Upload fails
 - Check browser console for error messages

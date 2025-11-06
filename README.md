@@ -168,26 +168,18 @@ function MyComponent() {
 
 ## Deployment
 
-**Want to get online quickly?** See `QUICK_DEPLOY.md` for the fastest path!
-
-**For detailed instructions:** See `DEPLOYMENT.md` for complete deployment guide.
+**📘 For complete step-by-step instructions:** See `VERCEL_DEPLOYMENT.md`
 
 ### Quick Summary
 
 **Vercel (Recommended - Easiest)**:
 1. Push code to GitHub
 2. Import in Vercel → Deploy
-3. Done! Your site is live in 2 minutes
+3. Add environment variables (Smash, EmailJS, WhatsApp)
+4. Redeploy
+5. Done! Your site is live
 
-**Netlify**:
-1. Push code to GitHub
-2. Connect in Netlify → Deploy
-3. Done!
-
-**GitHub Pages**:
-1. Install `gh-pages`: `npm install --save-dev gh-pages`
-2. Add deploy scripts to package.json
-3. Run `npm run deploy`
+See `VERCEL_DEPLOYMENT.md` for detailed instructions with screenshots and troubleshooting.
 
 ## Differences from Vanilla Version
 
