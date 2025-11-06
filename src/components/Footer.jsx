@@ -23,16 +23,21 @@ function Footer() {
           <div className="footer-contact">
             <p>Questions? Chat with us on WhatsApp</p>
             <a 
-              href={`https://wa.me/${WHATSAPP_NUMBER.replace(/[\s\-+]/g, '')}?text=${encodeURIComponent('Hello! I have a question about your photo album service.')}`} 
-              target="_blank" 
-              rel="noopener noreferrer" 
+              href="#" 
               className="whatsapp-link"
               onClick={(e) => {
-                const cleanNumber = WHATSAPP_NUMBER.replace(/[\s\-+]/g, '');
+                e.preventDefault();
+                const cleanNumber = WHATSAPP_NUMBER.replace(/[\s\-+()]/g, '');
+                
                 if (!cleanNumber || cleanNumber === 'YOUR_NUMBER' || cleanNumber.length < 10) {
-                  e.preventDefault();
                   alert('WhatsApp number not configured. Please contact us through other means.');
+                  return false;
                 }
+                
+                const message = encodeURIComponent('Hello! I have a question about your photo album service.');
+                const whatsappUrl = `https://wa.me/${cleanNumber}?text=${message}`;
+                window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+                return false;
               }}
             >
               WhatsApp Support

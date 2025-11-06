@@ -185,8 +185,21 @@ function UploadSection({ selectedAlbum, onUploadComplete }) {
       console.log('Starting upload...');
       console.log('Files to upload:', selectedFiles.map(f => ({ name: f.name, size: f.size, type: f.type })));
       
-      // Ensure files are proper File objects with valid extensions
-      // Smash SDK requires files to have proper extensions matching their MIME type
+      // Ensure files are proper File objects with valid extensions AND unique names
+      // Smash SDK requires files to have proper extensions and unique names
+      const mimeToExt = {
+        'image/jpeg': '.jpg',
+        'image/jpg': '.jpg',
+        'image/png': '.png',
+        'image/gif': '.gif',
+        'image/webp': '.webp',
+        'image/heic': '.heic',
+        'image/heif': '.heif'
+      };
+      
+      // Track used file names to ensure uniqueness
+      const usedNames = new Set();
+      
       const filesToUpload = selectedFiles.map((file, index) => {
         // Verify file is still valid
         if (!(file instanceof File)) {
@@ -194,16 +207,6 @@ function UploadSection({ selectedAlbum, onUploadComplete }) {
         }
         
         // Ensure file has proper extension matching its MIME type
-        const mimeToExt = {
-          'image/jpeg': '.jpg',
-          'image/jpg': '.jpg',
-          'image/png': '.png',
-          'image/gif': '.gif',
-          'image/webp': '.webp',
-          'image/heic': '.heic',
-          'image/heif': '.heif'
-        };
-        
         const extension = mimeToExt[file.type] || '.jpg';
         let fileName = file.name;
         
@@ -214,9 +217,21 @@ function UploadSection({ selectedAlbum, onUploadComplete }) {
           console.log(`Fixing file extension: ${file.name} -> ${fileName}`);
         }
         
+        // Ensure unique filename - if name already used, add unique suffix
+        let finalFileName = fileName;
+        let counter = 1;
+        while (usedNames.has(finalFileName)) {
+          const baseName = fileName.replace(/\.[^/.]+$/, '');
+          const ext = fileName.split('.').pop();
+          finalFileName = `${baseName}_${counter}.${ext}`;
+          counter++;
+        }
+        usedNames.add(finalFileName);
+        
         // If filename changed, create new File object with correct name
-        if (fileName !== file.name) {
-          return new File([file], fileName, { type: file.type, lastModified: file.lastModified });
+        if (finalFileName !== file.name) {
+          console.log(`Renaming file for uniqueness: ${file.name} -> ${finalFileName}`);
+          return new File([file], finalFileName, { type: file.type, lastModified: file.lastModified });
         }
         
         return file;
