@@ -16,10 +16,10 @@ function WhatsAppButton() {
       return false;
     }
     
-    // Create WhatsApp URL with proper format
-    // Format: https://wa.me/[country code][number]?text=[message]
+    // Create WhatsApp URL using api.whatsapp.com format (tested and working)
+    // Format: https://api.whatsapp.com/send?phone=[number]&text=[message]
     const message = encodeURIComponent('Hello! I have a question about your photo album service.');
-    const whatsappUrl = `https://wa.me/${cleanNumber}?text=${message}`;
+    const whatsappUrl = `https://api.whatsapp.com/send?phone=${cleanNumber}&text=${message}`;
     
     // Use window.open for better compatibility, especially on mobile
     window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
@@ -28,8 +28,9 @@ function WhatsAppButton() {
   };
 
   // Create fallback URL for href (in case JavaScript is disabled)
+  // Using api.whatsapp.com format which is tested and working
   const whatsappUrl = cleanNumber && cleanNumber !== 'YOUR_NUMBER' && cleanNumber.length >= 10
-    ? `https://wa.me/${cleanNumber}?text=${encodeURIComponent('Hello! I have a question about your photo album service.')}`
+    ? `https://api.whatsapp.com/send?phone=${cleanNumber}&text=${encodeURIComponent('Hello! I have a question about your photo album service.')}`
     : '#';
 
   return (

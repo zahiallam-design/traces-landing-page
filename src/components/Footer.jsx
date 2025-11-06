@@ -34,8 +34,10 @@ function Footer() {
                   return false;
                 }
                 
+                // Use api.whatsapp.com format (tested and working)
+                // Format: https://api.whatsapp.com/send?phone=[number]&text=[message]
                 const message = encodeURIComponent('Hello! I have a question about your photo album service.');
-                const whatsappUrl = `https://wa.me/${cleanNumber}?text=${message}`;
+                const whatsappUrl = `https://api.whatsapp.com/send?phone=${cleanNumber}&text=${message}`;
                 window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
                 return false;
               }}
