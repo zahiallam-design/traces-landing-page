@@ -1,0 +1,56 @@
+.footer {
+  background-color: var(--text-dark);
+  color: var(--white);
+  padding: 3rem 0 2rem;
+}
+
+.footer-content {
+  text-align: center;
+}
+
+.footer-links {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.footer-links button {
+  background: none;
+  border: none;
+  color: var(--white);
+  text-decoration: none;
+  cursor: pointer;
+  font-size: 1rem;
+  font-family: inherit;
+  transition: color 0.3s;
+}
+
+.footer-links button:hover {
+  color: var(--pastel-green);
+}
+
+.footer-contact {
+  margin-bottom: 2rem;
+}
+
+.whatsapp-link {
+  color: var(--pastel-green);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.whatsapp-link:hover {
+  text-decoration: underline;
+}
+
+.footer-legal {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.footer-legal small {
+  color: rgba(255, 255, 255, 0.7);
+}
+

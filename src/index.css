@@ -1,0 +1,93 @@
+/* Reset and Base Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --pastel-green: #a8d5ba;
+  --pastel-green-dark: #7fb99a;
+  --pastel-green-light: #d4e9dc;
+  --neutral-bg: #fafafa;
+  --text-dark: #333;
+  --text-light: #666;
+  --white: #ffffff;
+  --border-color: #e0e0e0;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  line-height: 1.6;
+  color: var(--text-dark);
+  background-color: var(--neutral-bg);
+  margin: 0;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Utility Classes */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.section-title {
+  font-size: 2rem;
+  text-align: center;
+  margin-bottom: 3rem;
+  color: var(--text-dark);
+}
+
+.btn {
+  display: inline-block;
+  padding: 0.75rem 2rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-family: inherit;
+}
+
+.btn-primary {
+  background-color: var(--pastel-green-dark);
+  color: var(--white);
+}
+
+.btn-primary:hover {
+  background-color: var(--pastel-green);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
+}
+
+.btn-secondary {
+  background-color: var(--white);
+  color: var(--pastel-green-dark);
+  border: 2px solid var(--pastel-green-dark);
+}
+
+.btn-secondary:hover {
+  background-color: var(--pastel-green-light);
+}
+
+.btn-large {
+  padding: 1rem 2.5rem;
+  font-size: 1.1rem;
+  width: 100%;
+}
+
+/* Responsive Section Title */
+@media (max-width: 600px) {
+  .section-title {
+    font-size: 1.5rem;
+  }
+}
+

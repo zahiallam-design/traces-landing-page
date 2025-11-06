@@ -1,0 +1,40 @@
+.gallery-section {
+  background-color: var(--neutral-bg);
+  padding: 4rem 0;
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+}
+
+.gallery-grid-mobile {
+  grid-template-columns: 1fr;
+}
+
+.gallery-item {
+  text-align: center;
+}
+
+.gallery-placeholder {
+  width: 100%;
+  height: 300px;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow);
+}
+
+.gallery-placeholder.green {
+  background: linear-gradient(135deg, #a8d5ba 0%, #7fb99a 100%);
+}
+
+.gallery-placeholder.grey {
+  background: linear-gradient(135deg, #d0d0d0 0%, #a0a0a0 100%);
+}
+
+.gallery-item p {
+  color: var(--text-light);
+  font-weight: 500;
+}
+

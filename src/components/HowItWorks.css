@@ -1,0 +1,47 @@
+.how-it-works {
+  background-color: var(--white);
+  padding: 4rem 0;
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+}
+
+.steps-mobile {
+  grid-template-columns: 1fr;
+}
+
+.step {
+  text-align: center;
+  padding: 2rem;
+  background-color: var(--neutral-bg);
+  border-radius: 12px;
+}
+
+.step-number {
+  width: 60px;
+  height: 60px;
+  background-color: var(--pastel-green-dark);
+  color: var(--white);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin: 0 auto 1rem;
+}
+
+.step-title {
+  font-size: 1.25rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-dark);
+}
+
+.step-description {
+  color: var(--text-light);
+  font-size: 0.95rem;
+}
+

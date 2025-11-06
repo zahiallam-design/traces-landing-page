@@ -1,0 +1,51 @@
+.extras-section {
+  background-color: var(--neutral-bg);
+  padding: 4rem 0;
+}
+
+.extras-content {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.notes-field {
+  margin-bottom: 2rem;
+}
+
+.notes-field label,
+.checkbox-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.notes-field textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit;
+  resize: vertical;
+  transition: border-color 0.3s;
+}
+
+.notes-field textarea:focus {
+  outline: none;
+  border-color: var(--pastel-green-dark);
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
