@@ -166,13 +166,40 @@ function UploadSection({ selectedAlbum, onUploadComplete }) {
       console.log('Starting upload...');
       console.log('Files to upload:', selectedFiles.map(f => ({ name: f.name, size: f.size, type: f.type })));
       
-      // Ensure files are proper File objects (not just references)
-      // Convert to array and verify each file is readable
-      const filesToUpload = selectedFiles.map(file => {
+      // Ensure files are proper File objects with valid extensions
+      // Smash SDK requires files to have proper extensions matching their MIME type
+      const filesToUpload = selectedFiles.map((file, index) => {
         // Verify file is still valid
         if (!(file instanceof File)) {
           throw new Error(`Invalid file object: ${file.name}`);
         }
+        
+        // Ensure file has proper extension matching its MIME type
+        const mimeToExt = {
+          'image/jpeg': '.jpg',
+          'image/jpg': '.jpg',
+          'image/png': '.png',
+          'image/gif': '.gif',
+          'image/webp': '.webp',
+          'image/heic': '.heic',
+          'image/heif': '.heif'
+        };
+        
+        const extension = mimeToExt[file.type] || '.jpg';
+        let fileName = file.name;
+        
+        // If file doesn't have extension or has wrong extension, fix it
+        if (!fileName.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp|heic|heif)$/i)) {
+          // Remove any existing extension and add correct one
+          fileName = fileName.replace(/\.[^/.]+$/, '') + extension;
+          console.log(`Fixing file extension: ${file.name} -> ${fileName}`);
+        }
+        
+        // If filename changed, create new File object with correct name
+        if (fileName !== file.name) {
+          return new File([file], fileName, { type: file.type, lastModified: file.lastModified });
+        }
+        
         return file;
       });
       
@@ -186,23 +213,10 @@ function UploadSection({ selectedAlbum, onUploadComplete }) {
         isBlob: f instanceof Blob
       })));
       
-      // Try different formats - Smash SDK might expect FileList or specific format
-      // First try: Direct array
-      let uploadPromise;
-      try {
-        // Check if SDK expects FileList instead of array
-        if (fileInputRef.current?.files && fileInputRef.current.files.length > 0) {
-          console.log('Trying with FileList from input...');
-          uploadPromise = uploader.upload({ files: fileInputRef.current.files });
-        } else {
-          console.log('Using files array...');
-          uploadPromise = uploader.upload({ files: filesToUpload });
-        }
-      } catch (formatError) {
-        console.error('Upload format error:', formatError);
-        // Fallback to array
-        uploadPromise = uploader.upload({ files: filesToUpload });
-      }
+      // Smash SDK expects an array of File objects
+      // Ensure we're passing the properly formatted files
+      console.log('Using files array with corrected extensions...');
+      const uploadPromise = uploader.upload({ files: filesToUpload });
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Upload timeout after 5 minutes')), 300000)
       );
