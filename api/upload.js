@@ -5,6 +5,8 @@
  * Uses Smash SDK for Node.js instead of REST API calls
  */
 
+import busboy from 'busboy';
+
 export default async function handler(req, res) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -26,31 +28,6 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Smash API key not configured' });
     }
 
-    // Import busboy for parsing multipart/form-data
-    let Busboy;
-    try {
-      const busboyModule = await import('busboy');
-      Busboy = busboyModule.default || busboyModule;
-    } catch (importError) {
-      console.error('Failed to import busboy:', importError);
-      return res.status(500).json({ 
-        error: 'Server configuration error',
-        details: 'Failed to load file upload library: ' + importError.message
-      });
-    }
-
-    // Import Smash SDK
-    let SmashUploader;
-    try {
-      const smashModule = await import('@smash-sdk/uploader');
-      SmashUploader = smashModule.default || smashModule.SmashUploader || smashModule;
-    } catch (importError) {
-      console.error('Failed to import Smash SDK:', importError);
-      return res.status(500).json({ 
-        error: 'Server configuration error',
-        details: 'Failed to load Smash SDK: ' + importError.message
-      });
-    }
 
     // Parse multipart/form-data using busboy
     const files = [];
@@ -58,7 +35,7 @@ export default async function handler(req, res) {
 
     return new Promise((resolve) => {
       try {
-        const bb = Busboy({ headers: req.headers });
+        const bb = busboy({ headers: req.headers });
 
         // Handle form fields (like transferId for batch uploads)
         bb.on('field', (name, value) => {
@@ -102,7 +79,28 @@ export default async function handler(req, res) {
 
             console.log(`Processing ${files.length} files`);
 
-            // Use Smash SDK to upload files
+            // Import and initialize Smash SDK
+            console.log('Importing Smash SDK...');
+            const smashModule = await import('@smash-sdk/uploader');
+            
+            console.log('Smash module keys:', Object.keys(smashModule));
+            console.log('Smash module default:', typeof smashModule.default);
+            console.log('Smash module SmashUploader:', typeof smashModule.SmashUploader);
+            
+            // Try different ways to get SmashUploader constructor
+            const SmashUploader = smashModule.SmashUploader || 
+                                 smashModule.default?.SmashUploader ||
+                                 smashModule.default ||
+                                 smashModule.Uploader ||
+                                 smashModule;
+            
+            console.log('SmashUploader type:', typeof SmashUploader);
+            console.log('Is constructor?', typeof SmashUploader === 'function');
+            
+            if (typeof SmashUploader !== 'function') {
+              throw new Error('SmashUploader is not a constructor. Module structure: ' + JSON.stringify(Object.keys(smashModule)));
+            }
+            
             console.log('Initializing Smash uploader...');
             const uploader = new SmashUploader({
               region: SMASH_REGION,
