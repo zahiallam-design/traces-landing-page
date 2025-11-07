@@ -25,9 +25,17 @@ export default async function handler(req, res) {
 
     // Parse multipart/form-data using busboy
     const files = [];
+    let existingTransferId = null;
     
     return new Promise((resolve, reject) => {
       const bb = busboy({ headers: req.headers });
+
+      // Handle form fields (like transferId for batch uploads)
+      bb.on('field', (name, value) => {
+        if (name === 'transferId') {
+          existingTransferId = value;
+        }
+      });
 
       bb.on('file', (name, file, info) => {
         const { filename, encoding, mimeType } = info;
@@ -55,39 +63,53 @@ export default async function handler(req, res) {
             return;
           }
 
-          // Step 1: Create a Smash transfer
-          const transferResponse = await fetch(
-            `https://${SMASH_REGION}.api.fromsmash.com/v1/transfer?version=01-2024`,
-            {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${SMASH_API_KEY}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                name: `Photo Album Upload - ${new Date().toISOString()}`,
-              }),
-            }
-          );
-
-          if (!transferResponse.ok) {
-            const errorText = await transferResponse.text();
-            console.error('Smash transfer creation failed:', errorText);
-            res.status(transferResponse.status).json({ 
-              error: 'Failed to create Smash transfer',
-              details: errorText 
-            });
-            resolve();
-            return;
-          }
-
-          const transferData = await transferResponse.json();
-          const transferId = transferData.transfer?.id || transferData.id;
-
+          // Check if we're adding to an existing transfer (for batch uploads)
+          let transferId = null;
+          let transferUrl = null;
+          
+          // Check if transferId was provided in form data (for subsequent batches)
+          // Note: busboy doesn't parse non-file fields easily, so we'll check headers or create new transfer
+          // For simplicity, we'll always create a new transfer per batch
+          // In production, you might want to use a different approach for batching
+          
+          // Step 1: Create a Smash transfer (or use existing if provided for batch uploads)
+          let transferId = existingTransferId;
+          
           if (!transferId) {
-            res.status(500).json({ error: 'Failed to get transfer ID from Smash' });
-            resolve();
-            return;
+            // Create new transfer
+            const transferResponse = await fetch(
+              `https://${SMASH_REGION}.api.fromsmash.com/v1/transfer?version=01-2024`,
+              {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${SMASH_API_KEY}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  name: `Photo Album Upload - ${new Date().toISOString()}`,
+                }),
+              }
+            );
+
+            if (!transferResponse.ok) {
+              const errorText = await transferResponse.text();
+              console.error('Smash transfer creation failed:', errorText);
+              res.status(transferResponse.status).json({ 
+                error: 'Failed to create Smash transfer',
+                details: errorText 
+              });
+              resolve();
+              return;
+            }
+
+            const transferData = await transferResponse.json();
+            transferId = transferData.transfer?.id || transferData.id;
+
+            if (!transferId) {
+              res.status(500).json({ error: 'Failed to get transfer ID from Smash' });
+              resolve();
+              return;
+            }
           }
 
           // Step 2: Upload each file to the transfer

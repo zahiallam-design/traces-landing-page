@@ -148,37 +148,101 @@ function UploadSection({ selectedAlbum, onUploadComplete }) {
         return file;
       });
 
-      // Create FormData to send files to our API
-      const formData = new FormData();
-      filesToUpload.forEach((file) => {
-        formData.append('files', file);
-      });
+      // Upload files in batches to avoid Vercel's 4.5MB request size limit
+      // Vercel serverless functions have a ~4.5MB body size limit
+      const BATCH_SIZE = 5; // Upload 5 files at a time
+      const batches = [];
+      
+      for (let i = 0; i < filesToUpload.length; i += BATCH_SIZE) {
+        batches.push(filesToUpload.slice(i, i + BATCH_SIZE));
+      }
 
-      // Simulate progress (since we can't track server-side progress easily)
-      // Update progress gradually
+      console.log(`Uploading ${filesToUpload.length} files in ${batches.length} batches`);
+
+      // Track progress
+      let uploadedCount = 0;
+      const totalFiles = filesToUpload.length;
+      
+      // Simulate progress based on batches
       const progressInterval = setInterval(() => {
-        setUploadProgress((prev) => {
-          if (prev < 90) return prev + 10;
-          return prev;
-        });
-      }, 500);
+        const batchProgress = Math.floor((uploadedCount / batches.length) * 90);
+        setUploadProgress(batchProgress);
+      }, 200);
 
-      // Send files to our serverless function
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
+      // Upload first batch to create transfer, then add remaining files
+      let transferId = null;
+      let transferUrl = null;
+
+      for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+        const batch = batches[batchIndex];
+        const formData = new FormData();
+        
+        batch.forEach((file) => {
+          formData.append('files', file);
+        });
+
+        // Include transferId if we already have one (for subsequent batches)
+        if (transferId) {
+          formData.append('transferId', transferId);
+        }
+
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          // Handle errors, especially 413 (Content Too Large)
+          let errorMessage = 'Upload failed';
+          
+          if (response.status === 413) {
+            errorMessage = 'Files are too large. Uploading in smaller batches...';
+            // The batching should handle this, but if a single batch is too large, show error
+            throw new Error('Batch too large. Please upload fewer files at once or compress images.');
+          }
+          
+          // Try to parse JSON error response
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            try {
+              const errorData = await response.json();
+              errorMessage = errorData.error || errorData.message || errorMessage;
+            } catch (e) {
+              errorMessage = `Server error (${response.status})`;
+            }
+          } else {
+            // Non-JSON response (like HTML error page)
+            try {
+              const errorText = await response.text();
+              errorMessage = errorText || `Server error (${response.status})`;
+            } catch (e) {
+              errorMessage = `Server error (${response.status})`;
+            }
+          }
+          
+          throw new Error(errorMessage);
+        }
+
+        const result = await response.json();
+        
+        if (!result.success) {
+          throw new Error(result.error || 'Upload failed');
+        }
+
+        // Store transfer info from first batch
+        if (batchIndex === 0) {
+          transferId = result.transferId;
+          transferUrl = result.transferUrl;
+        }
+
+        uploadedCount++;
+        const progress = Math.floor((uploadedCount / batches.length) * 90);
+        setUploadProgress(progress);
+      }
 
       clearInterval(progressInterval);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || errorData.message || 'Upload failed');
-      }
-
-      const result = await response.json();
-
-      if (!result.success || !result.transferUrl) {
+      if (!transferUrl) {
         throw new Error('Upload completed but no transfer URL received');
       }
 
@@ -187,7 +251,7 @@ function UploadSection({ selectedAlbum, onUploadComplete }) {
         type: 'success', 
         message: 'Photos uploaded successfully! You can now proceed with your order.' 
       });
-      onUploadComplete(result.transferUrl, result.fileCount || selectedFiles.length);
+      onUploadComplete(transferUrl, totalFiles);
 
     } catch (error) {
       console.error('Upload error:', error);
