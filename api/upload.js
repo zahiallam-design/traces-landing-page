@@ -107,53 +107,65 @@ export default async function handler(req, res) {
               token: SMASH_API_KEY
             });
 
-            // Convert Buffer files to File-like objects for Smash SDK
-            // Node.js 18+ has File API, but we need to create it properly
-            const { Blob } = await import('buffer');
+            // Smash SDK expects file paths (strings), not File objects
+            // Write files to /tmp directory (Vercel provides this)
+            const fs = await import('fs/promises');
+            const path = await import('path');
+            const os = await import('os');
             
-            // Create File-like objects that Smash SDK can use
-            const filesForSmash = files.map(file => {
-              // Create a Blob first
-              const blob = new Blob([file.data], { type: file.type });
-              
-              // Create File object (Node.js 18+ supports File API)
-              // If File is not available, create a File-like object
-              if (typeof File !== 'undefined') {
-                return new File([blob], file.name, { 
-                  type: file.type,
-                  lastModified: Date.now()
-                });
-              } else {
-                // Fallback: create File-like object
-                const fileLike = Object.assign(blob, {
-                  name: file.name,
-                  size: file.size,
-                  type: file.type,
-                  lastModified: Date.now()
-                });
-                return fileLike;
+            const tmpDir = os.tmpdir();
+            const filePaths = [];
+            const tempFiles = [];
+            
+            try {
+              console.log('Writing files to temp directory...');
+              for (const file of files) {
+                // Create unique filename to avoid conflicts
+                const timestamp = Date.now();
+                const random = Math.random().toString(36).substring(7);
+                const safeFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+                const tempFilePath = path.join(tmpDir, `${timestamp}_${random}_${safeFileName}`);
+                
+                // Write buffer to temp file
+                await fs.writeFile(tempFilePath, file.data);
+                filePaths.push(tempFilePath);
+                tempFiles.push(tempFilePath);
+                
+                console.log(`Written temp file: ${tempFilePath}`);
               }
-            });
 
-            console.log('Starting Smash upload...');
-            const result = await uploader.upload({ files: filesForSmash });
-            
-            console.log('Upload result:', result);
-            
-            const transferUrl = result.transfer?.transferUrl || result.transferUrl || `https://fromsmash.com/${result.transfer?.id || result.id}`;
-            const transferId = result.transfer?.id || result.id;
+              console.log(`Starting Smash upload with ${filePaths.length} files...`);
+              // Pass file paths (strings) to Smash SDK
+              const result = await uploader.upload({ files: filePaths });
+              
+              console.log('Upload result:', result);
+              
+              const transferUrl = result.transfer?.transferUrl || result.transferUrl || `https://fromsmash.com/${result.transfer?.id || result.id}`;
+              const transferId = result.transfer?.id || result.id;
 
-            if (!transferUrl) {
-              throw new Error('No transfer URL received from Smash');
+              if (!transferUrl) {
+                throw new Error('No transfer URL received from Smash');
+              }
+
+              res.status(200).json({
+                success: true,
+                transferUrl: transferUrl,
+                transferId: transferId,
+                fileCount: files.length,
+              });
+              resolve();
+            } finally {
+              // Always clean up temp files, even if upload fails
+              console.log('Cleaning up temp files...');
+              for (const tempFile of tempFiles) {
+                try {
+                  await fs.unlink(tempFile);
+                  console.log(`Deleted temp file: ${tempFile}`);
+                } catch (cleanupError) {
+                  console.warn(`Failed to delete temp file ${tempFile}:`, cleanupError.message);
+                }
+              }
             }
-
-            res.status(200).json({
-              success: true,
-              transferUrl: transferUrl,
-              transferId: transferId,
-              fileCount: files.length,
-            });
-            resolve();
           } catch (error) {
             console.error('Upload processing error:', error);
             console.error('Error stack:', error.stack);
