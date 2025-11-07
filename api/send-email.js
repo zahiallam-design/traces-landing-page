@@ -98,6 +98,16 @@ export default async function handler(req, res) {
     if (!emailjsResponse.ok) {
       const errorText = await emailjsResponse.text();
       console.error('EmailJS API error:', errorText);
+      
+      // Check if it's the "non-browser applications" error
+      if (errorText.includes('non-browser applications') || errorText.includes('disabled for non-browser')) {
+        return res.status(emailjsResponse.status).json({
+          error: 'EmailJS server-side API is disabled',
+          details: 'Please enable "Allow EmailJS API for non-browser applications" in your EmailJS account settings (Account → Security).',
+          errorText: errorText,
+        });
+      }
+      
       return res.status(emailjsResponse.status).json({
         error: 'Failed to send email',
         details: errorText,
