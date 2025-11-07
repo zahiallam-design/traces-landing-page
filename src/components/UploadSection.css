@@ -3,6 +3,24 @@
   padding: 4rem 0;
 }
 
+.upload-disabled-message {
+  text-align: center;
+  padding: 2rem;
+  background: var(--bg-light);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.upload-disabled-message p {
+  margin: 0.5rem 0;
+  color: var(--text-light);
+}
+
+.upload-disabled-message .upload-note {
+  font-size: 0.9rem;
+  color: var(--text-light);
+}
+
 .upload-instructions {
   max-width: 600px;
   margin: 0 auto 2rem;

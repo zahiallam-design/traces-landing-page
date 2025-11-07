@@ -4,7 +4,6 @@ import Hero from './components/Hero';
 import HowItWorks from './components/HowItWorks';
 import AlbumOptions from './components/AlbumOptions';
 import UploadSection from './components/UploadSection';
-import ExtrasSection from './components/ExtrasSection';
 import OrderForm from './components/OrderForm';
 import Gallery from './components/Gallery';
 import Footer from './components/Footer';
@@ -205,17 +204,13 @@ Order Date: ${new Date(orderData.timestamp).toLocaleString()}
         selectedAlbum={selectedAlbum}
         onUploadComplete={handleUploadComplete}
       />
-      <ExtrasSection
-        notes={notes}
-        onNotesChange={setNotes}
-        giftWrap={giftWrap}
-        onGiftWrapChange={setGiftWrap}
-      />
       <OrderForm
         selectedAlbum={selectedAlbum}
         selectedColor={selectedColor}
         giftWrap={giftWrap}
-        notes={notes}
+        onGiftWrapChange={setGiftWrap}
+        deliveryNotes={notes}
+        onDeliveryNotesChange={setNotes}
         smashTransferUrl={smashTransferUrl}
         fileCount={fileCount}
         onSubmit={handleOrderSubmit}

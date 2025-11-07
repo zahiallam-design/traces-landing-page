@@ -46,7 +46,7 @@ function Footer() {
             </a>
           </div>
           <div className="footer-legal">
-            <p><small>&copy; 2024 Your Albums. All rights reserved.</small></p>
+            <p><small>&copy; 2024 Traces. All rights reserved.</small></p>
             <p><small>Privacy Policy | Terms of Service</small></p>
           </div>
         </div>

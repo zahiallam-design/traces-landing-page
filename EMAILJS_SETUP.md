@@ -83,7 +83,7 @@ Please process this order and contact the customer via WhatsApp at {{customer_ph
 2. Click **Create New Template**
 3. Name it: "Customer Order Confirmation"
 4. Set the **To Email** field to: `{{customer_email}}` (this will use the customer's email)
-5. Set the **Subject** to: `Order Confirmation - Your Albums`
+5. Set the **Subject** to: `Order Confirmation - Traces`
 6. In the **Content** field, use this template:
 
 ```
@@ -118,7 +118,7 @@ We'll print your photos, assemble your beautiful album, and deliver it to your d
 
 If you have any questions, feel free to contact us via WhatsApp.
 
-Thank you for choosing Your Albums!
+Thank you for choosing Traces!
 ```
 
 7. Click **Save**

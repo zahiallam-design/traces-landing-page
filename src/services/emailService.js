@@ -218,7 +218,7 @@ We'll print your photos, assemble your beautiful album, and deliver it to your d
 
 If you have any questions, feel free to contact us via WhatsApp.
 
-Thank you for choosing Your Albums!
+Thank you for choosing Traces!
   `.trim();
 }
 

@@ -1,4 +1,4 @@
-# Your Albums Landing Page - React Version
+# Traces Landing Page - React Version
 
 A modern React-based landing page for your photo album service with custom breakpoints and responsive design.
 

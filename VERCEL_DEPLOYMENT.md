@@ -1,6 +1,6 @@
 # Step-by-Step Vercel Deployment Guide
 
-This guide will walk you through deploying your Albums Landing Page to Vercel, step by step.
+This guide will walk you through deploying your Traces Landing Page to Vercel, step by step.
 
 ## Prerequisites
 

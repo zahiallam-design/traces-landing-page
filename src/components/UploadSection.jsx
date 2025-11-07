@@ -27,6 +27,13 @@ function UploadSection({ selectedAlbum, onUploadComplete }) {
   }, [selectedFiles]);
 
   const handleFileSelect = (files) => {
+    // Prevent uploads if no album is selected
+    if (!selectedAlbum) {
+      alert('Please select an album size first before uploading photos.');
+      document.getElementById('album-options')?.scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
+    
     const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
     
     if (selectedFiles.length + imageFiles.length > maxFiles) {
@@ -63,8 +70,11 @@ function UploadSection({ selectedAlbum, onUploadComplete }) {
   const handleDrop = (e) => {
     e.preventDefault();
     dropzoneRef.current?.classList.remove('dragover');
-    if (!isUploading) {
+    if (!isUploading && selectedAlbum) {
       handleFileSelect(e.dataTransfer.files);
+    } else if (!selectedAlbum) {
+      alert('Please select an album size first before uploading photos.');
+      document.getElementById('album-options')?.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
@@ -277,62 +287,71 @@ function UploadSection({ selectedAlbum, onUploadComplete }) {
     <section id="upload-photos" className="upload-section">
       <div className="container">
         <h2 className="section-title">Upload Your Photos</h2>
-        <div className="upload-instructions">
-          <p>Select and upload your photos directly (up to {maxFiles} photos):</p>
-          <p className="upload-note">You can select multiple photos at once. Supported formats: JPG, PNG, HEIC</p>
-        </div>
-        <div className="upload-area">
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept="image/*"
-            style={{ display: 'none' }}
-            onChange={(e) => handleFileSelect(e.target.files)}
-          />
-          <div
-            ref={dropzoneRef}
-            className="upload-dropzone"
-            onClick={() => !isUploading && fileInputRef.current?.click()}
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-          >
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="17 8 12 3 7 8"></polyline>
-              <line x1="12" y1="3" x2="12" y2="15"></line>
-            </svg>
-            <p className="upload-text">Click to select photos or drag and drop</p>
-            <p className="upload-hint">Select up to {maxFiles} photos</p>
+        {!selectedAlbum ? (
+          <div className="upload-disabled-message">
+            <p>Please select an album size above to enable photo uploads.</p>
+            <p className="upload-note">The number of photos you can upload depends on the album size you choose.</p>
           </div>
-          {selectedFiles.length > 0 && (
-            <div className="file-list">
-              {selectedFiles.map((file, index) => (
-                <FileItem
-                  key={`${file.name}-${index}`}
-                  file={file}
-                  index={index}
-                  onRemove={removeFile}
-                  formatFileSize={formatFileSize}
-                />
-              ))}
+        ) : (
+          <>
+            <div className="upload-instructions">
+              <p>Select and upload your photos directly (up to {maxFiles} photos):</p>
+              <p className="upload-note">You can select multiple photos at once. Supported formats: JPG, PNG, HEIC</p>
             </div>
-          )}
-          {isUploading && (
-            <div className="upload-progress">
-              <div className="progress-bar">
-                <div className="progress-fill" style={{ width: `${uploadProgress}%` }}></div>
+            <div className="upload-area">
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={(e) => handleFileSelect(e.target.files)}
+              />
+              <div
+                ref={dropzoneRef}
+                className="upload-dropzone"
+                onClick={() => !isUploading && fileInputRef.current?.click()}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+              >
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                <p className="upload-text">Click to select photos or drag and drop</p>
+                <p className="upload-hint">Select up to {maxFiles} photos</p>
               </div>
-              <p className="progress-text">Uploading... {uploadProgress}%</p>
+              {selectedFiles.length > 0 && (
+                <div className="file-list">
+                  {selectedFiles.map((file, index) => (
+                    <FileItem
+                      key={`${file.name}-${index}`}
+                      file={file}
+                      index={index}
+                      onRemove={removeFile}
+                      formatFileSize={formatFileSize}
+                    />
+                  ))}
+                </div>
+              )}
+              {isUploading && (
+                <div className="upload-progress">
+                  <div className="progress-bar">
+                    <div className="progress-fill" style={{ width: `${uploadProgress}%` }}></div>
+                  </div>
+                  <p className="progress-text">Uploading... {uploadProgress}%</p>
+                </div>
+              )}
+              {uploadStatus && (
+                <div className={`upload-status ${uploadStatus.type}`}>
+                  {uploadStatus.type === 'success' ? '✓' : '✗'} {uploadStatus.message}
+                </div>
+              )}
             </div>
-          )}
-          {uploadStatus && (
-            <div className={`upload-status ${uploadStatus.type}`}>
-              {uploadStatus.type === 'success' ? '✓' : '✗'} {uploadStatus.message}
-            </div>
-          )}
-        </div>
+          </>
+        )}
       </div>
     </section>
   );

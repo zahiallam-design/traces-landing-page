@@ -6,7 +6,9 @@ function OrderForm({
   selectedAlbum, 
   selectedColor, 
   giftWrap,
-  notes,
+  onGiftWrapChange,
+  deliveryNotes,
+  onDeliveryNotesChange,
   smashTransferUrl, 
   fileCount,
   onSubmit,
@@ -53,7 +55,7 @@ function OrderForm({
       smashTransferUrl,
       fileCount,
       giftWrap,
-      notes,
+      notes: deliveryNotes,
       total,
       timestamp: new Date().toISOString()
     };
@@ -107,6 +109,32 @@ function OrderForm({
                 value={formData.deliveryAddress}
                 onChange={(e) => setFormData({ ...formData, deliveryAddress: e.target.value })}
               />
+            </div>
+            <div className="form-group">
+              <label htmlFor="delivery-notes">Delivery Notes (Optional)</label>
+              <textarea
+                id="delivery-notes"
+                name="delivery-notes"
+                rows="3"
+                placeholder="Any special instructions for delivery or notes for us..."
+                value={deliveryNotes}
+                onChange={(e) => onDeliveryNotesChange(e.target.value)}
+              />
+              <small style={{ color: 'var(--text-light)', fontSize: '0.85rem', marginTop: '0.25rem', display: 'block' }}>
+                Add any special delivery instructions or notes for us
+              </small>
+            </div>
+            <div className="form-group">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  id="gift-wrap"
+                  name="gift-wrap"
+                  checked={giftWrap}
+                  onChange={(e) => onGiftWrapChange(e.target.checked)}
+                />
+                <span>Gift wrap my album</span>
+              </label>
             </div>
             <div className="form-group">
               <label htmlFor="email">Email Address *</label>

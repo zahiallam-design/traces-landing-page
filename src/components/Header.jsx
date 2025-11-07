@@ -16,13 +16,13 @@ function Header() {
           <div className="logo">
             <img 
               src="/logo.png" 
-              alt="Your Albums Logo" 
+              alt="Traces Logo" 
               onError={(e) => {
                 e.target.style.display = 'none';
                 e.target.nextElementSibling.style.display = 'block';
               }}
             />
-            <span className="logo-text" style={{ display: 'none' }}>Your Albums</span>
+            <span className="logo-text" style={{ display: 'none' }}>Traces</span>
           </div>
           <nav className="nav">
             <button 
