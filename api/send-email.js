@@ -116,7 +116,17 @@ export default async function handler(req, res) {
       });
     }
 
-    const result = await emailjsResponse.json();
+    // EmailJS can return either JSON or plain text "OK" for success
+    const contentType = emailjsResponse.headers.get('content-type');
+    let result;
+    
+    if (contentType && contentType.includes('application/json')) {
+      result = await emailjsResponse.json();
+    } else {
+      // Plain text response (like "OK")
+      const textResponse = await emailjsResponse.text();
+      result = { status: 'success', message: textResponse || 'Email sent successfully' };
+    }
 
     return res.status(200).json({
       success: true,
