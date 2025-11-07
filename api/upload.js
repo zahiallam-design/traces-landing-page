@@ -84,8 +84,9 @@ export default async function handler(req, res) {
           
           if (!transferId) {
             console.log('Creating new Smash transfer...');
+            // Use api.fromsmash.com instead of regional subdomain (SSL certificate issue)
             const transferResponse = await fetch(
-              `https://${SMASH_REGION}.api.fromsmash.com/v1/transfer?version=01-2024`,
+              `https://api.fromsmash.com/v1/transfer?version=01-2024`,
               {
                 method: 'POST',
                 headers: {
@@ -124,8 +125,9 @@ export default async function handler(req, res) {
           // Step 2: Upload each file to the transfer
           console.log(`Uploading ${files.length} files to transfer ${transferId}`);
           const uploadPromises = files.map(async (file) => {
+            // Use api.fromsmash.com instead of regional subdomain (SSL certificate issue)
             const fileResponse = await fetch(
-              `https://${SMASH_REGION}.api.fromsmash.com/v1/transfer/${transferId}/file?version=01-2024`,
+              `https://api.fromsmash.com/v1/transfer/${transferId}/file?version=01-2024`,
               {
                 method: 'POST',
                 headers: {
