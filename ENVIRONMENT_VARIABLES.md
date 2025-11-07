@@ -46,6 +46,13 @@ Complete list of all environment variables used in the project.
 - **Required**: Yes
 - **Environments**: Production, Preview, Development
 
+- **Key**: `EMAILJS_PRIVATE_KEY` ⚠️ (NOT `VITE_EMAILJS_PRIVATE_KEY`)
+- **Value**: Your EmailJS Private Key (Access Token)
+- **Required**: Yes (for server-side API calls)
+- **How to get**: EmailJS Dashboard → Account → Security → Copy Private Key
+- **Environments**: Production, Preview, Development
+- **Used in**: `api/send-email.js` (serverless function)
+
 #### 3. EmailJS - Customer Confirmation Email
 - **Key**: `EMAILJS_CUSTOMER_TEMPLATE_ID` ⚠️ (NOT `VITE_EMAILJS_CUSTOMER_TEMPLATE_ID`)
 - **Value**: Your EmailJS Customer Template ID (Customer confirmation template)
@@ -76,6 +83,7 @@ Complete list of all environment variables used in the project.
 | `EMAILJS_TEMPLATE_ID` | Business owner email template | ✅ Yes | None | Serverless function |
 | `EMAILJS_CUSTOMER_TEMPLATE_ID` | Customer confirmation template | ✅ Yes | None | Serverless function |
 | `EMAILJS_PUBLIC_KEY` | EmailJS public key | ✅ Yes | None | Serverless function |
+| `EMAILJS_PRIVATE_KEY` | EmailJS private key (access token) | ✅ Yes | None | Serverless function |
 
 ### Frontend Variables (Browser - WITH `VITE_` prefix)
 
@@ -83,7 +91,7 @@ Complete list of all environment variables used in the project.
 |--------------|---------|----------|---------|----------|
 | `VITE_WHATSAPP_NUMBER` | WhatsApp contact number | ✅ Yes | None | Frontend components |
 
-**Total**: 7 environment variables (6 server-side, 1 frontend)
+**Total**: 8 environment variables (7 server-side, 1 frontend)
 
 ---
 
@@ -96,6 +104,7 @@ Complete list of all environment variables used in the project.
 - `EMAILJS_TEMPLATE_ID` → `api/send-email.js` (serverless function)
 - `EMAILJS_CUSTOMER_TEMPLATE_ID` → `api/send-email.js` (serverless function)
 - `EMAILJS_PUBLIC_KEY` → `api/send-email.js` (serverless function)
+- `EMAILJS_PRIVATE_KEY` → `api/send-email.js` (serverless function)
 
 ### Frontend (Browser):
 - `VITE_WHATSAPP_NUMBER` → `src/components/Footer.jsx` & `src/components/WhatsAppButton.jsx`
@@ -111,6 +120,7 @@ Complete list of all environment variables used in the project.
 - [ ] `EMAILJS_TEMPLATE_ID` - Get from EmailJS templates (Business Owner)
 - [ ] `EMAILJS_CUSTOMER_TEMPLATE_ID` - Get from EmailJS templates (Customer)
 - [ ] `EMAILJS_PUBLIC_KEY` - Get from EmailJS account settings
+- [ ] `EMAILJS_PRIVATE_KEY` - Get from EmailJS Dashboard → Account → Security
 
 ### Frontend Variables (WITH `VITE_` prefix):
 - [ ] `VITE_WHATSAPP_NUMBER` - Your WhatsApp number (no +, no spaces)

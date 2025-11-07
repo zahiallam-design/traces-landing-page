@@ -15,21 +15,25 @@ export default async function handler(req, res) {
     const EMAILJS_TEMPLATE_ID = process.env.EMAILJS_TEMPLATE_ID || process.env.VITE_EMAILJS_TEMPLATE_ID;
     const EMAILJS_CUSTOMER_TEMPLATE_ID = process.env.EMAILJS_CUSTOMER_TEMPLATE_ID || process.env.VITE_EMAILJS_CUSTOMER_TEMPLATE_ID;
     const EMAILJS_PUBLIC_KEY = process.env.EMAILJS_PUBLIC_KEY || process.env.VITE_EMAILJS_PUBLIC_KEY;
+    const EMAILJS_PRIVATE_KEY = process.env.EMAILJS_PRIVATE_KEY || process.env.VITE_EMAILJS_PRIVATE_KEY;
 
     // Validate required credentials
     if (!EMAILJS_SERVICE_ID || !EMAILJS_PUBLIC_KEY) {
       return res.status(500).json({ error: 'EmailJS credentials not configured' });
+    }
+    
+    // Private key is required for server-side API calls in strict mode
+    if (!EMAILJS_PRIVATE_KEY) {
+      return res.status(500).json({ 
+        error: 'EmailJS private key not configured',
+        details: 'Please add EMAILJS_PRIVATE_KEY to your Vercel environment variables. Get it from EmailJS Dashboard → Account → Security.'
+      });
     }
 
     // Get request body
     // In Vercel serverless functions, body is available as req.body
     // It should be automatically parsed for application/json
     let body;
-    
-    // Log for debugging
-    console.log('Request body type:', typeof req.body);
-    console.log('Request body:', req.body);
-    console.log('Request headers:', req.headers);
     
     if (req.body) {
       // Body might already be parsed (object) or still be a string
@@ -45,7 +49,6 @@ export default async function handler(req, res) {
       }
     } else {
       // Try reading raw body if req.body is not available
-      console.log('req.body is undefined, attempting to read raw body...');
       const chunks = [];
       for await (const chunk of req) {
         chunks.push(chunk);
@@ -58,8 +61,6 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Invalid request body' });
       }
     }
-    
-    console.log('Parsed body:', body);
     
     const { 
       templateType, // 'owner' or 'customer'
@@ -91,6 +92,7 @@ export default async function handler(req, res) {
         service_id: EMAILJS_SERVICE_ID,
         template_id: templateId,
         user_id: EMAILJS_PUBLIC_KEY,
+        accessToken: EMAILJS_PRIVATE_KEY, // Required for server-side API calls in strict mode
         template_params: templateParams,
       }),
     });
