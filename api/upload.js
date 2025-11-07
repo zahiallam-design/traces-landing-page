@@ -1,13 +1,14 @@
 /**
  * Vercel Serverless Function for Smash API uploads
  * This keeps the Smash API key secure on the server side
- * 
- * Note: This function uses busboy to parse multipart/form-data
  */
 
-import busboy from 'busboy';
-
 export default async function handler(req, res) {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
   // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -18,16 +19,30 @@ export default async function handler(req, res) {
   const SMASH_REGION = process.env.SMASH_REGION || process.env.VITE_SMASH_REGION || 'eu-west-3';
 
   if (!SMASH_API_KEY || SMASH_API_KEY === 'YOUR_SMASH_API_KEY') {
+    console.error('SMASH_API_KEY not configured');
     return res.status(500).json({ error: 'Smash API key not configured' });
+  }
+
+  // Import busboy
+  let Busboy;
+  try {
+    const busboyModule = await import('busboy');
+    Busboy = busboyModule.default || busboyModule;
+  } catch (importError) {
+    console.error('Failed to import busboy:', importError);
+    return res.status(500).json({ 
+      error: 'Server configuration error',
+      details: 'Failed to load file upload library: ' + importError.message
+    });
   }
 
   // Parse multipart/form-data using busboy
   const files = [];
   let existingTransferId = null;
 
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     try {
-      const bb = busboy({ headers: req.headers });
+      const bb = Busboy({ headers: req.headers });
 
       // Handle form fields (like transferId for batch uploads)
       bb.on('field', (name, value) => {
@@ -62,11 +77,13 @@ export default async function handler(req, res) {
             return;
           }
 
+          console.log(`Processing ${files.length} files`);
+
           // Step 1: Create a Smash transfer (or use existing if provided for batch uploads)
           let transferId = existingTransferId;
           
           if (!transferId) {
-            // Create new transfer
+            console.log('Creating new Smash transfer...');
             const transferResponse = await fetch(
               `https://${SMASH_REGION}.api.fromsmash.com/v1/transfer?version=01-2024`,
               {
@@ -96,13 +113,16 @@ export default async function handler(req, res) {
             transferId = transferData.transfer?.id || transferData.id;
 
             if (!transferId) {
+              console.error('No transfer ID in response:', transferData);
               res.status(500).json({ error: 'Failed to get transfer ID from Smash' });
               resolve();
               return;
             }
+            console.log('Transfer created:', transferId);
           }
 
           // Step 2: Upload each file to the transfer
+          console.log(`Uploading ${files.length} files to transfer ${transferId}`);
           const uploadPromises = files.map(async (file) => {
             const fileResponse = await fetch(
               `https://${SMASH_REGION}.api.fromsmash.com/v1/transfer/${transferId}/file?version=01-2024`,
@@ -127,6 +147,7 @@ export default async function handler(req, res) {
           });
 
           await Promise.all(uploadPromises);
+          console.log('All files uploaded successfully');
 
           // Step 3: Return transfer URL
           const transferUrl = `https://fromsmash.com/${transferId}`;
@@ -139,7 +160,8 @@ export default async function handler(req, res) {
           });
           resolve();
         } catch (error) {
-          console.error('Upload error:', error);
+          console.error('Upload processing error:', error);
+          console.error('Error stack:', error.stack);
           res.status(500).json({
             error: 'Upload failed',
             message: error.message || 'Unknown error occurred',
@@ -149,7 +171,8 @@ export default async function handler(req, res) {
       });
 
       bb.on('error', (error) => {
-        console.error('Busboy error:', error);
+        console.error('Busboy parsing error:', error);
+        console.error('Error stack:', error.stack);
         res.status(500).json({
           error: 'File parsing failed',
           message: error.message,
@@ -158,24 +181,32 @@ export default async function handler(req, res) {
       });
 
       // Pipe request to busboy
-      // For Vercel, we need to handle the request as a stream
-      if (req.pipe) {
-        req.pipe(bb);
-      } else if (req.on) {
-        // If req is an EventEmitter, pipe manually
-        req.on('data', (chunk) => {
-          bb.write(chunk);
+      console.log('Starting to pipe request to busboy');
+      try {
+        if (typeof req.pipe === 'function') {
+          req.pipe(bb);
+          console.log('Request piped successfully');
+        } else {
+          console.error('Request object does not have pipe method');
+          console.error('Request object keys:', Object.keys(req));
+          res.status(500).json({ 
+            error: 'Server configuration error',
+            details: 'Request streaming not supported'
+          });
+          resolve();
+        }
+      } catch (pipeError) {
+        console.error('Error piping request:', pipeError);
+        console.error('Pipe error stack:', pipeError.stack);
+        res.status(500).json({ 
+          error: 'Failed to process request',
+          message: pipeError.message 
         });
-        req.on('end', () => {
-          bb.end();
-        });
-      } else {
-        console.error('Request object format not supported');
-        res.status(500).json({ error: 'Server configuration error' });
         resolve();
       }
     } catch (error) {
       console.error('Handler setup error:', error);
+      console.error('Setup error stack:', error.stack);
       res.status(500).json({
         error: 'Request processing failed',
         message: error.message || 'Unknown error occurred',
