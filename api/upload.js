@@ -84,27 +84,49 @@ export default async function handler(req, res) {
           
           if (!transferId) {
             console.log('Creating new Smash transfer...');
+            console.log('API Key length:', SMASH_API_KEY?.length);
+            console.log('Region:', SMASH_REGION);
+            
+            const transferUrl = `https://api.fromsmash.com/v1/transfer?version=01-2024`;
+            const transferBody = {
+              name: `Photo Album Upload - ${new Date().toISOString()}`,
+            };
+            
+            console.log('Transfer URL:', transferUrl);
+            console.log('Transfer body:', JSON.stringify(transferBody));
+            
             // Use api.fromsmash.com instead of regional subdomain (SSL certificate issue)
-            const transferResponse = await fetch(
-              `https://api.fromsmash.com/v1/transfer?version=01-2024`,
-              {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${SMASH_API_KEY}`,
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  name: `Photo Album Upload - ${new Date().toISOString()}`,
-                }),
-              }
-            );
+            const transferResponse = await fetch(transferUrl, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${SMASH_API_KEY}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(transferBody),
+            });
+            
+            console.log('Transfer response status:', transferResponse.status);
+            console.log('Transfer response ok:', transferResponse.ok);
 
             if (!transferResponse.ok) {
               const errorText = await transferResponse.text();
-              console.error('Smash transfer creation failed:', errorText);
+              console.error('Smash transfer creation failed - Status:', transferResponse.status);
+              console.error('Smash transfer creation failed - Response:', errorText);
+              console.error('Smash transfer creation failed - Headers:', JSON.stringify(Object.fromEntries(transferResponse.headers)));
+              
+              // Try to parse as JSON if possible
+              let errorDetails = errorText;
+              try {
+                const errorJson = JSON.parse(errorText);
+                errorDetails = JSON.stringify(errorJson, null, 2);
+              } catch (e) {
+                // Not JSON, use as-is
+              }
+              
               res.status(transferResponse.status).json({ 
                 error: 'Failed to create Smash transfer',
-                details: errorText 
+                status: transferResponse.status,
+                details: errorDetails 
               });
               resolve();
               return;
