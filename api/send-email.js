@@ -22,10 +22,49 @@ export default async function handler(req, res) {
     }
 
     // Get request body
+    // In Vercel serverless functions, body is available as req.body
+    // It should be automatically parsed for application/json
+    let body;
+    
+    // Log for debugging
+    console.log('Request body type:', typeof req.body);
+    console.log('Request body:', req.body);
+    console.log('Request headers:', req.headers);
+    
+    if (req.body) {
+      // Body might already be parsed (object) or still be a string
+      if (typeof req.body === 'string') {
+        try {
+          body = JSON.parse(req.body);
+        } catch (e) {
+          console.error('JSON parse error:', e);
+          return res.status(400).json({ error: 'Invalid JSON in request body' });
+        }
+      } else {
+        body = req.body;
+      }
+    } else {
+      // Try reading raw body if req.body is not available
+      console.log('req.body is undefined, attempting to read raw body...');
+      const chunks = [];
+      for await (const chunk of req) {
+        chunks.push(chunk);
+      }
+      const rawBody = Buffer.concat(chunks).toString();
+      try {
+        body = JSON.parse(rawBody);
+      } catch (e) {
+        console.error('Failed to parse raw body:', e);
+        return res.status(400).json({ error: 'Invalid request body' });
+      }
+    }
+    
+    console.log('Parsed body:', body);
+    
     const { 
       templateType, // 'owner' or 'customer'
       templateParams 
-    } = await req.json();
+    } = body;
 
     if (!templateType || !templateParams) {
       return res.status(400).json({ error: 'Missing templateType or templateParams' });
