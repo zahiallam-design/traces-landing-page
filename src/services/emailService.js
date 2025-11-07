@@ -1,21 +1,13 @@
-import emailjs from '@emailjs/browser';
-
-// IMPORTANT: Replace these with your EmailJS credentials
-// Get them from: https://dashboard.emailjs.com/admin
-// You can use environment variables (VITE_EMAILJS_*) or hardcode them here
-const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID || 'YOUR_SERVICE_ID';
-const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'YOUR_TEMPLATE_ID';
-const EMAILJS_CUSTOMER_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_CUSTOMER_TEMPLATE_ID || 'YOUR_CUSTOMER_TEMPLATE_ID';
-const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'YOUR_PUBLIC_KEY';
+// EmailJS credentials are now handled server-side via Vercel Serverless Functions
+// No credentials needed in frontend - more secure!
 
 /**
- * Initialize EmailJS with your public key
- * Call this once when your app starts (e.g., in App.jsx useEffect)
+ * Initialize EmailJS (no longer needed, but kept for compatibility)
+ * Email sending now happens via serverless function
  */
 export const initEmailJS = () => {
-  if (EMAILJS_PUBLIC_KEY && EMAILJS_PUBLIC_KEY !== 'YOUR_PUBLIC_KEY') {
-    emailjs.init(EMAILJS_PUBLIC_KEY);
-  }
+  // No initialization needed - emails sent via serverless function
+  console.log('EmailJS initialized (using serverless function)');
 };
 
 /**
@@ -24,18 +16,7 @@ export const initEmailJS = () => {
  * @returns {Promise} Promise that resolves when email is sent
  */
 export const sendOrderEmail = async (orderData) => {
-  // Validate configuration
-  if (!EMAILJS_SERVICE_ID || EMAILJS_SERVICE_ID === 'YOUR_SERVICE_ID') {
-    throw new Error('EmailJS Service ID not configured. Please set EMAILJS_SERVICE_ID in src/services/emailService.js');
-  }
-  
-  if (!EMAILJS_TEMPLATE_ID || EMAILJS_TEMPLATE_ID === 'YOUR_TEMPLATE_ID') {
-    throw new Error('EmailJS Template ID not configured. Please set EMAILJS_TEMPLATE_ID in src/services/emailService.js');
-  }
-  
-  if (!EMAILJS_PUBLIC_KEY || EMAILJS_PUBLIC_KEY === 'YOUR_PUBLIC_KEY') {
-    throw new Error('EmailJS Public Key not configured. Please set EMAILJS_PUBLIC_KEY in src/services/emailService.js');
-  }
+  // No validation needed - serverless function handles configuration
 
   // Format order data for email template
   const templateParams = {
@@ -67,20 +48,33 @@ export const sendOrderEmail = async (orderData) => {
   };
 
   try {
-    const response = await emailjs.send(
-      EMAILJS_SERVICE_ID,
-      EMAILJS_TEMPLATE_ID,
-      templateParams
-    );
+    // Send email via serverless function (secure - credentials on server)
+    const response = await fetch('/api/send-email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        templateType: 'owner',
+        templateParams: templateParams,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || errorData.message || 'Failed to send email');
+    }
+
+    const result = await response.json();
     
     return {
       success: true,
-      status: response.status,
-      text: response.text,
+      status: 200,
+      text: result.message || 'Email sent successfully',
     };
   } catch (error) {
-    console.error('EmailJS Error:', error);
-    throw new Error(`Failed to send email: ${error.text || error.message}`);
+    console.error('Email sending error:', error);
+    throw new Error(`Failed to send email: ${error.message}`);
   }
 };
 
@@ -90,26 +84,13 @@ export const sendOrderEmail = async (orderData) => {
  * @returns {Promise} Promise that resolves when email is sent
  */
 export const sendCustomerConfirmationEmail = async (orderData) => {
-  // Validate configuration
-  if (!EMAILJS_SERVICE_ID || EMAILJS_SERVICE_ID === 'YOUR_SERVICE_ID') {
-    throw new Error('EmailJS Service ID not configured');
-  }
-  
-  if (!EMAILJS_CUSTOMER_TEMPLATE_ID || EMAILJS_CUSTOMER_TEMPLATE_ID === 'YOUR_CUSTOMER_TEMPLATE_ID') {
-    // If customer template not configured, skip sending customer email
-    console.warn('Customer confirmation email template not configured. Skipping customer email.');
-    return { success: false, skipped: true };
-  }
-  
-  if (!EMAILJS_PUBLIC_KEY || EMAILJS_PUBLIC_KEY === 'YOUR_PUBLIC_KEY') {
-    throw new Error('EmailJS Public Key not configured');
-  }
-
   // Don't send if customer email is not provided
   if (!orderData.customer.email) {
     console.warn('Customer email not provided. Skipping customer confirmation email.');
     return { success: false, skipped: true };
   }
+  
+  // Serverless function handles template configuration
 
   // Format order data for customer confirmation email
   const templateParams = {
@@ -138,16 +119,30 @@ export const sendCustomerConfirmationEmail = async (orderData) => {
   };
 
   try {
-    const response = await emailjs.send(
-      EMAILJS_SERVICE_ID,
-      EMAILJS_CUSTOMER_TEMPLATE_ID,
-      templateParams
-    );
+    // Send email via serverless function (secure - credentials on server)
+    const response = await fetch('/api/send-email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        templateType: 'customer',
+        templateParams: templateParams,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      // Don't throw - customer email failure shouldn't block order
+      return { success: false, error: errorData.error || errorData.message };
+    }
+
+    const result = await response.json();
     
     return {
       success: true,
-      status: response.status,
-      text: response.text,
+      status: 200,
+      text: result.message || 'Email sent successfully',
     };
   } catch (error) {
     console.error('EmailJS Customer Email Error:', error);

@@ -2,10 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 import './UploadSection.css';
 
-// IMPORTANT: Replace with your Smash API key
-// You can use environment variables (VITE_SMASH_API_KEY) or hardcode it here
-const SMASH_API_KEY = import.meta.env.VITE_SMASH_API_KEY || 'YOUR_SMASH_API_KEY';
-const SMASH_REGION = import.meta.env.VITE_SMASH_REGION || 'eu-west-3';
+// Smash API key is now handled server-side via Vercel Serverless Functions
+// No API key needed in frontend - more secure!
 
 function UploadSection({ selectedAlbum, onUploadComplete }) {
   const breakpoint = useBreakpoint();
@@ -99,94 +97,14 @@ function UploadSection({ selectedAlbum, onUploadComplete }) {
   const uploadToSmash = async () => {
     if (selectedFiles.length === 0 || isUploading) return;
 
-    // Check API key
-    if (!SMASH_API_KEY || SMASH_API_KEY === 'YOUR_SMASH_API_KEY') {
-      setUploadStatus({ 
-        type: 'error', 
-        message: 'Smash API key not configured. Please add VITE_SMASH_API_KEY in Vercel environment variables and redeploy.' 
-      });
-      return;
-    }
-
     setIsUploading(true);
     setUploadProgress(0);
     setUploadStatus(null);
 
     try {
-      // Check if Smash SDK is loaded
-      if (typeof SmashUploader === 'undefined') {
-        throw new Error('Smash SDK not loaded. Please check the script tag in index.html');
-      }
-
-      console.log('Initializing Smash uploader...', { 
-        region: SMASH_REGION, 
-        hasApiKey: !!SMASH_API_KEY,
-        fileCount: selectedFiles.length 
-      });
-
-      const uploader = new SmashUploader({
-        region: SMASH_REGION,
-        token: SMASH_API_KEY
-      });
-
-      // Set up progress listener BEFORE starting upload
-      uploader.on('progress', (event) => {
-        console.log('Upload progress event:', event);
-        console.log('Event structure:', {
-          hasData: !!event.data,
-          hasProgress: !!event.data?.progress,
-          hasPercent: !!event.data?.progress?.percent,
-          eventKeys: Object.keys(event || {}),
-          dataKeys: event.data ? Object.keys(event.data) : []
-        });
-        
-        // Try different possible event structures from Smash SDK
-        let percent = 0;
-        
-        if (event?.data?.progress?.percent !== undefined) {
-          percent = Math.round(event.data.progress.percent);
-        } else if (event?.progress?.percent !== undefined) {
-          percent = Math.round(event.progress.percent);
-        } else if (event?.percent !== undefined) {
-          percent = Math.round(event.percent);
-        } else if (event?.data?.percent !== undefined) {
-          percent = Math.round(event.data.percent);
-        } else if (typeof event === 'number') {
-          percent = Math.round(event);
-        } else {
-          // If we can't find percent, log the full event for debugging
-          console.warn('Could not find percent in progress event:', event);
-          // Don't update progress if we can't determine it
-          return;
-        }
-        
-        console.log('Calculated progress:', percent + '%');
-        setUploadProgress(percent);
-      });
-
-      // Also listen for other events for debugging
-      uploader.on('error', (event) => {
-        console.error('Smash uploader error event:', event);
-        setUploadStatus({ 
-          type: 'error', 
-          message: 'Upload error: ' + (event?.message || event?.error || 'Unknown error') 
-        });
-      });
+      console.log('Starting upload via API...', { fileCount: selectedFiles.length });
       
-      // Listen for completion/other events
-      uploader.on('complete', (event) => {
-        console.log('Upload complete event:', event);
-      });
-      
-      uploader.on('finish', (event) => {
-        console.log('Upload finish event:', event);
-      });
-
-      console.log('Starting upload...');
-      console.log('Files to upload:', selectedFiles.map(f => ({ name: f.name, size: f.size, type: f.type })));
-      
-      // Ensure files are proper File objects with valid extensions AND unique names
-      // Smash SDK requires files to have proper extensions and unique names
+      // Ensure files have proper extensions and unique names
       const mimeToExt = {
         'image/jpeg': '.jpg',
         'image/jpg': '.jpg',
@@ -197,27 +115,22 @@ function UploadSection({ selectedAlbum, onUploadComplete }) {
         'image/heif': '.heif'
       };
       
-      // Track used file names to ensure uniqueness
       const usedNames = new Set();
       
-      const filesToUpload = selectedFiles.map((file, index) => {
-        // Verify file is still valid
+      const filesToUpload = selectedFiles.map((file) => {
         if (!(file instanceof File)) {
           throw new Error(`Invalid file object: ${file.name}`);
         }
         
-        // Ensure file has proper extension matching its MIME type
         const extension = mimeToExt[file.type] || '.jpg';
         let fileName = file.name;
         
-        // If file doesn't have extension or has wrong extension, fix it
+        // Fix extension if needed
         if (!fileName.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp|heic|heif)$/i)) {
-          // Remove any existing extension and add correct one
           fileName = fileName.replace(/\.[^/.]+$/, '') + extension;
-          console.log(`Fixing file extension: ${file.name} -> ${fileName}`);
         }
         
-        // Ensure unique filename - if name already used, add unique suffix
+        // Ensure unique filename
         let finalFileName = fileName;
         let counter = 1;
         while (usedNames.has(finalFileName)) {
@@ -228,66 +141,63 @@ function UploadSection({ selectedAlbum, onUploadComplete }) {
         }
         usedNames.add(finalFileName);
         
-        // If filename changed, create new File object with correct name
         if (finalFileName !== file.name) {
-          console.log(`Renaming file for uniqueness: ${file.name} -> ${finalFileName}`);
           return new File([file], finalFileName, { type: file.type, lastModified: file.lastModified });
         }
         
         return file;
       });
-      
-      console.log('Files verified, starting upload...');
-      console.log('File details:', filesToUpload.map(f => ({
-        name: f.name,
-        size: f.size,
-        type: f.type,
-        lastModified: f.lastModified,
-        isFile: f instanceof File,
-        isBlob: f instanceof Blob
-      })));
-      
-      // Smash SDK expects an array of File objects
-      // Ensure we're passing the properly formatted files
-      console.log('Using files array with corrected extensions...');
-      const uploadPromise = uploader.upload({ files: filesToUpload });
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Upload timeout after 5 minutes')), 300000)
-      );
 
-      const result = await Promise.race([uploadPromise, timeoutPromise]);
-      
-      console.log('Upload result:', result);
-      
-      const transferUrl = result.transfer?.transferUrl || result.transferUrl;
+      // Create FormData to send files to our API
+      const formData = new FormData();
+      filesToUpload.forEach((file) => {
+        formData.append('files', file);
+      });
 
-      if (!transferUrl) {
+      // Simulate progress (since we can't track server-side progress easily)
+      // Update progress gradually
+      const progressInterval = setInterval(() => {
+        setUploadProgress((prev) => {
+          if (prev < 90) return prev + 10;
+          return prev;
+        });
+      }, 500);
+
+      // Send files to our serverless function
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      clearInterval(progressInterval);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || errorData.message || 'Upload failed');
+      }
+
+      const result = await response.json();
+
+      if (!result.success || !result.transferUrl) {
         throw new Error('Upload completed but no transfer URL received');
       }
 
       setUploadProgress(100);
-      setUploadStatus({ type: 'success', message: 'Photos uploaded successfully! You can now proceed with your order.' });
-      onUploadComplete(transferUrl, selectedFiles.length);
+      setUploadStatus({ 
+        type: 'success', 
+        message: 'Photos uploaded successfully! You can now proceed with your order.' 
+      });
+      onUploadComplete(result.transferUrl, result.fileCount || selectedFiles.length);
 
     } catch (error) {
-      console.error('Smash upload error:', error);
-      console.error('Error details:', {
-        message: error.message,
-        stack: error.stack,
-        apiKeySet: !!SMASH_API_KEY,
-        apiKeyLength: SMASH_API_KEY?.length,
-        sdkLoaded: typeof SmashUploader !== 'undefined',
-        fileCount: selectedFiles.length
-      });
+      console.error('Upload error:', error);
       
       let errorMessage = 'Upload failed. ';
       
       if (error.message?.includes('timeout')) {
         errorMessage += 'Upload took too long. Please try with fewer or smaller files.';
-      } else if (error.message?.includes('401') || error.message?.includes('Unauthorized')) {
-        errorMessage += 'Invalid API key. Please check your Smash API key in Vercel environment variables.';
-      } else if (error.message?.includes('403') || error.message?.includes('Forbidden')) {
-        errorMessage += 'API key access denied. Please verify your Smash account and API key permissions.';
+      } else if (error.message?.includes('API key')) {
+        errorMessage += 'Server configuration error. Please contact support.';
       } else {
         errorMessage += error.message || 'Please try again.';
       }
