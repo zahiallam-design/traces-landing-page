@@ -1,6 +1,8 @@
 /**
  * Vercel Serverless Function for Smash API uploads
  * This keeps the Smash API key secure on the server side
+ * 
+ * Uses Smash SDK for Node.js instead of REST API calls
  */
 
 export default async function handler(req, res) {
@@ -14,228 +16,202 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Get Smash API key from environment variables (server-side only)
-  const SMASH_API_KEY = process.env.SMASH_API_KEY || process.env.VITE_SMASH_API_KEY;
-  const SMASH_REGION = process.env.SMASH_REGION || process.env.VITE_SMASH_REGION || 'eu-west-3';
-
-  if (!SMASH_API_KEY || SMASH_API_KEY === 'YOUR_SMASH_API_KEY') {
-    console.error('SMASH_API_KEY not configured');
-    return res.status(500).json({ error: 'Smash API key not configured' });
-  }
-
-  // Import busboy
-  let Busboy;
   try {
-    const busboyModule = await import('busboy');
-    Busboy = busboyModule.default || busboyModule;
-  } catch (importError) {
-    console.error('Failed to import busboy:', importError);
-    return res.status(500).json({ 
-      error: 'Server configuration error',
-      details: 'Failed to load file upload library: ' + importError.message
-    });
-  }
+    // Get Smash API key from environment variables (server-side only)
+    const SMASH_API_KEY = process.env.SMASH_API_KEY || process.env.VITE_SMASH_API_KEY;
+    const SMASH_REGION = process.env.SMASH_REGION || process.env.VITE_SMASH_REGION || 'eu-west-3';
 
-  // Parse multipart/form-data using busboy
-  const files = [];
-  let existingTransferId = null;
+    if (!SMASH_API_KEY || SMASH_API_KEY === 'YOUR_SMASH_API_KEY') {
+      console.error('SMASH_API_KEY not configured');
+      return res.status(500).json({ error: 'Smash API key not configured' });
+    }
 
-  return new Promise((resolve) => {
+    // Import busboy for parsing multipart/form-data
+    let Busboy;
     try {
-      const bb = Busboy({ headers: req.headers });
-
-      // Handle form fields (like transferId for batch uploads)
-      bb.on('field', (name, value) => {
-        if (name === 'transferId') {
-          existingTransferId = value;
-        }
+      const busboyModule = await import('busboy');
+      Busboy = busboyModule.default || busboyModule;
+    } catch (importError) {
+      console.error('Failed to import busboy:', importError);
+      return res.status(500).json({ 
+        error: 'Server configuration error',
+        details: 'Failed to load file upload library: ' + importError.message
       });
+    }
 
-      bb.on('file', (name, file, info) => {
-        const { filename, encoding, mimeType } = info;
-        const chunks = [];
-        
-        file.on('data', (data) => {
-          chunks.push(data);
-        });
-        
-        file.on('end', () => {
-          files.push({
-            name: filename,
-            type: mimeType,
-            data: Buffer.concat(chunks),
-            size: Buffer.concat(chunks).length
-          });
-        });
+    // Import Smash SDK
+    let SmashUploader;
+    try {
+      const smashModule = await import('@smash-sdk/uploader');
+      SmashUploader = smashModule.default || smashModule.SmashUploader || smashModule;
+    } catch (importError) {
+      console.error('Failed to import Smash SDK:', importError);
+      return res.status(500).json({ 
+        error: 'Server configuration error',
+        details: 'Failed to load Smash SDK: ' + importError.message
       });
+    }
 
-      bb.on('finish', async () => {
-        try {
-          if (files.length === 0) {
-            res.status(400).json({ error: 'No files provided' });
-            resolve();
-            return;
-          }
+    // Parse multipart/form-data using busboy
+    const files = [];
+    let existingTransferId = null;
 
-          console.log(`Processing ${files.length} files`);
-
-          // Step 1: Create a Smash transfer (or use existing if provided for batch uploads)
-          let transferId = existingTransferId;
-          
-          if (!transferId) {
-            console.log('Creating new Smash transfer...');
-            console.log('API Key length:', SMASH_API_KEY?.length);
-            console.log('Region:', SMASH_REGION);
-            
-            const transferUrl = `https://api.fromsmash.com/v1/transfer?version=01-2024`;
-            const transferBody = {
-              name: `Photo Album Upload - ${new Date().toISOString()}`,
-            };
-            
-            console.log('Transfer URL:', transferUrl);
-            console.log('Transfer body:', JSON.stringify(transferBody));
-            
-            // Use api.fromsmash.com instead of regional subdomain (SSL certificate issue)
-            const transferResponse = await fetch(transferUrl, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${SMASH_API_KEY}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(transferBody),
-            });
-            
-            console.log('Transfer response status:', transferResponse.status);
-            console.log('Transfer response ok:', transferResponse.ok);
-
-            if (!transferResponse.ok) {
-              const errorText = await transferResponse.text();
-              console.error('Smash transfer creation failed - Status:', transferResponse.status);
-              console.error('Smash transfer creation failed - Response:', errorText);
-              console.error('Smash transfer creation failed - Headers:', JSON.stringify(Object.fromEntries(transferResponse.headers)));
-              
-              // Try to parse as JSON if possible
-              let errorDetails = errorText;
-              try {
-                const errorJson = JSON.parse(errorText);
-                errorDetails = JSON.stringify(errorJson, null, 2);
-              } catch (e) {
-                // Not JSON, use as-is
-              }
-              
-              res.status(transferResponse.status).json({ 
-                error: 'Failed to create Smash transfer',
-                status: transferResponse.status,
-                details: errorDetails 
-              });
-              resolve();
-              return;
-            }
-
-            const transferData = await transferResponse.json();
-            transferId = transferData.transfer?.id || transferData.id;
-
-            if (!transferId) {
-              console.error('No transfer ID in response:', transferData);
-              res.status(500).json({ error: 'Failed to get transfer ID from Smash' });
-              resolve();
-              return;
-            }
-            console.log('Transfer created:', transferId);
-          }
-
-          // Step 2: Upload each file to the transfer
-          console.log(`Uploading ${files.length} files to transfer ${transferId}`);
-          const uploadPromises = files.map(async (file) => {
-            // Use api.fromsmash.com instead of regional subdomain (SSL certificate issue)
-            const fileResponse = await fetch(
-              `https://api.fromsmash.com/v1/transfer/${transferId}/file?version=01-2024`,
-              {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${SMASH_API_KEY}`,
-                  'Content-Type': file.type || 'application/octet-stream',
-                  'X-File-Name': file.name,
-                  'X-File-Size': file.size.toString(),
-                },
-                body: file.data,
-              }
-            );
-
-            if (!fileResponse.ok) {
-              const errorText = await fileResponse.text();
-              throw new Error(`Failed to upload file ${file.name}: ${errorText}`);
-            }
-
-            return await fileResponse.json();
-          });
-
-          await Promise.all(uploadPromises);
-          console.log('All files uploaded successfully');
-
-          // Step 3: Return transfer URL
-          const transferUrl = `https://fromsmash.com/${transferId}`;
-
-          res.status(200).json({
-            success: true,
-            transferUrl: transferUrl,
-            transferId: transferId,
-            fileCount: files.length,
-          });
-          resolve();
-        } catch (error) {
-          console.error('Upload processing error:', error);
-          console.error('Error stack:', error.stack);
-          res.status(500).json({
-            error: 'Upload failed',
-            message: error.message || 'Unknown error occurred',
-          });
-          resolve();
-        }
-      });
-
-      bb.on('error', (error) => {
-        console.error('Busboy parsing error:', error);
-        console.error('Error stack:', error.stack);
-        res.status(500).json({
-          error: 'File parsing failed',
-          message: error.message,
-        });
-        resolve();
-      });
-
-      // Pipe request to busboy
-      console.log('Starting to pipe request to busboy');
+    return new Promise((resolve) => {
       try {
-        if (typeof req.pipe === 'function') {
-          req.pipe(bb);
-          console.log('Request piped successfully');
-        } else {
-          console.error('Request object does not have pipe method');
-          console.error('Request object keys:', Object.keys(req));
+        const bb = Busboy({ headers: req.headers });
+
+        // Handle form fields (like transferId for batch uploads)
+        bb.on('field', (name, value) => {
+          if (name === 'transferId') {
+            existingTransferId = value;
+          }
+        });
+
+        bb.on('file', (name, file, info) => {
+          const { filename, encoding, mimeType } = info;
+          const chunks = [];
+          
+          file.on('data', (data) => {
+            chunks.push(data);
+          });
+          
+          file.on('end', () => {
+            // Create File-like object for Smash SDK
+            const fileData = Buffer.concat(chunks);
+            files.push({
+              name: filename,
+              type: mimeType,
+              data: fileData,
+              size: fileData.length,
+              // Create a File-like object that Smash SDK can use
+              stream: () => {
+                const { Readable } = require('stream');
+                return Readable.from([fileData]);
+              }
+            });
+          });
+        });
+
+        bb.on('finish', async () => {
+          try {
+            if (files.length === 0) {
+              res.status(400).json({ error: 'No files provided' });
+              resolve();
+              return;
+            }
+
+            console.log(`Processing ${files.length} files`);
+
+            // Use Smash SDK to upload files
+            console.log('Initializing Smash uploader...');
+            const uploader = new SmashUploader({
+              region: SMASH_REGION,
+              token: SMASH_API_KEY
+            });
+
+            // Convert Buffer files to File-like objects for Smash SDK
+            // Node.js 18+ has File API, but we need to create it properly
+            const { Blob } = await import('buffer');
+            
+            // Create File-like objects that Smash SDK can use
+            const filesForSmash = files.map(file => {
+              // Create a Blob first
+              const blob = new Blob([file.data], { type: file.type });
+              
+              // Create File object (Node.js 18+ supports File API)
+              // If File is not available, create a File-like object
+              if (typeof File !== 'undefined') {
+                return new File([blob], file.name, { 
+                  type: file.type,
+                  lastModified: Date.now()
+                });
+              } else {
+                // Fallback: create File-like object
+                const fileLike = Object.assign(blob, {
+                  name: file.name,
+                  size: file.size,
+                  type: file.type,
+                  lastModified: Date.now()
+                });
+                return fileLike;
+              }
+            });
+
+            console.log('Starting Smash upload...');
+            const result = await uploader.upload({ files: filesForSmash });
+            
+            console.log('Upload result:', result);
+            
+            const transferUrl = result.transfer?.transferUrl || result.transferUrl || `https://fromsmash.com/${result.transfer?.id || result.id}`;
+            const transferId = result.transfer?.id || result.id;
+
+            if (!transferUrl) {
+              throw new Error('No transfer URL received from Smash');
+            }
+
+            res.status(200).json({
+              success: true,
+              transferUrl: transferUrl,
+              transferId: transferId,
+              fileCount: files.length,
+            });
+            resolve();
+          } catch (error) {
+            console.error('Upload processing error:', error);
+            console.error('Error stack:', error.stack);
+            res.status(500).json({
+              error: 'Upload failed',
+              message: error.message || 'Unknown error occurred',
+            });
+            resolve();
+          }
+        });
+
+        bb.on('error', (error) => {
+          console.error('Busboy parsing error:', error);
+          res.status(500).json({
+            error: 'File parsing failed',
+            message: error.message,
+          });
+          resolve();
+        });
+
+        // Pipe request to busboy
+        console.log('Starting to pipe request to busboy');
+        try {
+          if (typeof req.pipe === 'function') {
+            req.pipe(bb);
+            console.log('Request piped successfully');
+          } else {
+            console.error('Request object does not have pipe method');
+            res.status(500).json({ 
+              error: 'Server configuration error',
+              details: 'Request streaming not supported'
+            });
+            resolve();
+          }
+        } catch (pipeError) {
+          console.error('Error piping request:', pipeError);
           res.status(500).json({ 
-            error: 'Server configuration error',
-            details: 'Request streaming not supported'
+            error: 'Failed to process request',
+            message: pipeError.message 
           });
           resolve();
         }
-      } catch (pipeError) {
-        console.error('Error piping request:', pipeError);
-        console.error('Pipe error stack:', pipeError.stack);
-        res.status(500).json({ 
-          error: 'Failed to process request',
-          message: pipeError.message 
+      } catch (error) {
+        console.error('Handler setup error:', error);
+        res.status(500).json({
+          error: 'Request processing failed',
+          message: error.message || 'Unknown error occurred',
         });
         resolve();
       }
-    } catch (error) {
-      console.error('Handler setup error:', error);
-      console.error('Setup error stack:', error.stack);
-      res.status(500).json({
-        error: 'Request processing failed',
-        message: error.message || 'Unknown error occurred',
-      });
-      resolve();
-    }
-  });
+    });
+  } catch (error) {
+    console.error('Outer handler error:', error);
+    return res.status(500).json({
+      error: 'Request processing failed',
+      message: error.message || 'Unknown error occurred',
+    });
+  }
 }
