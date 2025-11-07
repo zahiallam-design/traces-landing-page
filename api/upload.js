@@ -13,21 +13,20 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  try {
-    // Get Smash API key from environment variables (server-side only)
-    // Use SMASH_API_KEY (without VITE_ prefix) for serverless functions
-    const SMASH_API_KEY = process.env.SMASH_API_KEY || process.env.VITE_SMASH_API_KEY;
-    const SMASH_REGION = process.env.SMASH_REGION || process.env.VITE_SMASH_REGION || 'eu-west-3';
+  // Get Smash API key from environment variables (server-side only)
+  const SMASH_API_KEY = process.env.SMASH_API_KEY || process.env.VITE_SMASH_API_KEY;
+  const SMASH_REGION = process.env.SMASH_REGION || process.env.VITE_SMASH_REGION || 'eu-west-3';
 
-    if (!SMASH_API_KEY || SMASH_API_KEY === 'YOUR_SMASH_API_KEY') {
-      return res.status(500).json({ error: 'Smash API key not configured' });
-    }
+  if (!SMASH_API_KEY || SMASH_API_KEY === 'YOUR_SMASH_API_KEY') {
+    return res.status(500).json({ error: 'Smash API key not configured' });
+  }
 
-    // Parse multipart/form-data using busboy
-    const files = [];
-    let existingTransferId = null;
-    
-    return new Promise((resolve, reject) => {
+  // Parse multipart/form-data using busboy
+  const files = [];
+  let existingTransferId = null;
+
+  return new Promise((resolve, reject) => {
+    try {
       const bb = busboy({ headers: req.headers });
 
       // Handle form fields (like transferId for batch uploads)
@@ -63,15 +62,6 @@ export default async function handler(req, res) {
             return;
           }
 
-          // Check if we're adding to an existing transfer (for batch uploads)
-          let transferId = null;
-          let transferUrl = null;
-          
-          // Check if transferId was provided in form data (for subsequent batches)
-          // Note: busboy doesn't parse non-file fields easily, so we'll check headers or create new transfer
-          // For simplicity, we'll always create a new transfer per batch
-          // In production, you might want to use a different approach for batching
-          
           // Step 1: Create a Smash transfer (or use existing if provided for batch uploads)
           let transferId = existingTransferId;
           
@@ -148,15 +138,15 @@ export default async function handler(req, res) {
             fileCount: files.length,
           });
           resolve();
-      } catch (error) {
-        console.error('Upload error:', error);
-        res.status(500).json({
-          error: 'Upload failed',
-          message: error.message || 'Unknown error occurred',
-        });
-        reject(error);
-      }
-    });
+        } catch (error) {
+          console.error('Upload error:', error);
+          res.status(500).json({
+            error: 'Upload failed',
+            message: error.message || 'Unknown error occurred',
+          });
+          resolve();
+        }
+      });
 
       bb.on('error', (error) => {
         console.error('Busboy error:', error);
@@ -164,18 +154,33 @@ export default async function handler(req, res) {
           error: 'File parsing failed',
           message: error.message,
         });
-        reject(error);
+        resolve();
       });
 
-      req.pipe(bb);
-    });
-
-  } catch (error) {
-    console.error('Handler error:', error);
-    return res.status(500).json({
-      error: 'Request processing failed',
-      message: error.message || 'Unknown error occurred',
-    });
-  }
+      // Pipe request to busboy
+      // For Vercel, we need to handle the request as a stream
+      if (req.pipe) {
+        req.pipe(bb);
+      } else if (req.on) {
+        // If req is an EventEmitter, pipe manually
+        req.on('data', (chunk) => {
+          bb.write(chunk);
+        });
+        req.on('end', () => {
+          bb.end();
+        });
+      } else {
+        console.error('Request object format not supported');
+        res.status(500).json({ error: 'Server configuration error' });
+        resolve();
+      }
+    } catch (error) {
+      console.error('Handler setup error:', error);
+      res.status(500).json({
+        error: 'Request processing failed',
+        message: error.message || 'Unknown error occurred',
+      });
+      resolve();
+    }
+  });
 }
-
