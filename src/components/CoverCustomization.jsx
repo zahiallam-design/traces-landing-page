@@ -96,11 +96,13 @@ function CoverCustomization({ albumIndex, onCoverChange }) {
   };
 
   return (
-    <div className="cover-customization">
-      <h3 className="cover-title">Album {albumIndex + 1} - Cover Customization</h3>
-      <p className="cover-subtitle">Choose how you want your album cover to look</p>
-      
-      <div className="cover-type-selection">
+    <section className="cover-customization">
+      <div className="container">
+        <h2 className="section-title">Album {albumIndex + 1} - Cover Customization</h2>
+        <div className="cover-customization-content">
+          <p className="cover-subtitle">Choose how you want your album cover to look</p>
+          
+          <div className="cover-type-selection">
         <button
           className={`cover-type-btn ${coverType === 'image' ? 'selected' : ''}`}
           onClick={() => handleCoverTypeSelect('image')}
@@ -182,7 +184,9 @@ function CoverCustomization({ albumIndex, onCoverChange }) {
           </div>
         </div>
       )}
-    </div>
+        </div>
+      </div>
+    </section>
   );
 }
 

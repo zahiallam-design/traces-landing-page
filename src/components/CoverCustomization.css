@@ -1,17 +1,28 @@
 .cover-customization {
+  background-color: var(--white);
+  padding: 4rem 0;
+}
+
+.cover-customization .container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.cover-customization-content {
   background: white;
   border: 1px solid var(--border-light);
   border-radius: 12px;
   padding: 2rem;
-  margin-top: 2rem;
-  max-width: 100%;
-  box-sizing: border-box;
+  box-shadow: var(--shadow);
 }
 
 @media (max-width: 900px) {
   .cover-customization {
+    padding: 2rem 0;
+  }
+  
+  .cover-customization-content {
     padding: 1.5rem;
-    margin-top: 1.5rem;
   }
 }
 

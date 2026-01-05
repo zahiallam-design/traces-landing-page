@@ -168,11 +168,12 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
         throw new Error('Upload completed but no transfer URL received');
       }
 
-      // Set to 100% when complete
+      // Set to 100% when complete and stop
       setUploadProgress(100);
+      setIsUploading(false);
       setUploadStatus({ 
         type: 'success', 
-        message: 'Photos uploaded successfully! You can now proceed with your order.' 
+        message: 'Upload complete! Photos uploaded successfully. You can now proceed with your order.' 
       });
       onUploadComplete(transferUrl, totalFiles);
 
@@ -342,7 +343,7 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
                   ))}
                 </div>
               )}
-              {isUploading && (
+              {isUploading && uploadProgress < 100 && (
                 <div className="upload-progress">
                   <div className="progress-bar">
                     <div className="progress-fill" style={{ width: `${uploadProgress}%` }}></div>

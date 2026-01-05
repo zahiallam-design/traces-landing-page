@@ -21,16 +21,24 @@ function App() {
   // Initialize albums array when count is selected
   const handleAlbumCountSelect = (count) => {
     setAlbumCount(count);
-    // Initialize albums array with empty objects
-    const initialAlbums = Array.from({ length: count }, (_, index) => ({
-      id: index,
-      selectedAlbum: null,
-      selectedColor: 'green',
-      smashTransferUrl: null,
-      fileCount: 0,
-      cover: null // { type: 'image'|'text', image: File|null, title: string, date: string }
-    }));
-    setAlbums(initialAlbums);
+    
+    // Preserve existing albums if increasing count, remove extras if decreasing
+    if (count > albums.length) {
+      // Adding more albums - keep existing ones and add new empty ones
+      const newAlbums = Array.from({ length: count - albums.length }, (_, index) => ({
+        id: albums.length + index,
+        selectedAlbum: null,
+        selectedColor: 'green',
+        smashTransferUrl: null,
+        fileCount: 0,
+        cover: null
+      }));
+      setAlbums([...albums, ...newAlbums]);
+    } else if (count < albums.length) {
+      // Reducing count - keep only the first N albums
+      setAlbums(albums.slice(0, count));
+    }
+    // If count is same, do nothing (preserve existing data)
   };
 
   const handleAlbumSelect = (albumIndex, album) => {
@@ -124,6 +132,12 @@ function App() {
   const formatOrderForEmail = (orderData) => {
     let albumsText = '';
     orderData.albums.forEach((albumData, index) => {
+      const coverInfo = albumData.cover?.type === 'image' 
+        ? (albumData.cover.imageUrl ? `Image cover - URL: ${albumData.cover.imageUrl}` : 'Image cover')
+        : albumData.cover?.type === 'text' 
+          ? `Text: "${albumData.cover.title}"${albumData.cover.date ? ` - ${albumData.cover.date}` : ''}`
+          : 'Not selected';
+      
       albumsText += `
 ALBUM ${index + 1}:
 - Size: ${albumData.album.size} Photos
@@ -131,7 +145,7 @@ ALBUM ${index + 1}:
 - Price: $${albumData.album.price.toFixed(2)}
 - Photos: ${albumData.fileCount} photos
 - Transfer URL: ${albumData.smashTransferUrl}
-- Cover: ${albumData.cover?.type === 'image' ? 'Image cover' : albumData.cover?.type === 'text' ? `Text: "${albumData.cover.title}"${albumData.cover.date ? ` - ${albumData.cover.date}` : ''}` : 'Not selected'}
+- Cover: ${coverInfo}
 `;
     });
 
@@ -200,7 +214,7 @@ Order Date: ${new Date(orderData.timestamp).toLocaleString()}
       <h2 style="color: var(--pastel-green-dark); margin-bottom: 1rem;">Order Submitted Successfully!</h2>
       <p style="margin-bottom: 1rem;">Thank you for your order, ${orderData.customer.fullName}!</p>
       ${emailStatusHtml}
-      <p style="margin-bottom: 1rem;">We've received your order and will process it soon.${orderData.customer.email ? ' Check your email for order confirmation.' : ''} You'll also receive updates via WhatsApp.</p>
+      <p style="margin-bottom: 1rem;">We've received your order and will process it soon.${orderData.customer.email ? ' Check your email for order confirmation.' : ''}</p>
       <div style="background-color: #f5f5f5; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; font-family: monospace; font-size: 0.9rem; white-space: pre-wrap;">${orderText}</div>
       <button id="close-modal" style="background-color: var(--pastel-green-dark); color: white; border: none; padding: 0.75rem 2rem; border-radius: 8px; cursor: pointer; font-size: 1rem; width: 100%;">Close</button>
     `;
@@ -234,9 +248,8 @@ Order Date: ${new Date(orderData.timestamp).toLocaleString()}
       <Hero />
       <HowItWorks />
       
-      {!albumCount ? (
-        <AlbumCountSelector onCountSelect={handleAlbumCountSelect} />
-      ) : (
+      <AlbumCountSelector onCountSelect={handleAlbumCountSelect} currentCount={albumCount} />
+      {albumCount && (
         <>
           <div id="album-sections" style={{ marginTop: '2rem' }}>
             {albums.map((album, index) => (
