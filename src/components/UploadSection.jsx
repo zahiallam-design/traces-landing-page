@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import imageCompression from 'browser-image-compression';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 import './UploadSection.css';
 
@@ -11,11 +12,54 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatus, setUploadStatus] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isCompressing, setIsCompressing] = useState(false);
+  const [compressionProgress, setCompressionProgress] = useState(0);
   const fileInputRef = useRef(null);
   const dropzoneRef = useRef(null);
   const abortControllerRef = useRef(null);
 
   const maxFiles = selectedAlbum?.size || 50;
+
+  // Compress images that are larger than 4MB
+  const compressImageIfNeeded = async (file) => {
+    const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
+    
+    // If file is already under 4MB, return as-is
+    if (file.size <= MAX_FILE_SIZE) {
+      return file;
+    }
+    
+    console.log(`Compressing ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)...`);
+    
+    try {
+      const options = {
+        maxSizeMB: 3.5, // Target 3.5MB to be safe
+        maxWidthOrHeight: 4000, // Max dimension
+        useWebWorker: true, // Use web worker for better performance
+        fileType: file.type, // Preserve original type
+        initialQuality: 0.8, // Start with 80% quality
+      };
+      
+      const compressedFile = await imageCompression(file, options);
+      console.log(`Compressed ${file.name}: ${(file.size / 1024 / 1024).toFixed(2)} MB → ${(compressedFile.size / 1024 / 1024).toFixed(2)} MB`);
+      
+      // If still too large, compress more aggressively
+      if (compressedFile.size > MAX_FILE_SIZE) {
+        const aggressiveOptions = {
+          ...options,
+          maxSizeMB: 3.0,
+          initialQuality: 0.6,
+        };
+        return await imageCompression(file, aggressiveOptions);
+      }
+      
+      return compressedFile;
+    } catch (error) {
+      console.error(`Failed to compress ${file.name}:`, error);
+      // If compression fails, return original (will be rejected later)
+      return file;
+    }
+  };
 
   const cancelUpload = useCallback(() => {
     if (abortControllerRef.current) {
@@ -40,16 +84,56 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
     setIsUploading(true);
     setUploadProgress(0);
     setUploadStatus(null);
+    setIsCompressing(false);
+    setCompressionProgress(0);
 
     try {
       console.log('Starting upload via API...', { fileCount: selectedFiles.length });
       
+      // Compress large images before upload
+      const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
+      const filesToCompress = selectedFiles.filter(file => file.size > MAX_FILE_SIZE);
+      let processedFiles = [...selectedFiles];
+      
+      if (filesToCompress.length > 0) {
+        setIsCompressing(true);
+        setUploadStatus({ 
+          type: 'info', 
+          message: `Compressing ${filesToCompress.length} large image(s)...` 
+        });
+        
+        // Compress files one by one with progress
+        for (let i = 0; i < selectedFiles.length; i++) {
+          const file = selectedFiles[i];
+          if (file.size > MAX_FILE_SIZE) {
+            const compressed = await compressImageIfNeeded(file);
+            processedFiles[i] = compressed;
+          }
+          setCompressionProgress(Math.floor(((i + 1) / selectedFiles.length) * 100));
+        }
+        
+        setIsCompressing(false);
+        setCompressionProgress(0);
+        setUploadStatus(null);
+      }
+      
+      // Re-check file sizes after compression
+      const oversizedFiles = processedFiles.filter(file => file.size > MAX_FILE_SIZE);
+      if (oversizedFiles.length > 0) {
+        throw new Error(`Some images are still too large after compression: ${oversizedFiles.map(f => `${f.name} (${(f.size / 1024 / 1024).toFixed(2)} MB)`).join(', ')}. Please use smaller images.`);
+      }
+      
       // Ensure files have proper extensions and unique names
+      // GIF files should have been filtered out already, but double-check
+      const gifFiles = processedFiles.filter(file => file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif'));
+      if (gifFiles.length > 0) {
+        throw new Error('GIF files are not supported. Please remove GIF files and try again.');
+      }
+      
       const mimeToExt = {
         'image/jpeg': '.jpg',
         'image/jpg': '.jpg',
         'image/png': '.png',
-        'image/gif': '.gif',
         'image/webp': '.webp',
         'image/heic': '.heic',
         'image/heif': '.heif'
@@ -57,16 +141,21 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
       
       const usedNames = new Set();
       
-      const filesToUpload = selectedFiles.map((file) => {
+      const filesToUpload = processedFiles.map((file) => {
         if (!(file instanceof File)) {
           throw new Error(`Invalid file object: ${file.name}`);
+        }
+        
+        // Skip GIF files
+        if (file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif')) {
+          throw new Error(`GIF files are not supported: ${file.name}`);
         }
         
         const extension = mimeToExt[file.type] || '.jpg';
         let fileName = file.name;
         
-        // Fix extension if needed
-        if (!fileName.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp|heic|heif)$/i)) {
+        // Fix extension if needed (excluding GIF)
+        if (!fileName.toLowerCase().match(/\.(jpg|jpeg|png|webp|heic|heif)$/i)) {
           fileName = fileName.replace(/\.[^/.]+$/, '') + extension;
         }
         
@@ -90,9 +179,30 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
 
       // Upload files in batches to avoid Vercel's 4.5MB request size limit
       // Vercel serverless functions have a ~4.5MB body size limit
-      // For large files (2-3 MB each), use smaller batches
+      // For large files, use smaller batches (max 4MB per batch to be safe)
+      const MAX_BATCH_SIZE = 4 * 1024 * 1024; // 4MB max per batch
       const averageFileSize = filesToUpload.reduce((sum, file) => sum + file.size, 0) / filesToUpload.length;
-      const BATCH_SIZE = averageFileSize > 1.5 * 1024 * 1024 ? 1 : averageFileSize > 1024 * 1024 ? 2 : 5; // Smaller batches for large files
+      
+      // Check if any single file exceeds 4MB limit
+      const oversizedFiles = filesToUpload.filter(file => file.size > MAX_BATCH_SIZE);
+      if (oversizedFiles.length > 0) {
+        throw new Error(`Files exceed the 4MB size limit: ${oversizedFiles.map(f => `${f.name} (${(f.size / 1024 / 1024).toFixed(2)} MB)`).join(', ')}. Please compress your images.`);
+      }
+      
+      // Calculate batch size based on file sizes
+      let BATCH_SIZE;
+      if (averageFileSize > 3.5 * 1024 * 1024) {
+        // Files are very large (close to 4MB limit) - one per batch
+        BATCH_SIZE = 1;
+      } else if (averageFileSize > 1.5 * 1024 * 1024) {
+        BATCH_SIZE = 1; // One file per batch for large files
+      } else if (averageFileSize > 1024 * 1024) {
+        BATCH_SIZE = 2; // Two files per batch for medium files
+      } else {
+        // For smaller files, calculate how many can fit in 4MB
+        BATCH_SIZE = Math.floor(MAX_BATCH_SIZE / averageFileSize);
+        BATCH_SIZE = Math.min(BATCH_SIZE, 5); // Cap at 5 files per batch
+      }
       const batches = [];
       
       for (let i = 0; i < filesToUpload.length; i += BATCH_SIZE) {
@@ -265,6 +375,22 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
     
     const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
     
+    // Check for GIF files and reject them
+    const gifFiles = imageFiles.filter(file => file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif'));
+    if (gifFiles.length > 0) {
+      alert(`GIF files are not supported. Please remove the GIF file(s) and upload JPEG, PNG, HEIC, or WebP images instead.\n\nGIF files found: ${gifFiles.map(f => f.name).join(', ')}`);
+      return;
+    }
+    
+    // Check file size limit (Vercel has 4.5MB body limit, so we limit individual files to 4MB to be safe)
+    const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
+    const oversizedFiles = imageFiles.filter(file => file.size > MAX_FILE_SIZE);
+    if (oversizedFiles.length > 0) {
+      const oversizedNames = oversizedFiles.map(f => `${f.name} (${(f.size / 1024 / 1024).toFixed(2)} MB)`).join(', ');
+      alert(`Some files are too large. Maximum file size is 4MB. Please compress your images or use smaller files.\n\nLarge files: ${oversizedNames}`);
+      return;
+    }
+    
     // If we already have uploaded files and are adding more, reset upload status
     const willResetUpload = uploadStatus?.type === 'success';
     
@@ -388,7 +514,7 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
                 ref={fileInputRef}
                 type="file"
                 multiple
-                accept="image/*"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif"
                 style={{ display: 'none' }}
                 onChange={(e) => handleFileSelect(e.target.files)}
               />
@@ -444,6 +570,14 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
                   </button>
                 </div>
               )}
+              {isCompressing && (
+                <div className="upload-progress">
+                  <div className="progress-bar">
+                    <div className="progress-fill" style={{ width: `${compressionProgress}%` }}></div>
+                  </div>
+                  <p className="progress-text" style={{ marginTop: '0.5rem' }}>Compressing images... {compressionProgress}%</p>
+                </div>
+              )}
               {isUploading && (
                 <div className="upload-progress">
                   <div className="progress-bar">
@@ -461,9 +595,9 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
                   </div>
                 </div>
               )}
-              {uploadStatus && !isUploading && (
+              {uploadStatus && !isUploading && !isCompressing && (
                 <div className={`upload-status ${uploadStatus.type}`}>
-                  {uploadStatus.type === 'success' ? '✓' : '✗'} {uploadStatus.message}
+                  {uploadStatus.type === 'success' ? '✓' : uploadStatus.type === 'info' ? 'ℹ' : '✗'} {uploadStatus.message}
                 </div>
               )}
             </div>

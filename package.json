@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@smash-sdk/uploader": "^1.0.0",
+    "browser-image-compression": "^2.0.2",
     "busboy": "^1.6.0",
     "jspdf": "^4.0.0",
     "react": "^18.2.0",
