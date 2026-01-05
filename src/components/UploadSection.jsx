@@ -183,10 +183,11 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
       const MAX_BATCH_SIZE = 4 * 1024 * 1024; // 4MB max per batch
       const averageFileSize = filesToUpload.reduce((sum, file) => sum + file.size, 0) / filesToUpload.length;
       
-      // Check if any single file exceeds 4MB limit
-      const oversizedFiles = filesToUpload.filter(file => file.size > MAX_BATCH_SIZE);
-      if (oversizedFiles.length > 0) {
-        throw new Error(`Files exceed the 4MB size limit: ${oversizedFiles.map(f => `${f.name} (${(f.size / 1024 / 1024).toFixed(2)} MB)`).join(', ')}. Please compress your images.`);
+      // Files should already be under 4MB after compression check above
+      // Double-check for safety
+      const stillOversized = filesToUpload.filter(file => file.size > MAX_BATCH_SIZE);
+      if (stillOversized.length > 0) {
+        throw new Error(`Files exceed the 4MB size limit: ${stillOversized.map(f => `${f.name} (${(f.size / 1024 / 1024).toFixed(2)} MB)`).join(', ')}. Please compress your images.`);
       }
       
       // Calculate batch size based on file sizes
