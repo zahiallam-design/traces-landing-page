@@ -23,6 +23,7 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
   // Compress images that are larger than 4MB
   const compressImageIfNeeded = async (file) => {
     const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
+    const TARGET_SIZE = 3.5 * 1024 * 1024; // Target 3.5MB to be safe
     
     // If file is already under 4MB, return as-is
     if (file.size <= MAX_FILE_SIZE) {
@@ -31,34 +32,54 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
     
     console.log(`Compressing ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)...`);
     
-    try {
-      const options = {
-        maxSizeMB: 3.5, // Target 3.5MB to be safe
-        maxWidthOrHeight: 4000, // Max dimension
-        useWebWorker: true, // Use web worker for better performance
-        fileType: file.type, // Preserve original type
-        initialQuality: 0.8, // Start with 80% quality
-      };
-      
-      const compressedFile = await imageCompression(file, options);
-      console.log(`Compressed ${file.name}: ${(file.size / 1024 / 1024).toFixed(2)} MB → ${(compressedFile.size / 1024 / 1024).toFixed(2)} MB`);
-      
-      // If still too large, compress more aggressively
-      if (compressedFile.size > MAX_FILE_SIZE) {
-        const aggressiveOptions = {
-          ...options,
-          maxSizeMB: 3.0,
-          initialQuality: 0.6,
+    let compressedFile = file;
+    let quality = 0.8; // Start with 80% quality
+    let maxSizeMB = 3.5;
+    const maxAttempts = 5;
+    
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const options = {
+          maxSizeMB: maxSizeMB,
+          maxWidthOrHeight: 4000, // Max dimension
+          useWebWorker: true, // Use web worker for better performance
+          fileType: file.type, // Preserve original type
+          initialQuality: quality,
         };
-        return await imageCompression(file, aggressiveOptions);
+        
+        compressedFile = await imageCompression(file, options);
+        console.log(`Attempt ${attempt}: Compressed ${file.name}: ${(file.size / 1024 / 1024).toFixed(2)} MB → ${(compressedFile.size / 1024 / 1024).toFixed(2)} MB`);
+        
+        // If file is now under 4MB, we're done
+        if (compressedFile.size <= MAX_FILE_SIZE) {
+          console.log(`✓ Successfully compressed ${file.name} to ${(compressedFile.size / 1024 / 1024).toFixed(2)} MB`);
+          return compressedFile;
+        }
+        
+        // If still too large, try more aggressive compression
+        if (attempt < maxAttempts) {
+          quality = Math.max(0.3, quality - 0.1); // Reduce quality by 10% each attempt, minimum 30%
+          maxSizeMB = Math.max(2.5, maxSizeMB - 0.2); // Reduce target size, minimum 2.5MB
+          console.log(`File still too large, trying more aggressive compression (quality: ${quality}, maxSizeMB: ${maxSizeMB})...`);
+        }
+      } catch (error) {
+        console.error(`Compression attempt ${attempt} failed for ${file.name}:`, error);
+        if (attempt === maxAttempts) {
+          // Last attempt failed, throw error
+          throw new Error(`Failed to compress ${file.name} after ${maxAttempts} attempts: ${error.message}`);
+        }
+        // Try again with more aggressive settings
+        quality = Math.max(0.3, quality - 0.15);
+        maxSizeMB = Math.max(2.5, maxSizeMB - 0.3);
       }
-      
-      return compressedFile;
-    } catch (error) {
-      console.error(`Failed to compress ${file.name}:`, error);
-      // If compression fails, return original (will be rejected later)
-      return file;
     }
+    
+    // If we get here, compression didn't work - check final size
+    if (compressedFile.size > MAX_FILE_SIZE) {
+      throw new Error(`Unable to compress ${file.name} below 4MB. Final size: ${(compressedFile.size / 1024 / 1024).toFixed(2)} MB. Please use a smaller image.`);
+    }
+    
+    return compressedFile;
   };
 
   const cancelUpload = useCallback(() => {
@@ -103,21 +124,38 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
         });
         
         // Compress files one by one with progress
-        for (let i = 0; i < selectedFiles.length; i++) {
-          const file = selectedFiles[i];
-          if (file.size > MAX_FILE_SIZE) {
-            const compressed = await compressImageIfNeeded(file);
-            processedFiles[i] = compressed;
+        try {
+          for (let i = 0; i < selectedFiles.length; i++) {
+            const file = selectedFiles[i];
+            if (file.size > MAX_FILE_SIZE) {
+              try {
+                const compressed = await compressImageIfNeeded(file);
+                processedFiles[i] = compressed;
+                
+                // Verify compression was successful
+                if (compressed.size > MAX_FILE_SIZE) {
+                  throw new Error(`${file.name} could not be compressed below 4MB. Final size: ${(compressed.size / 1024 / 1024).toFixed(2)} MB`);
+                }
+              } catch (compressionError) {
+                setIsCompressing(false);
+                setCompressionProgress(0);
+                throw compressionError;
+              }
+            }
+            setCompressionProgress(Math.floor(((i + 1) / selectedFiles.length) * 100));
           }
-          setCompressionProgress(Math.floor(((i + 1) / selectedFiles.length) * 100));
+          
+          setIsCompressing(false);
+          setCompressionProgress(0);
+          setUploadStatus(null);
+        } catch (compressionError) {
+          setIsCompressing(false);
+          setCompressionProgress(0);
+          throw compressionError;
         }
-        
-        setIsCompressing(false);
-        setCompressionProgress(0);
-        setUploadStatus(null);
       }
       
-      // Re-check file sizes after compression
+      // Final verification: Re-check file sizes after compression
       const oversizedFiles = processedFiles.filter(file => file.size > MAX_FILE_SIZE);
       if (oversizedFiles.length > 0) {
         throw new Error(`Some images are still too large after compression: ${oversizedFiles.map(f => `${f.name} (${(f.size / 1024 / 1024).toFixed(2)} MB)`).join(', ')}. Please use smaller images.`);
@@ -323,6 +361,10 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
         clearInterval(progressInterval);
       }
       
+      // Reset compression state on error
+      setIsCompressing(false);
+      setCompressionProgress(0);
+      
       let errorMessage = 'Upload failed. ';
       
       if (error.name === 'AbortError' || signal.aborted) {
@@ -333,6 +375,8 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
         errorMessage += 'Server configuration error. Please contact support.';
       } else if (error.message?.includes('413') || error.message?.includes('too large')) {
         errorMessage += 'Files are too large. Please compress your images or upload fewer files at once.';
+      } else if (error.message?.includes('compress') || error.message?.includes('Compression') || error.message?.includes('Unable to compress')) {
+        errorMessage = error.message; // Use compression error message as-is
       } else {
         errorMessage += error.message || 'Please try again. If the problem persists, try compressing your images.';
       }
@@ -345,6 +389,8 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
       if (!signal.aborted) {
         setIsUploading(false);
       }
+      setIsCompressing(false);
+      setCompressionProgress(0);
       abortControllerRef.current = null;
     }
   }, [selectedFiles, isUploading, onUploadComplete]);
