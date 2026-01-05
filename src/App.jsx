@@ -272,7 +272,7 @@ Order Date: ${orderData.timestamp ? new Date(orderData.timestamp).toLocaleString
       
       // Traces Branding Header
       addText('TRACES', 24, true, [45, 134, 89]);
-      addText('Hold your moments!', 12, false, [100, 100, 100]);
+      addText('Hold Your Moments!', 12, false, [100, 100, 100]);
       yPosition += 10;
       
       // Title
