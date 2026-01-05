@@ -106,6 +106,13 @@ export const sendCustomerConfirmationEmail = async (orderData) => {
     // Notes
     customer_notes: orderData.notes || 'None',
     
+    // WhatsApp link
+    whatsapp_link: (() => {
+      const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || '71532156';
+      const cleanNumber = whatsappNumber.replace(/[\s\-+()]/g, '');
+      return `https://api.whatsapp.com/send?phone=${cleanNumber}`;
+    })(),
+    
     // Formatted order summary for customer
     order_summary: formatCustomerOrderSummary(orderData),
   };
@@ -149,7 +156,7 @@ export const sendCustomerConfirmationEmail = async (orderData) => {
 function formatAlbumsDetails(albums) {
   return albums.map((albumData, index) => {
     const coverInfo = albumData.cover?.type === 'image' 
-      ? 'Image cover' 
+      ? (albumData.cover.imageUrl ? `Image cover - URL: ${albumData.cover.imageUrl}` : 'Image cover')
       : albumData.cover?.type === 'text' 
         ? `Text: "${albumData.cover.title}"${albumData.cover.date ? ` - ${albumData.cover.date}` : ''}`
         : 'Not selected';
@@ -165,7 +172,7 @@ function formatOrderSummary(orderData) {
   let albumsText = '';
   orderData.albums.forEach((albumData, index) => {
     const coverInfo = albumData.cover?.type === 'image' 
-      ? 'Image cover' 
+      ? (albumData.cover.imageUrl ? `Image cover - URL: ${albumData.cover.imageUrl}` : 'Image cover')
       : albumData.cover?.type === 'text' 
         ? `Text: "${albumData.cover.title}"${albumData.cover.date ? ` - ${albumData.cover.date}` : ''}`
         : 'Not selected';
@@ -210,7 +217,7 @@ function formatCustomerOrderSummary(orderData) {
   let albumsText = '';
   orderData.albums.forEach((albumData, index) => {
     const coverInfo = albumData.cover?.type === 'image' 
-      ? 'Image cover' 
+      ? (albumData.cover.imageUrl ? `Image cover` : 'Image cover')
       : albumData.cover?.type === 'text' 
         ? `Text: "${albumData.cover.title}"${albumData.cover.date ? ` - ${albumData.cover.date}` : ''}`
         : 'Not selected';
@@ -224,6 +231,10 @@ ALBUM ${index + 1}:
 • Cover: ${coverInfo}
 `;
   });
+
+  const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || '71532156';
+  const cleanWhatsAppNumber = whatsappNumber.replace(/[\s\-+()]/g, '');
+  const whatsappLink = `https://api.whatsapp.com/send?phone=${cleanWhatsAppNumber}`;
 
   return `
 ORDER CONFIRMATION
@@ -249,7 +260,7 @@ Order Date: ${new Date(orderData.timestamp).toLocaleString()}
 WHAT'S NEXT?
 We'll print your photos, assemble your beautiful ${orderData.albums.length > 1 ? 'albums' : 'album'}, and deliver ${orderData.albums.length > 1 ? 'them' : 'it'} to your door. You'll receive updates via WhatsApp at ${orderData.customer.mobileNumber}.
 
-If you have any questions, feel free to contact us via WhatsApp.
+If you have any questions, feel free to contact us via WhatsApp: ${whatsappLink}
 
 Thank you for choosing Traces!
   `.trim();

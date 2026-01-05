@@ -84,12 +84,7 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
       // Track progress
       let uploadedCount = 0;
       const totalFiles = filesToUpload.length;
-      
-      // Simulate progress based on batches
-      const progressInterval = setInterval(() => {
-        const batchProgress = Math.floor((uploadedCount / batches.length) * 90);
-        setUploadProgress(batchProgress);
-      }, 200);
+      let progressInterval = null;
 
       // Upload first batch to create transfer, then add remaining files
       let transferId = null;
@@ -107,6 +102,10 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
         if (transferId) {
           formData.append('transferId', transferId);
         }
+
+        // Update progress before upload
+        const progress = Math.floor(((batchIndex + 1) / batches.length) * 95);
+        setUploadProgress(progress);
 
         const response = await fetch('/api/upload', {
           method: 'POST',
@@ -158,16 +157,18 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
         }
 
         uploadedCount++;
-        const progress = Math.floor((uploadedCount / batches.length) * 90);
-        setUploadProgress(progress);
       }
 
-      clearInterval(progressInterval);
+      // Clear any interval if it exists
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
 
       if (!transferUrl) {
         throw new Error('Upload completed but no transfer URL received');
       }
 
+      // Set to 100% when complete
       setUploadProgress(100);
       setUploadStatus({ 
         type: 'success', 
@@ -177,6 +178,11 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
 
     } catch (error) {
       console.error('Upload error:', error);
+      
+      // Clear interval on error
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
       
       let errorMessage = 'Upload failed. ';
       

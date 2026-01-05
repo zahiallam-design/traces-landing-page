@@ -5,23 +5,33 @@ import './HowItWorks.css';
 const steps = [
   {
     number: 1,
-    title: 'Choose your album: 50 or 100 photos',
-    description: 'Select the size and color that fits your memories'
+    title: 'Select number of albums',
+    description: 'Choose how many albums you want to order (1 to 5 albums)'
   },
   {
     number: 2,
-    title: 'Upload your photos directly',
-    description: 'Send us your favorite moments easily and securely'
+    title: 'Choose your album size and color',
+    description: 'Select 50 or 100 photos and pick your favorite color (green or grey)'
   },
   {
     number: 3,
-    title: 'Fill your details and submit your order',
-    description: 'Tell us where to deliver your beautiful album'
+    title: 'Upload your photos',
+    description: 'Send us your favorite moments easily and securely'
   },
   {
     number: 4,
+    title: 'Customize your album cover',
+    description: 'Choose an image cover or add a text title with optional date'
+  },
+  {
+    number: 5,
+    title: 'Fill your details and submit',
+    description: 'Tell us where to deliver your beautiful albums'
+  },
+  {
+    number: 6,
     title: 'We print, assemble, and deliver',
-    description: 'We print your photos, assemble your album, and deliver it to your door — cash on delivery'
+    description: 'We print your photos, assemble your albums, and deliver them to your door — cash on delivery'
   }
 ];
 

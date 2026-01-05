@@ -6,8 +6,10 @@ function CoverCustomization({ albumIndex, onCoverChange }) {
   const breakpoint = useBreakpoint();
   const [coverType, setCoverType] = useState(null); // 'image' or 'text'
   const [coverImage, setCoverImage] = useState(null);
+  const [coverImageUrl, setCoverImageUrl] = useState(null);
   const [coverTitle, setCoverTitle] = useState('');
   const [coverDate, setCoverDate] = useState('');
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
   const fileInputRef = useRef(null);
 
   const handleCoverTypeSelect = (type) => {
@@ -27,14 +29,45 @@ function CoverCustomization({ albumIndex, onCoverChange }) {
     }
   };
 
-  const handleImageSelect = (e) => {
+  const handleImageSelect = async (e) => {
     const file = e.target.files?.[0];
     if (file && file.type.startsWith('image/')) {
       setCoverImage(file);
-      onCoverChange({
-        type: 'image',
-        image: file
-      });
+      setIsUploadingCover(true);
+      
+      try {
+        // Upload cover image to Smash
+        const formData = new FormData();
+        formData.append('files', file);
+        
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to upload cover image');
+        }
+        
+        const result = await response.json();
+        
+        if (!result.success || !result.transferUrl) {
+          throw new Error('No transfer URL received for cover image');
+        }
+        
+        setCoverImageUrl(result.transferUrl);
+        onCoverChange({
+          type: 'image',
+          image: file,
+          imageUrl: result.transferUrl
+        });
+      } catch (error) {
+        console.error('Cover image upload error:', error);
+        alert('Failed to upload cover image. Please try again.');
+        setCoverImage(null);
+      } finally {
+        setIsUploadingCover(false);
+      }
     }
   };
 
@@ -104,13 +137,19 @@ function CoverCustomization({ albumIndex, onCoverChange }) {
           <button
             className="btn btn-secondary"
             onClick={() => fileInputRef.current?.click()}
+            disabled={isUploadingCover}
           >
-            {coverImage ? 'Change Cover Image' : 'Upload Cover Image'}
+            {isUploadingCover ? 'Uploading...' : coverImage ? 'Change Cover Image' : 'Upload Cover Image'}
           </button>
           {coverImage && (
             <div className="cover-image-preview">
               <img src={URL.createObjectURL(coverImage)} alt="Cover preview" />
               <p className="preview-label">{coverImage.name}</p>
+              {coverImageUrl && (
+                <p className="preview-url" style={{ fontSize: '0.8rem', color: 'var(--pastel-green-dark)', marginTop: '0.5rem', wordBreak: 'break-all' }}>
+                  Cover uploaded: {coverImageUrl}
+                </p>
+              )}
             </div>
           )}
         </div>

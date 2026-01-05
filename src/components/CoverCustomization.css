@@ -4,6 +4,15 @@
   border-radius: 12px;
   padding: 2rem;
   margin-top: 2rem;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 900px) {
+  .cover-customization {
+    padding: 1.5rem;
+    margin-top: 1.5rem;
+  }
 }
 
 .cover-title {
@@ -68,8 +77,11 @@
 .cover-image-preview img {
   max-width: 100%;
   max-height: 300px;
+  width: auto;
+  height: auto;
   border-radius: 8px;
   border: 2px solid var(--border-light);
+  object-fit: contain;
 }
 
 .preview-label {

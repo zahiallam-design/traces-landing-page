@@ -7,15 +7,21 @@ const albums = [
   { size: 100, price: 55 }
 ];
 
-function AlbumCard({ album, isSelected, onSelect, selectedColor, onColorChange }) {
+function AlbumCard({ album, isSelected, onSelect, selectedColor, onColorChange, albumIndex }) {
   const [localColor, setLocalColor] = useState('green');
   const currentColor = isSelected ? selectedColor : localColor;
 
   const handleColorClick = (color) => {
-    if (isSelected) {
-      onColorChange(color);
+    // If album is not selected yet, select it with this color
+    if (!isSelected) {
+      onSelect(album);
+      // Small delay to ensure album is selected before changing color
+      setTimeout(() => {
+        onColorChange(color);
+      }, 10);
     } else {
-      setLocalColor(color);
+      // Album is already selected, just change color
+      onColorChange(color);
     }
   };
 
@@ -43,12 +49,6 @@ function AlbumCard({ album, isSelected, onSelect, selectedColor, onColorChange }
           <span className="color-swatch grey"></span>
         </button>
       </div>
-      <button 
-        className="btn btn-select"
-        onClick={() => onSelect(album)}
-      >
-        Select This Album
-      </button>
     </div>
   );
 }
@@ -77,6 +77,7 @@ function AlbumOptions({ albumIndex, selectedAlbum, onAlbumSelect, selectedColor,
             <AlbumCard
               key={album.size}
               album={album}
+              albumIndex={albumIndex}
               isSelected={selectedAlbum?.size === album.size}
               onSelect={handleSelect}
               selectedColor={selectedColor}

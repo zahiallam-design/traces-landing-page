@@ -25,17 +25,10 @@ function Hero() {
           </p>
           <button 
             className="btn btn-primary"
-            onClick={() => scrollToSection('album-options')}
+            onClick={() => scrollToSection('album-count-selector')}
           >
-            Start Your Album
+            Start Your Order
           </button>
-          <div className="hero-visuals">
-            <div className={`album-preview ${isMobile ? 'album-preview-mobile' : ''}`}>
-              <div className="album-sample green"></div>
-              <div className="album-sample grey"></div>
-            </div>
-            <p className="hero-tagline">Choose 50 or 100 photos, get your album delivered</p>
-          </div>
         </div>
       </div>
     </section>

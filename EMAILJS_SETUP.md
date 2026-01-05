@@ -110,7 +110,7 @@ Order Date: {{order_date}}
 WHAT'S NEXT?
 We'll print your photos, assemble your beautiful albums, and deliver them to your door. You'll receive updates via WhatsApp.
 
-If you have any questions, feel free to contact us via WhatsApp.
+If you have any questions, feel free to contact us via WhatsApp: {{whatsapp_link}}
 
 Thank you for choosing Traces!
 ```
