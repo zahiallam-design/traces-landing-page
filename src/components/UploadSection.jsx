@@ -31,23 +31,27 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
     
     console.log(`Compressing ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)...`);
     
-    // For very large files (>20MB), use more aggressive initial settings
+    // Target just below 4MB (3.8MB) to preserve quality
+    const TARGET_SIZE_MB = 3.8;
+    const TARGET_SIZE = TARGET_SIZE_MB * 1024 * 1024;
+    
+    // For very large files (>20MB), disable web worker (can cause memory issues)
     const isVeryLarge = file.size > 20 * 1024 * 1024;
     
     let currentFile = file; // Use current file (original or previously compressed) for next attempt
-    let quality = isVeryLarge ? 0.6 : 0.7; // Start with lower quality for very large files
-    let maxSizeMB = isVeryLarge ? 2.5 : 3.0; // Start with smaller target for very large files
+    let quality = 0.9; // Start with high quality (90%)
+    let maxSizeMB = TARGET_SIZE_MB; // Target 3.8MB
     const maxAttempts = 5;
     
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         const options = {
           maxSizeMB: maxSizeMB,
-          maxWidthOrHeight: isVeryLarge ? 3000 : 4000, // Smaller max dimension for very large files
+          maxWidthOrHeight: 4000, // Keep high resolution
           useWebWorker: !isVeryLarge, // Disable web worker for very large files (can cause memory issues)
           fileType: currentFile.type, // Preserve original type
           initialQuality: quality,
-          alwaysKeepResolution: false, // Allow resizing to reduce size
+          alwaysKeepResolution: true, // Try to keep resolution, only compress quality
         };
         
         console.log(`Compression attempt ${attempt} options:`, { maxSizeMB, quality, fileSize: (currentFile.size / 1024 / 1024).toFixed(2) + ' MB', useWebWorker: options.useWebWorker });
@@ -64,21 +68,38 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
         
         // If file is now under 4MB, we're done
         if (compressedFile.size <= MAX_FILE_SIZE) {
-          console.log(`✓ Successfully compressed ${file.name} to ${(compressedFile.size / 1024 / 1024).toFixed(2)} MB`);
+          console.log(`✓ Successfully compressed ${file.name} to ${(compressedFile.size / 1024 / 1024).toFixed(2)} MB (target: ~${TARGET_SIZE_MB} MB)`);
           return compressedFile;
         }
         
         // Update currentFile to use compressed version for next attempt
         currentFile = compressedFile;
         
-        // If still too large, try more aggressive compression
+        // If still too large, gradually reduce quality and target size
         if (attempt < maxAttempts) {
-          quality = Math.max(0.3, quality - 0.15); // Reduce quality by 15% each attempt, minimum 30%
-          maxSizeMB = Math.max(2.0, maxSizeMB - 0.3); // Reduce target size more aggressively, minimum 2MB
-          console.log(`File still too large (${(compressedFile.size / 1024 / 1024).toFixed(2)} MB), trying more aggressive compression (quality: ${quality}, maxSizeMB: ${maxSizeMB})...`);
+          // Reduce quality more gradually (by 5-10% per attempt)
+          quality = Math.max(0.5, quality - (attempt === 1 ? 0.05 : 0.1)); // Small reduction first, then more
+          maxSizeMB = Math.max(3.0, maxSizeMB - 0.1); // Reduce target size gradually, minimum 3MB
+          console.log(`File still too large (${(compressedFile.size / 1024 / 1024).toFixed(2)} MB), trying slightly more compression (quality: ${quality}, maxSizeMB: ${maxSizeMB})...`);
         } else {
-          // Last attempt and still too large
-          throw new Error(`Unable to compress ${file.name} below 4MB after ${maxAttempts} attempts. Final size: ${(compressedFile.size / 1024 / 1024).toFixed(2)} MB`);
+          // Last attempt - allow more aggressive compression if needed
+          if (compressedFile.size > MAX_FILE_SIZE) {
+            // Try one more time with more aggressive settings
+            const finalOptions = {
+              maxSizeMB: 3.5,
+              maxWidthOrHeight: 4000,
+              useWebWorker: !isVeryLarge,
+              fileType: currentFile.type,
+              initialQuality: 0.6,
+              alwaysKeepResolution: false, // Allow resizing as last resort
+            };
+            const finalCompressed = await imageCompression(currentFile, finalOptions);
+            if (finalCompressed.size <= MAX_FILE_SIZE) {
+              console.log(`✓ Successfully compressed ${file.name} to ${(finalCompressed.size / 1024 / 1024).toFixed(2)} MB (final attempt)`);
+              return finalCompressed;
+            }
+            throw new Error(`Unable to compress ${file.name} below 4MB after ${maxAttempts} attempts. Final size: ${(finalCompressed.size / 1024 / 1024).toFixed(2)} MB`);
+          }
         }
       } catch (error) {
         console.error(`Compression attempt ${attempt} failed for ${file.name}:`, error);
@@ -121,6 +142,9 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
     setUploadStatus(null);
     setIsCompressing(false);
     setCompressionProgress(0);
+
+    // Declare progressInterval outside try block so it's accessible in catch/finally
+    let progressInterval = null;
 
     try {
       console.log('Starting upload via API...', { fileCount: selectedFiles.length });
