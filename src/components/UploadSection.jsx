@@ -383,14 +383,8 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
       return;
     }
     
-    // Check file size limit (Vercel has 4.5MB body limit, so we limit individual files to 4MB to be safe)
-    const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
-    const oversizedFiles = imageFiles.filter(file => file.size > MAX_FILE_SIZE);
-    if (oversizedFiles.length > 0) {
-      const oversizedNames = oversizedFiles.map(f => `${f.name} (${(f.size / 1024 / 1024).toFixed(2)} MB)`).join(', ');
-      alert(`Some files are too large. Maximum file size is 4MB. Please compress your images or use smaller files.\n\nLarge files: ${oversizedNames}`);
-      return;
-    }
+    // Note: Large files will be automatically compressed when user clicks "Upload Photos"
+    // No need to block file selection here - compression happens during upload
     
     // If we already have uploaded files and are adding more, reset upload status
     const willResetUpload = uploadStatus?.type === 'success';
