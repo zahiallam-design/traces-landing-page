@@ -215,22 +215,78 @@ Order Date: ${new Date(orderData.timestamp).toLocaleString()}
       <p style="margin-bottom: 1rem;">Thank you for your order, ${orderData.customer.fullName}!</p>
       ${emailStatusHtml}
       <p style="margin-bottom: 1rem;">We've received your order and will process it soon.${orderData.customer.email ? ' Check your email for order confirmation.' : ''}</p>
-      <div style="background-color: #f5f5f5; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; font-family: monospace; font-size: 0.9rem; white-space: pre-wrap;">${orderText}</div>
-      <button id="close-modal" style="background-color: var(--pastel-green-dark); color: white; border: none; padding: 0.75rem 2rem; border-radius: 8px; cursor: pointer; font-size: 1rem; width: 100%;">Close</button>
+      <div id="order-summary-content" style="background-color: #f5f5f5; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; font-family: monospace; font-size: 0.9rem; white-space: pre-wrap;">${orderText}</div>
+      <div style="display: flex; gap: 0.75rem; margin-bottom: 1rem;">
+        <button id="print-order" style="background-color: #4a90e2; color: white; border: none; padding: 0.75rem 2rem; border-radius: 8px; cursor: pointer; font-size: 1rem; flex: 1;">Print Order Summary</button>
+        <button id="close-modal" style="background-color: var(--pastel-green-dark); color: white; border: none; padding: 0.75rem 2rem; border-radius: 8px; cursor: pointer; font-size: 1rem; flex: 1;">Close</button>
+      </div>
     `;
     
     modal.appendChild(modalContent);
     document.body.appendChild(modal);
     
-    // Close modal handlers
-    const closeBtn = modalContent.querySelector('#close-modal');
-    closeBtn.addEventListener('click', () => {
-      document.body.removeChild(modal);
+    // Print handler
+    const printBtn = modalContent.querySelector('#print-order');
+    printBtn.addEventListener('click', () => {
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Order Summary - ${orderData.customer.fullName}</title>
+            <style>
+              body {
+                font-family: Arial, sans-serif;
+                padding: 2rem;
+                max-width: 800px;
+                margin: 0 auto;
+              }
+              h1 {
+                color: #2d8659;
+                margin-bottom: 1rem;
+              }
+              .order-details {
+                background-color: #f5f5f5;
+                padding: 1.5rem;
+                border-radius: 8px;
+                font-family: monospace;
+                font-size: 0.9rem;
+                white-space: pre-wrap;
+                margin: 1rem 0;
+              }
+              @media print {
+                body {
+                  padding: 1rem;
+                }
+              }
+            </style>
+          </head>
+          <body>
+            <h1>Order Summary</h1>
+            <p><strong>Customer:</strong> ${orderData.customer.fullName}</p>
+            <p><strong>Order Date:</strong> ${new Date().toLocaleString()}</p>
+            <div class="order-details">${orderText}</div>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      setTimeout(() => {
+        printWindow.print();
+      }, 250);
     });
+    
+    // Close modal handlers
+    const closeModal = () => {
+      document.body.removeChild(modal);
+      // Refresh the page to reset the form
+      window.location.reload();
+    };
+    
+    const closeBtn = modalContent.querySelector('#close-modal');
+    closeBtn.addEventListener('click', closeModal);
     
     modal.addEventListener('click', (e) => {
       if (e.target === modal) {
-        document.body.removeChild(modal);
+        closeModal();
       }
     });
     

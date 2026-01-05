@@ -12,9 +12,10 @@ function Footer() {
     }
   };
 
+  const cleanNumber = WHATSAPP_NUMBER.replace(/[\s\-+()]/g, '');
+  
   const handleWhatsAppClick = (e) => {
     e.preventDefault();
-    const cleanNumber = WHATSAPP_NUMBER.replace(/[\s\-+()]/g, '');
     
     if (!cleanNumber || cleanNumber === 'YOUR_NUMBER' || cleanNumber.length < 10) {
       alert('WhatsApp number not configured. Please contact us through other means.');
@@ -27,6 +28,11 @@ function Footer() {
     window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
     return false;
   };
+
+  // Create fallback URL for href (in case JavaScript is disabled)
+  const whatsappUrl = cleanNumber && cleanNumber !== 'YOUR_NUMBER' && cleanNumber.length >= 10
+    ? `https://api.whatsapp.com/send?phone=${cleanNumber}&text=${encodeURIComponent('Hello! I have a question about your photo album service.')}`
+    : '#';
 
   return (
     <footer id="contact" className="footer">
@@ -42,7 +48,7 @@ function Footer() {
               <div className="contact-item">
                 <strong>WhatsApp:</strong>
                 <a 
-                  href="#" 
+                  href={whatsappUrl}
                   className="whatsapp-link"
                   onClick={handleWhatsAppClick}
                 >

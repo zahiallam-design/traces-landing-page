@@ -14,17 +14,22 @@ function CoverCustomization({ albumIndex, onCoverChange }) {
 
   const handleCoverTypeSelect = (type) => {
     setCoverType(type);
-    // Notify parent immediately
-    if (type === 'text') {
+    // If image type is selected, automatically trigger file input
+    if (type === 'image') {
+      // Small delay to ensure state is updated
+      setTimeout(() => {
+        fileInputRef.current?.click();
+      }, 100);
+      onCoverChange({
+        type: 'image',
+        image: coverImage
+      });
+    } else {
+      // Notify parent immediately for text type
       onCoverChange({
         type: 'text',
         title: coverTitle,
         date: coverDate
-      });
-    } else {
-      onCoverChange({
-        type: 'image',
-        image: coverImage
       });
     }
   };
