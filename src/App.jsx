@@ -270,6 +270,11 @@ Order Date: ${orderData.timestamp ? new Date(orderData.timestamp).toLocaleString
         yPosition += 5;
       };
       
+      // Traces Branding Header
+      addText('TRACES', 24, true, [45, 134, 89]);
+      addText('Photo Album Service', 12, false, [100, 100, 100]);
+      yPosition += 10;
+      
       // Title
       addText('ORDER SUMMARY', 18, true, [45, 134, 89]);
       yPosition += 5;
@@ -319,6 +324,25 @@ Order Date: ${orderData.timestamp ? new Date(orderData.timestamp).toLocaleString
       yPosition += 5;
       const total = orderData.albums.reduce((sum, album) => sum + album.album.price, 0);
       addText(`TOTAL: $${total.toFixed(2)}`, 14, true, [45, 134, 89]);
+      
+      // Contact Information Footer
+      yPosition += 15;
+      addText('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 10, false, [200, 200, 200]);
+      yPosition += 5;
+      addText('CONTACT INFORMATION', 12, true, [45, 134, 89]);
+      yPosition += 3;
+      addText('Traces', 11, true);
+      
+      // Get WhatsApp number from environment
+      const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || '71532156';
+      const cleanWhatsAppNumber = whatsappNumber.replace(/[\s\-+()]/g, '');
+      const formattedWhatsApp = cleanWhatsAppNumber.length > 8 
+        ? `${cleanWhatsAppNumber.slice(0, 2)} ${cleanWhatsAppNumber.slice(2, 5)} ${cleanWhatsAppNumber.slice(5)}`
+        : cleanWhatsAppNumber;
+      
+      addText(`Email: traces.leb@gmail.com`, 10);
+      addText(`WhatsApp: ${formattedWhatsApp}`, 10);
+      addText(`Website: www.traces.com`, 10);
       
       // Download PDF
       const fileName = `Order_Summary_${orderData.orderNumber || 'N/A'}.pdf`;
