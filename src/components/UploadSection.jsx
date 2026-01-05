@@ -171,6 +171,7 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
       // Set to 100% when complete and stop
       setUploadProgress(100);
       setIsUploading(false);
+      
       setUploadStatus({ 
         type: 'success', 
         message: 'Upload complete! Photos uploaded successfully. You can now proceed with your order.' 
@@ -203,14 +204,14 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
   }, [selectedFiles, isUploading, onUploadComplete]);
 
   useEffect(() => {
-    if (selectedFiles.length > 0 && !isUploading) {
+    if (selectedFiles.length > 0 && !isUploading && uploadProgress === 0 && (!uploadStatus || uploadStatus.type !== 'success')) {
       // Small delay to ensure files are fully loaded
       const timer = setTimeout(() => {
         uploadToSmash();
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [selectedFiles, isUploading, uploadToSmash]);
+  }, [selectedFiles, isUploading, uploadProgress, uploadStatus, uploadToSmash]);
 
   const handleFileSelect = (files) => {
     // Prevent uploads if no album is selected

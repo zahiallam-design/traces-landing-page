@@ -1,5 +1,5 @@
 .cover-customization {
-  background-color: var(--white);
+  background-color: var(--neutral-bg);
   padding: 4rem 0;
 }
 
@@ -10,10 +10,10 @@
 
 .cover-customization-content {
   background: white;
-  border: 1px solid var(--border-light);
   border-radius: 12px;
   padding: 2rem;
   box-shadow: var(--shadow);
+  margin-top: 2rem;
 }
 
 @media (max-width: 900px) {
@@ -35,26 +35,29 @@
 
 .cover-subtitle {
   color: var(--text-light);
-  margin-bottom: 1.5rem;
-  font-size: 0.95rem;
+  margin-bottom: 2rem;
+  font-size: 1rem;
+  text-align: center;
 }
 
 .cover-type-selection {
   display: flex;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  justify-content: center;
 }
 
 .cover-type-btn {
-  flex: 1;
+  flex: 0 1 200px;
+  max-width: 200px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
-  padding: 1.5rem;
-  background: white;
+  gap: 0.75rem;
+  padding: 2rem 1.5rem;
+  background: var(--neutral-bg);
   border: 2px solid var(--border-light);
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
   transition: all 0.3s ease;
   font-family: inherit;
@@ -68,6 +71,7 @@
 .cover-type-btn.selected {
   border-color: var(--pastel-green-dark);
   background-color: var(--pastel-green-light);
+  box-shadow: var(--shadow);
 }
 
 .cover-type-btn svg {

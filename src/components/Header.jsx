@@ -33,7 +33,15 @@ function Header() {
             </button>
             <button 
               className="nav-link" 
-              onClick={() => scrollToSection('contact')}
+              onClick={() => {
+                // Scroll to footer/contact section at the end
+                setTimeout(() => {
+                  const footer = document.querySelector('footer');
+                  if (footer) {
+                    footer.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                  }
+                }, 100);
+              }}
             >
               Contact
             </button>

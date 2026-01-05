@@ -8,9 +8,6 @@ const albums = [
 ];
 
 function AlbumCard({ album, isSelected, onSelect, selectedColor, onColorChange, albumIndex }) {
-  const [localColor, setLocalColor] = useState('green');
-  const currentColor = isSelected ? selectedColor : localColor;
-
   const handleColorClick = (color) => {
     // If album is not selected yet, select it with this color
     if (!isSelected) {
@@ -24,25 +21,28 @@ function AlbumCard({ album, isSelected, onSelect, selectedColor, onColorChange, 
       onColorChange(color);
     }
   };
+  
+  // Use selectedColor only if this album is selected, otherwise use default green for display
+  const displayColor = isSelected ? selectedColor : 'green';
 
   return (
     <div className={`album-card ${isSelected ? 'selected' : ''}`}>
       <div className="album-image">
-        <div className={`album-placeholder ${currentColor}`}></div>
+        <div className={`album-placeholder ${displayColor}`}></div>
       </div>
       <h3 className="album-title">Up to {album.size} Photos</h3>
       <p className="album-price">${album.price}</p>
       <p className="album-details">A6 size prints</p>
       <div className="color-selection">
         <button 
-          className={`color-btn ${currentColor === 'green' ? 'active' : ''}`}
+          className={`color-btn ${isSelected && selectedColor === 'green' ? 'active' : ''}`}
           onClick={() => handleColorClick('green')}
           aria-label="Green color"
         >
           <span className="color-swatch green"></span>
         </button>
         <button 
-          className={`color-btn ${currentColor === 'grey' ? 'active' : ''}`}
+          className={`color-btn ${isSelected && selectedColor === 'grey' ? 'active' : ''}`}
           onClick={() => handleColorClick('grey')}
           aria-label="Grey color"
         >
