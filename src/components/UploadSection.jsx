@@ -90,12 +90,16 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
 
       // Upload files in batches to avoid Vercel's 4.5MB request size limit
       // Vercel serverless functions have a ~4.5MB body size limit
-      const BATCH_SIZE = 5; // Upload 5 files at a time
+      // For large files (2-3 MB each), use smaller batches
+      const averageFileSize = filesToUpload.reduce((sum, file) => sum + file.size, 0) / filesToUpload.length;
+      const BATCH_SIZE = averageFileSize > 1.5 * 1024 * 1024 ? 1 : averageFileSize > 1024 * 1024 ? 2 : 5; // Smaller batches for large files
       const batches = [];
       
       for (let i = 0; i < filesToUpload.length; i += BATCH_SIZE) {
         batches.push(filesToUpload.slice(i, i + BATCH_SIZE));
       }
+      
+      console.log(`Uploading ${filesToUpload.length} files in ${batches.length} batches (batch size: ${BATCH_SIZE}, avg file size: ${(averageFileSize / 1024 / 1024).toFixed(2)} MB)`);
 
       console.log(`Uploading ${filesToUpload.length} files in ${batches.length} batches`);
 
@@ -125,57 +129,55 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
         const progress = Math.floor(((batchIndex + 1) / batches.length) * 95);
         setUploadProgress(Math.min(progress, 95)); // Cap at 95% until all batches complete
 
-        const response = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-          signal: signal
-        });
-
-        if (!response.ok) {
-          // Handle errors, especially 413 (Content Too Large)
-          let errorMessage = 'Upload failed';
-          
-          if (response.status === 413) {
-            errorMessage = 'Files are too large. Uploading in smaller batches...';
-            // The batching should handle this, but if a single batch is too large, show error
-            throw new Error('Batch too large. Please upload fewer files at once or compress images.');
-          }
-          
-          // Try to parse JSON error response
-          const contentType = response.headers.get('content-type');
-          if (contentType && contentType.includes('application/json')) {
-            try {
-              const errorData = await response.json();
-              errorMessage = errorData.error || errorData.message || errorMessage;
-            } catch (e) {
-              errorMessage = `Server error (${response.status})`;
-            }
-          } else {
-            // Non-JSON response (like HTML error page)
-            try {
-              const errorText = await response.text();
-              errorMessage = errorText || `Server error (${response.status})`;
-            } catch (e) {
-              errorMessage = `Server error (${response.status})`;
-            }
-          }
-          
-          throw new Error(errorMessage);
-        }
-
-        const result = await response.json();
+        console.log(`Uploading batch ${batchIndex + 1}/${batches.length} (${batch.length} files)...`);
         
-        if (!result.success) {
-          throw new Error(result.error || 'Upload failed');
-        }
+        // Create timeout promise (60 seconds per batch)
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => {
+            reject(new Error('Upload timeout: Request took too long. Please try again or compress your images.'));
+          }, 60000);
+        });
+        
+        try {
+          // Race between fetch and timeout
+          const response = await Promise.race([
+            fetch('/api/upload', {
+              method: 'POST',
+              body: formData,
+              signal: signal
+            }),
+            timeoutPromise
+          ]);
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            let errorData;
+            try {
+              errorData = JSON.parse(errorText);
+            } catch {
+              errorData = { error: errorText || `Server error (${response.status})` };
+            }
+            throw new Error(errorData.error || errorData.message || `Upload failed with status ${response.status}`);
+          }
 
-        // Store transfer info from first batch
-        if (batchIndex === 0) {
-          transferId = result.transferId;
-          transferUrl = result.transferUrl;
-        }
+          const result = await response.json();
+        
+          if (!result.success) {
+            throw new Error(result.error || result.message || 'Upload failed');
+          }
 
-        uploadedCount++;
+          // Store transfer info from first batch
+          if (batchIndex === 0) {
+            transferId = result.transferId;
+            transferUrl = result.transferUrl;
+          }
+
+          uploadedCount++;
+          console.log(`Batch ${batchIndex + 1}/${batches.length} completed successfully`);
+        } catch (batchError) {
+          console.error(`Batch ${batchIndex + 1} failed:`, batchError);
+          throw batchError;
+        }
       }
 
       // Clear any interval if it exists
@@ -214,14 +216,17 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
       
       if (error.name === 'AbortError' || signal.aborted) {
         errorMessage = 'Upload cancelled.';
-      } else if (error.message?.includes('timeout')) {
-        errorMessage += 'Upload took too long. Please try with fewer or smaller files.';
+      } else if (error.message?.includes('timeout') || error.message?.includes('Timeout')) {
+        errorMessage += 'Upload took too long. Large files may take longer. Please try again or compress your images.';
       } else if (error.message?.includes('API key')) {
         errorMessage += 'Server configuration error. Please contact support.';
+      } else if (error.message?.includes('413') || error.message?.includes('too large')) {
+        errorMessage += 'Files are too large. Please compress your images or upload fewer files at once.';
       } else {
-        errorMessage += error.message || 'Please try again.';
+        errorMessage += error.message || 'Please try again. If the problem persists, try compressing your images.';
       }
       
+      console.error('Upload error details:', error);
       setUploadStatus({ type: 'error', message: errorMessage });
       setUploadProgress(0);
       setIsUploading(false);
