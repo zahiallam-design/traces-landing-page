@@ -47,14 +47,16 @@ The project uses your custom breakpoint system:
 2. **Configure Environment Variables** (After deployment):
    - See `ENVIRONMENT_VARIABLES.md` for complete list
    - Add all variables in Vercel: Settings → Environment Variables
-   - Required variables:
-     - `VITE_SMASH_API_KEY` - See `SMASH_SETUP.md`
-     - `VITE_EMAILJS_SERVICE_ID` - See `EMAILJS_SETUP.md`
-     - `VITE_EMAILJS_TEMPLATE_ID` - See `EMAILJS_SETUP.md`
-     - `VITE_EMAILJS_CUSTOMER_TEMPLATE_ID` - See `EMAILJS_SETUP.md`
-     - `VITE_EMAILJS_PUBLIC_KEY` - See `EMAILJS_SETUP.md`
+   - **Server-side variables** (no `VITE_` prefix):
+     - `SMASH_API_KEY` - See `SMASH_SETUP.md`
+     - `SMASH_REGION` - Optional (defaults to `eu-west-3`)
+     - `EMAILJS_SERVICE_ID` - See `EMAILJS_SETUP.md`
+     - `EMAILJS_TEMPLATE_ID` - See `EMAILJS_SETUP.md`
+     - `EMAILJS_CUSTOMER_TEMPLATE_ID` - See `EMAILJS_SETUP.md`
+     - `EMAILJS_PUBLIC_KEY` - See `EMAILJS_SETUP.md`
+     - `EMAILJS_PRIVATE_KEY` - See `EMAILJS_SETUP.md`
+   - **Frontend variables** (with `VITE_` prefix):
      - `VITE_WHATSAPP_NUMBER` - Your WhatsApp number
-   - Optional: `VITE_SMASH_REGION` (defaults to `eu-west-3`)
 
 5. **Add Logo**:
    - Place your logo as `public/logo.png`
@@ -92,16 +94,20 @@ src/
 │   ├── HowItWorks.jsx
 │   ├── AlbumOptions.jsx
 │   ├── UploadSection.jsx
-│   ├── ExtrasSection.jsx
 │   ├── OrderForm.jsx
 │   ├── Gallery.jsx
 │   ├── Footer.jsx
 │   └── WhatsAppButton.jsx
 ├── hooks/
 │   └── useBreakpoint.js  # Custom breakpoint hook
+├── services/
+│   └── emailService.js  # Email sending service
 ├── App.jsx              # Main app component
 ├── main.jsx             # Entry point
 └── index.css            # Global styles
+api/
+├── upload.js            # Serverless function for Smash API uploads
+└── send-email.js        # Serverless function for EmailJS
 ```
 
 ## Using Breakpoints
@@ -148,20 +154,17 @@ function MyComponent() {
 - `selectedAlbum`: Album object to determine max file count
 - `onUploadComplete`: Callback `(transferUrl, fileCount) => void`
 
-### ExtrasSection
-- `notes`: Notes text value
-- `onNotesChange`: Callback `(text) => void`
-- `giftWrap`: Boolean gift wrap state
-- `onGiftWrapChange`: Callback `(checked) => void`
-
 ### OrderForm
 - `selectedAlbum`: Selected album object
 - `selectedColor`: Selected color
 - `giftWrap`: Gift wrap boolean
-- `notes`: Notes text
+- `onGiftWrapChange`: Callback `(checked) => void`
+- `deliveryNotes`: Delivery notes text
+- `onDeliveryNotesChange`: Callback `(text) => void`
 - `smashTransferUrl`: Smash transfer URL from upload
 - `fileCount`: Number of uploaded files
 - `onSubmit`: Callback `(orderData) => void`
+- `isSubmitting`: Boolean indicating if form is submitting
 
 ## Deployment
 
@@ -194,11 +197,20 @@ See `VERCEL_DEPLOYMENT.md` for detailed instructions with screenshots and troubl
 4. **Form Validation**: Add client-side validation library (e.g., react-hook-form)
 5. **Accessibility**: Enhance ARIA labels and keyboard navigation
 
+## Security
+
+This project uses **Vercel Serverless Functions** to keep API keys secure:
+- Smash API key is stored server-side in `/api/upload.js`
+- EmailJS credentials are stored server-side in `/api/send-email.js`
+- Only frontend-safe variables (like WhatsApp number) use `VITE_` prefix
+
+See `SECURE_API_SETUP.md` for details on the secure architecture.
+
 ## Support
 
 - **Environment Variables**: See `ENVIRONMENT_VARIABLES.md` for complete reference
 - **Smash API Setup**: See `SMASH_SETUP.md`
 - **EmailJS Setup**: See `EMAILJS_SETUP.md`
 - **Deployment**: See `VERCEL_DEPLOYMENT.md`
-- **Git Issues**: See `GIT_SETUP.md`
+- **Security Architecture**: See `SECURE_API_SETUP.md`
 

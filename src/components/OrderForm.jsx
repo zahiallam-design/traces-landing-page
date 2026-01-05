@@ -3,14 +3,9 @@ import { useBreakpoint } from '../hooks/useBreakpoint';
 import './OrderForm.css';
 
 function OrderForm({ 
-  selectedAlbum, 
-  selectedColor, 
-  giftWrap,
-  onGiftWrapChange,
+  albums,
   deliveryNotes,
   onDeliveryNotesChange,
-  smashTransferUrl, 
-  fileCount,
   onSubmit,
   isSubmitting = false
 }) {
@@ -24,7 +19,9 @@ function OrderForm({
     mobileNumber: ''
   });
 
-  const total = selectedAlbum?.price || 0;
+  const total = albums.reduce((sum, album) => {
+    return sum + (album.selectedAlbum?.price || 0);
+  }, 0);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -33,28 +30,29 @@ function OrderForm({
       return; // Prevent double submission
     }
     
-    if (!selectedAlbum) {
-      alert('Please select an album size first.');
-      document.getElementById('album-options')?.scrollIntoView({ behavior: 'smooth' });
-      return;
-    }
+    // Validate all albums are complete
+    for (let i = 0; i < albums.length; i++) {
+      const album = albums[i];
+      if (!album.selectedAlbum) {
+        alert(`Please select an album size for Album ${i + 1}.`);
+        document.getElementById(`album-options-${i}`)?.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
 
-    if (!smashTransferUrl) {
-      alert('Please upload your photos first.');
-      document.getElementById('upload-photos')?.scrollIntoView({ behavior: 'smooth' });
-      return;
+      if (!album.smashTransferUrl) {
+        alert(`Please upload photos for Album ${i + 1}.`);
+        document.getElementById(`upload-photos-${i}`)?.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+
+      if (!album.cover) {
+        alert(`Please customize the cover for Album ${i + 1}.`);
+        return;
+      }
     }
 
     const orderData = {
-      album: {
-        size: selectedAlbum.size,
-        color: selectedColor,
-        price: selectedAlbum.price
-      },
       customer: formData,
-      smashTransferUrl,
-      fileCount,
-      giftWrap,
       notes: deliveryNotes,
       total,
       timestamp: new Date().toISOString()
@@ -71,17 +69,25 @@ function OrderForm({
           <div className="order-summary">
             <h3>Order Summary</h3>
             <div className="summary-item">
-              <span>Album:</span>
-              <span>{selectedAlbum ? `${selectedAlbum.size} Photos` : 'Not selected'}</span>
+              <span>Number of Albums:</span>
+              <span>{albums.length}</span>
             </div>
-            <div className="summary-item">
-              <span>Color:</span>
-              <span>{selectedAlbum ? selectedColor.charAt(0).toUpperCase() + selectedColor.slice(1) : '-'}</span>
-            </div>
-            <div className="summary-item">
-              <span>Gift Wrap:</span>
-              <span>{giftWrap ? 'Yes' : 'No'}</span>
-            </div>
+            {albums.map((album, index) => (
+              <div key={index} className="album-summary-item">
+                <div className="summary-item">
+                  <span>Album {index + 1}:</span>
+                  <span>{album.selectedAlbum ? `${album.selectedAlbum.size} Photos` : 'Not selected'}</span>
+                </div>
+                <div className="summary-item">
+                  <span>Color:</span>
+                  <span>{album.selectedAlbum ? album.selectedColor.charAt(0).toUpperCase() + album.selectedColor.slice(1) : '-'}</span>
+                </div>
+                <div className="summary-item">
+                  <span>Price:</span>
+                  <span>${album.selectedAlbum?.price.toFixed(2) || '0.00'}</span>
+                </div>
+              </div>
+            ))}
             <div className="summary-total">
               <span>Total:</span>
               <span>${total.toFixed(2)}</span>
@@ -123,18 +129,6 @@ function OrderForm({
               <small style={{ color: 'var(--text-light)', fontSize: '0.85rem', marginTop: '0.25rem', display: 'block' }}>
                 Add any special delivery instructions or notes for us
               </small>
-            </div>
-            <div className="form-group">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  id="gift-wrap"
-                  name="gift-wrap"
-                  checked={giftWrap}
-                  onChange={(e) => onGiftWrapChange(e.target.checked)}
-                />
-                <span>Gift wrap my album</span>
-              </label>
             </div>
             <div className="form-group">
               <label htmlFor="email">Email Address *</label>

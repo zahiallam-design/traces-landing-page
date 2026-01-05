@@ -1,46 +1,77 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import HowItWorks from './components/HowItWorks';
+import AlbumCountSelector from './components/AlbumCountSelector';
 import AlbumOptions from './components/AlbumOptions';
 import UploadSection from './components/UploadSection';
+import CoverCustomization from './components/CoverCustomization';
 import OrderForm from './components/OrderForm';
 import Gallery from './components/Gallery';
 import Footer from './components/Footer';
 import WhatsAppButton from './components/WhatsAppButton';
-import { initEmailJS, sendOrderEmail, sendCustomerConfirmationEmail } from './services/emailService';
+import { sendOrderEmail, sendCustomerConfirmationEmail } from './services/emailService';
 
 function App() {
-  const [selectedAlbum, setSelectedAlbum] = useState(null);
-  const [selectedColor, setSelectedColor] = useState('green');
-  const [smashTransferUrl, setSmashTransferUrl] = useState(null);
-  const [fileCount, setFileCount] = useState(0);
+  const [albumCount, setAlbumCount] = useState(null);
+  const [albums, setAlbums] = useState([]); // Array of album objects
   const [notes, setNotes] = useState('');
-  const [giftWrap, setGiftWrap] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Initialize EmailJS when app loads
-  useEffect(() => {
-    initEmailJS();
-  }, []);
-
-  const handleAlbumSelect = (album) => {
-    setSelectedAlbum(album);
+  // Initialize albums array when count is selected
+  const handleAlbumCountSelect = (count) => {
+    setAlbumCount(count);
+    // Initialize albums array with empty objects
+    const initialAlbums = Array.from({ length: count }, (_, index) => ({
+      id: index,
+      selectedAlbum: null,
+      selectedColor: 'green',
+      smashTransferUrl: null,
+      fileCount: 0,
+      cover: null // { type: 'image'|'text', image: File|null, title: string, date: string }
+    }));
+    setAlbums(initialAlbums);
   };
 
-  const handleColorChange = (color) => {
-    setSelectedColor(color);
+  const handleAlbumSelect = (albumIndex, album) => {
+    const updatedAlbums = [...albums];
+    updatedAlbums[albumIndex].selectedAlbum = album;
+    setAlbums(updatedAlbums);
   };
 
-  const handleUploadComplete = (transferUrl, count) => {
-    setSmashTransferUrl(transferUrl);
-    setFileCount(count);
+  const handleColorChange = (albumIndex, color) => {
+    const updatedAlbums = [...albums];
+    updatedAlbums[albumIndex].selectedColor = color;
+    setAlbums(updatedAlbums);
+  };
+
+  const handleUploadComplete = (albumIndex, transferUrl, count) => {
+    const updatedAlbums = [...albums];
+    updatedAlbums[albumIndex].smashTransferUrl = transferUrl;
+    updatedAlbums[albumIndex].fileCount = count;
+    setAlbums(updatedAlbums);
+  };
+
+  const handleCoverChange = (albumIndex, coverData) => {
+    const updatedAlbums = [...albums];
+    updatedAlbums[albumIndex].cover = coverData;
+    setAlbums(updatedAlbums);
   };
 
   const handleOrderSubmit = async (orderData) => {
-    // Add notes to order data
+    // Combine albums data with customer info
     const completeOrderData = {
       ...orderData,
+      albums: albums.map(album => ({
+        album: {
+          size: album.selectedAlbum?.size,
+          color: album.selectedColor,
+          price: album.selectedAlbum?.price
+        },
+        smashTransferUrl: album.smashTransferUrl,
+        fileCount: album.fileCount,
+        cover: album.cover
+      })),
       notes
     };
     
@@ -91,30 +122,38 @@ function App() {
   };
 
   const formatOrderForEmail = (orderData) => {
+    let albumsText = '';
+    orderData.albums.forEach((albumData, index) => {
+      albumsText += `
+ALBUM ${index + 1}:
+- Size: ${albumData.album.size} Photos
+- Color: ${albumData.album.color.charAt(0).toUpperCase() + albumData.album.color.slice(1)}
+- Price: $${albumData.album.price.toFixed(2)}
+- Photos: ${albumData.fileCount} photos
+- Transfer URL: ${albumData.smashTransferUrl}
+- Cover: ${albumData.cover?.type === 'image' ? 'Image cover' : albumData.cover?.type === 'text' ? `Text: "${albumData.cover.title}"${albumData.cover.date ? ` - ${albumData.cover.date}` : ''}` : 'Not selected'}
+`;
+    });
+
+    const total = orderData.albums.reduce((sum, album) => sum + album.album.price, 0);
+
     return `
 NEW ALBUM ORDER
 ================
 
-ALBUM DETAILS:
-- Size: ${orderData.album.size} Photos
-- Color: ${orderData.album.color}
-- Price: $${orderData.album.price.toFixed(2)}
+NUMBER OF ALBUMS: ${orderData.albums.length}
 
+${albumsText}
 CUSTOMER DETAILS:
 - Name: ${orderData.customer.fullName}
 - Email: ${orderData.customer.email || 'Not provided'}
 - Address: ${orderData.customer.deliveryAddress}
 - Mobile: ${orderData.customer.mobileNumber}
 
-PHOTOS:
-- Smash Transfer URL: ${orderData.smashTransferUrl}
-- Number of Photos: ${orderData.fileCount}
+DELIVERY NOTES:
+${orderData.notes || 'None'}
 
-EXTRAS:
-- Gift Wrap: ${orderData.giftWrap ? 'Yes' : 'No'}
-- Notes: ${orderData.notes || 'None'}
-
-TOTAL: $${orderData.total.toFixed(2)}
+TOTAL: $${total.toFixed(2)}
 
 Order Date: ${new Date(orderData.timestamp).toLocaleString()}
     `.trim();
@@ -194,28 +233,46 @@ Order Date: ${new Date(orderData.timestamp).toLocaleString()}
       <Header />
       <Hero />
       <HowItWorks />
-      <AlbumOptions
-        selectedAlbum={selectedAlbum}
-        onAlbumSelect={handleAlbumSelect}
-        selectedColor={selectedColor}
-        onColorChange={handleColorChange}
-      />
-      <UploadSection
-        selectedAlbum={selectedAlbum}
-        onUploadComplete={handleUploadComplete}
-      />
-      <OrderForm
-        selectedAlbum={selectedAlbum}
-        selectedColor={selectedColor}
-        giftWrap={giftWrap}
-        onGiftWrapChange={setGiftWrap}
-        deliveryNotes={notes}
-        onDeliveryNotesChange={setNotes}
-        smashTransferUrl={smashTransferUrl}
-        fileCount={fileCount}
-        onSubmit={handleOrderSubmit}
-        isSubmitting={isSubmitting}
-      />
+      
+      {!albumCount ? (
+        <AlbumCountSelector onCountSelect={handleAlbumCountSelect} />
+      ) : (
+        <>
+          <div id="album-sections" style={{ marginTop: '2rem' }}>
+            {albums.map((album, index) => (
+              <div key={album.id} className="album-section-wrapper" style={{ marginBottom: '4rem', paddingBottom: '2rem', borderBottom: index < albums.length - 1 ? '2px solid var(--border-light)' : 'none' }}>
+                <AlbumOptions
+                  albumIndex={index}
+                  selectedAlbum={album.selectedAlbum}
+                  onAlbumSelect={(albumData) => handleAlbumSelect(index, albumData)}
+                  selectedColor={album.selectedColor}
+                  onColorChange={(color) => handleColorChange(index, color)}
+                />
+                <UploadSection
+                  albumIndex={index}
+                  selectedAlbum={album.selectedAlbum}
+                  onUploadComplete={(transferUrl, count) => handleUploadComplete(index, transferUrl, count)}
+                />
+                {album.smashTransferUrl && (
+                  <CoverCustomization
+                    albumIndex={index}
+                    onCoverChange={(coverData) => handleCoverChange(index, coverData)}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+          
+          <OrderForm
+            albums={albums}
+            deliveryNotes={notes}
+            onDeliveryNotesChange={setNotes}
+            onSubmit={handleOrderSubmit}
+            isSubmitting={isSubmitting}
+          />
+        </>
+      )}
+      
       <Gallery />
       <Footer />
       <WhatsAppButton />

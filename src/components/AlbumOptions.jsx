@@ -53,15 +53,15 @@ function AlbumCard({ album, isSelected, onSelect, selectedColor, onColorChange }
   );
 }
 
-function AlbumOptions({ selectedAlbum, onAlbumSelect, selectedColor, onColorChange }) {
+function AlbumOptions({ albumIndex, selectedAlbum, onAlbumSelect, selectedColor, onColorChange }) {
   const breakpoint = useBreakpoint();
   const isMobile = ['xs', 'ss', 'sm'].includes(breakpoint);
 
   const handleSelect = (album) => {
     onAlbumSelect(album);
-    // Scroll to upload section
+    // Scroll to upload section for this album
     setTimeout(() => {
-      const element = document.getElementById('upload-photos');
+      const element = document.getElementById(`upload-photos-${albumIndex}`);
       if (element) {
         element.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
@@ -69,9 +69,9 @@ function AlbumOptions({ selectedAlbum, onAlbumSelect, selectedColor, onColorChan
   };
 
   return (
-    <section id="album-options" className="album-options">
+    <section id={`album-options-${albumIndex}`} className="album-options">
       <div className="container">
-        <h2 className="section-title">Choose Your Album</h2>
+        <h2 className="section-title">Album {albumIndex + 1} - Choose Your Album</h2>
         <div className={`album-cards ${isMobile ? 'album-cards-mobile' : ''}`}>
           {albums.map((album) => (
             <AlbumCard

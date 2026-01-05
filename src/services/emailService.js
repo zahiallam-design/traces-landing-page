@@ -24,10 +24,9 @@ export const sendOrderEmail = async (orderData) => {
     order_date: new Date(orderData.timestamp).toLocaleString(),
     order_total: `$${orderData.total.toFixed(2)}`,
     
-    // Album Details
-    album_size: `${orderData.album.size} Photos`,
-    album_color: orderData.album.color.charAt(0).toUpperCase() + orderData.album.color.slice(1),
-    album_price: `$${orderData.album.price.toFixed(2)}`,
+    // Multiple Albums - format as text
+    album_count: orderData.albums.length.toString(),
+    albums_details: formatAlbumsDetails(orderData.albums),
     
     // Customer Details
     customer_name: orderData.customer.fullName,
@@ -35,12 +34,7 @@ export const sendOrderEmail = async (orderData) => {
     customer_address: orderData.customer.deliveryAddress,
     customer_phone: orderData.customer.mobileNumber,
     
-    // Photo Details
-    photo_transfer_url: orderData.smashTransferUrl,
-    photo_count: orderData.fileCount.toString(),
-    
-    // Extras
-    gift_wrap: orderData.giftWrap ? 'Yes' : 'No',
+    // Notes
     customer_notes: orderData.notes || 'None',
     
     // Formatted order summary (for easy reading)
@@ -102,16 +96,14 @@ export const sendCustomerConfirmationEmail = async (orderData) => {
     order_date: new Date(orderData.timestamp).toLocaleString(),
     order_total: `$${orderData.total.toFixed(2)}`,
     
-    // Album Details
-    album_size: `${orderData.album.size} Photos`,
-    album_color: orderData.album.color.charAt(0).toUpperCase() + orderData.album.color.slice(1),
-    album_price: `$${orderData.album.price.toFixed(2)}`,
+    // Multiple Albums
+    album_count: orderData.albums.length.toString(),
+    albums_details: formatAlbumsDetails(orderData.albums),
     
     // Delivery Details
     delivery_address: orderData.customer.deliveryAddress,
     
-    // Extras
-    gift_wrap: orderData.giftWrap ? 'Yes' : 'No',
+    // Notes
     customer_notes: orderData.notes || 'None',
     
     // Formatted order summary for customer
@@ -152,31 +144,58 @@ export const sendCustomerConfirmationEmail = async (orderData) => {
 };
 
 /**
+ * Format albums details as text
+ */
+function formatAlbumsDetails(albums) {
+  return albums.map((albumData, index) => {
+    const coverInfo = albumData.cover?.type === 'image' 
+      ? 'Image cover' 
+      : albumData.cover?.type === 'text' 
+        ? `Text: "${albumData.cover.title}"${albumData.cover.date ? ` - ${albumData.cover.date}` : ''}`
+        : 'Not selected';
+    
+    return `Album ${index + 1}: ${albumData.album.size} Photos, ${albumData.album.color.charAt(0).toUpperCase() + albumData.album.color.slice(1)}, $${albumData.album.price.toFixed(2)} | ${albumData.fileCount} photos | Cover: ${coverInfo}`;
+  }).join('\n');
+}
+
+/**
  * Format order data as a readable summary for business owner email
  */
 function formatOrderSummary(orderData) {
+  let albumsText = '';
+  orderData.albums.forEach((albumData, index) => {
+    const coverInfo = albumData.cover?.type === 'image' 
+      ? 'Image cover' 
+      : albumData.cover?.type === 'text' 
+        ? `Text: "${albumData.cover.title}"${albumData.cover.date ? ` - ${albumData.cover.date}` : ''}`
+        : 'Not selected';
+    
+    albumsText += `
+ALBUM ${index + 1}:
+- Size: ${albumData.album.size} Photos
+- Color: ${albumData.album.color.charAt(0).toUpperCase() + albumData.album.color.slice(1)}
+- Price: $${albumData.album.price.toFixed(2)}
+- Photos: ${albumData.fileCount} photos
+- Transfer URL: ${albumData.smashTransferUrl}
+- Cover: ${coverInfo}
+`;
+  });
+
   return `
 NEW ALBUM ORDER
 ================
 
-ALBUM DETAILS:
-- Size: ${orderData.album.size} Photos
-- Color: ${orderData.album.color.charAt(0).toUpperCase() + orderData.album.color.slice(1)}
-- Price: $${orderData.album.price.toFixed(2)}
+NUMBER OF ALBUMS: ${orderData.albums.length}
 
+${albumsText}
 CUSTOMER DETAILS:
 - Name: ${orderData.customer.fullName}
 - Email: ${orderData.customer.email || 'Not provided'}
 - Address: ${orderData.customer.deliveryAddress}
 - Mobile: ${orderData.customer.mobileNumber}
 
-PHOTOS:
-- Smash Transfer URL: ${orderData.smashTransferUrl}
-- Number of Photos: ${orderData.fileCount}
-
-EXTRAS:
-- Gift Wrap: ${orderData.giftWrap ? 'Yes' : 'No'}
-- Notes: ${orderData.notes || 'None'}
+DELIVERY NOTES:
+${orderData.notes || 'None'}
 
 TOTAL: $${orderData.total.toFixed(2)}
 
@@ -188,6 +207,11 @@ Order Date: ${new Date(orderData.timestamp).toLocaleString()}
  * Format order data as a readable summary for customer confirmation email
  */
 function formatCustomerOrderSummary(orderData) {
+  let albumsText = '';
+  orderData.albums.forEach((albumData, index) => {
+    albumsText += `- Album ${index + 1}: ${albumData.album.size} Photos, ${albumData.album.color.charAt(0).toUpperCase() + albumData.album.color.slice(1)} Color - $${albumData.album.price.toFixed(2)}\n`;
+  });
+
   return `
 ORDER CONFIRMATION
 ==================
@@ -197,11 +221,7 @@ Thank you for your order, ${orderData.customer.fullName}!
 Your order has been received and we'll start processing it soon.
 
 ORDER DETAILS:
-- Album: ${orderData.album.size} Photos, ${orderData.album.color.charAt(0).toUpperCase() + orderData.album.color.slice(1)} Color
-- Price: $${orderData.album.price.toFixed(2)}
-- Gift Wrap: ${orderData.giftWrap ? 'Yes' : 'No'}
-${orderData.notes ? `- Special Notes: ${orderData.notes}` : ''}
-
+${albumsText}${orderData.notes ? `- Delivery Notes: ${orderData.notes}\n` : ''}
 DELIVERY ADDRESS:
 ${orderData.customer.deliveryAddress}
 
@@ -214,7 +234,7 @@ Order Date: ${new Date(orderData.timestamp).toLocaleString()}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 WHAT'S NEXT?
-We'll print your photos, assemble your beautiful album, and deliver it to your door. You'll receive updates via WhatsApp at ${orderData.customer.mobileNumber}.
+We'll print your photos, assemble your beautiful albums, and deliver them to your door. You'll receive updates via WhatsApp at ${orderData.customer.mobileNumber}.
 
 If you have any questions, feel free to contact us via WhatsApp.
 

@@ -1,11 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 import './UploadSection.css';
 
 // Smash API key is now handled server-side via Vercel Serverless Functions
 // No API key needed in frontend - more secure!
 
-function UploadSection({ selectedAlbum, onUploadComplete }) {
+function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
   const breakpoint = useBreakpoint();
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -16,95 +16,7 @@ function UploadSection({ selectedAlbum, onUploadComplete }) {
 
   const maxFiles = selectedAlbum?.size || 50;
 
-  useEffect(() => {
-    if (selectedFiles.length > 0 && !isUploading) {
-      // Small delay to ensure files are fully loaded
-      const timer = setTimeout(() => {
-        uploadToSmash();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [selectedFiles]);
-
-  const handleFileSelect = (files) => {
-    // Prevent uploads if no album is selected
-    if (!selectedAlbum) {
-      alert('Please select an album size first before uploading photos.');
-      document.getElementById('album-options')?.scrollIntoView({ behavior: 'smooth' });
-      return;
-    }
-    
-    const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
-    
-    if (selectedFiles.length + imageFiles.length > maxFiles) {
-      alert(`You can only upload up to ${maxFiles} photos. Please remove some files or select a different album size.`);
-      return;
-    }
-
-    // Handle duplicate file names by adding unique identifiers
-    const newFiles = imageFiles.map(file => {
-      // Check if file with same name and size already exists
-      const existingFile = selectedFiles.find(f => f.name === file.name && f.size === file.size);
-      
-      if (existingFile) {
-        // Create a new File object with a unique name
-        const timestamp = Date.now();
-        const randomSuffix = Math.random().toString(36).substring(2, 8);
-        const fileExtension = file.name.split('.').pop() || 'jpg';
-        const baseName = file.name.replace(/\.[^/.]+$/, '');
-        const uniqueName = `${baseName}_${timestamp}_${randomSuffix}.${fileExtension}`;
-        
-        // Create new File object with unique name
-        return new File([file], uniqueName, { 
-          type: file.type, 
-          lastModified: file.lastModified 
-        });
-      }
-      
-      return file;
-    });
-
-    setSelectedFiles(prev => [...prev, ...newFiles]);
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    dropzoneRef.current?.classList.remove('dragover');
-    if (!isUploading && selectedAlbum) {
-      handleFileSelect(e.dataTransfer.files);
-    } else if (!selectedAlbum) {
-      alert('Please select an album size first before uploading photos.');
-      document.getElementById('album-options')?.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    dropzoneRef.current?.classList.add('dragover');
-  };
-
-  const handleDragLeave = () => {
-    dropzoneRef.current?.classList.remove('dragover');
-  };
-
-  const removeFile = (index) => {
-    if (isUploading) return;
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
-    if (selectedFiles.length === 1) {
-      setUploadStatus(null);
-      setUploadProgress(0);
-    }
-  };
-
-  const formatFileSize = (bytes) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
-  };
-
-  const uploadToSmash = async () => {
+  const uploadToSmash = useCallback(async () => {
     if (selectedFiles.length === 0 || isUploading) return;
 
     setIsUploading(true);
@@ -281,12 +193,100 @@ function UploadSection({ selectedAlbum, onUploadComplete }) {
     } finally {
       setIsUploading(false);
     }
+  }, [selectedFiles, isUploading, onUploadComplete]);
+
+  useEffect(() => {
+    if (selectedFiles.length > 0 && !isUploading) {
+      // Small delay to ensure files are fully loaded
+      const timer = setTimeout(() => {
+        uploadToSmash();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedFiles, isUploading, uploadToSmash]);
+
+  const handleFileSelect = (files) => {
+    // Prevent uploads if no album is selected
+    if (!selectedAlbum) {
+      alert('Please select an album size first before uploading photos.');
+      document.getElementById('album-options')?.scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
+    
+    const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+    
+    if (selectedFiles.length + imageFiles.length > maxFiles) {
+      alert(`You can only upload up to ${maxFiles} photos. Please remove some files or select a different album size.`);
+      return;
+    }
+
+    // Handle duplicate file names by adding unique identifiers
+    const newFiles = imageFiles.map(file => {
+      // Check if file with same name and size already exists
+      const existingFile = selectedFiles.find(f => f.name === file.name && f.size === file.size);
+      
+      if (existingFile) {
+        // Create a new File object with a unique name
+        const timestamp = Date.now();
+        const randomSuffix = Math.random().toString(36).substring(2, 8);
+        const fileExtension = file.name.split('.').pop() || 'jpg';
+        const baseName = file.name.replace(/\.[^/.]+$/, '');
+        const uniqueName = `${baseName}_${timestamp}_${randomSuffix}.${fileExtension}`;
+        
+        // Create new File object with unique name
+        return new File([file], uniqueName, { 
+          type: file.type, 
+          lastModified: file.lastModified 
+        });
+      }
+      
+      return file;
+    });
+
+    setSelectedFiles(prev => [...prev, ...newFiles]);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    dropzoneRef.current?.classList.remove('dragover');
+    if (!isUploading && selectedAlbum) {
+      handleFileSelect(e.dataTransfer.files);
+    } else if (!selectedAlbum) {
+      alert('Please select an album size first before uploading photos.');
+      document.getElementById('album-options')?.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    dropzoneRef.current?.classList.add('dragover');
+  };
+
+  const handleDragLeave = () => {
+    dropzoneRef.current?.classList.remove('dragover');
+  };
+
+  const removeFile = (index) => {
+    if (isUploading) return;
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    if (selectedFiles.length === 1) {
+      setUploadStatus(null);
+      setUploadProgress(0);
+    }
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
   };
 
   return (
-    <section id="upload-photos" className="upload-section">
+    <section id={`upload-photos-${albumIndex}`} className="upload-section">
       <div className="container">
-        <h2 className="section-title">Upload Your Photos</h2>
+        <h2 className="section-title">Album {albumIndex + 1} - Upload Your Photos</h2>
         {!selectedAlbum ? (
           <div className="upload-disabled-message">
             <p>Please select an album size above to enable photo uploads.</p>
