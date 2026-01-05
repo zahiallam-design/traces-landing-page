@@ -21,7 +21,8 @@ export const sendOrderEmail = async (orderData) => {
   // Format order data for email template
   const templateParams = {
     // Order Information
-    order_date: new Date(orderData.timestamp).toLocaleString(),
+    order_number: orderData.orderNumber || 'N/A',
+    order_date: orderData.timestamp ? new Date(orderData.timestamp).toLocaleString() : new Date().toLocaleString(),
     order_total: `$${orderData.total.toFixed(2)}`,
     
     // Multiple Albums - format as text
@@ -93,7 +94,8 @@ export const sendCustomerConfirmationEmail = async (orderData) => {
     customer_email: orderData.customer.email,
     
     // Order Information
-    order_date: new Date(orderData.timestamp).toLocaleString(),
+    order_number: orderData.orderNumber || 'N/A',
+    order_date: orderData.timestamp ? new Date(orderData.timestamp).toLocaleString() : new Date().toLocaleString(),
     order_total: `$${orderData.total.toFixed(2)}`,
     
     // Multiple Albums
@@ -192,6 +194,8 @@ ALBUM ${index + 1}:
 NEW ALBUM ORDER
 ================
 
+ORDER NUMBER: ${orderData.orderNumber || 'N/A'}
+
 NUMBER OF ALBUMS: ${orderData.albums.length}
 
 ${albumsText}
@@ -206,7 +210,7 @@ ${orderData.notes || 'None'}
 
 TOTAL: $${orderData.total.toFixed(2)}
 
-Order Date: ${new Date(orderData.timestamp).toLocaleString()}
+Order Date: ${orderData.timestamp ? new Date(orderData.timestamp).toLocaleString() : new Date().toLocaleString()}
   `.trim();
 }
 
@@ -244,6 +248,8 @@ Hello! Thank you for your order, ${orderData.customer.fullName}!
 
 Your order has been received and we'll start processing it soon.
 
+ORDER NUMBER: ${orderData.orderNumber || 'N/A'}
+
 ORDER DETAILS:
 ${albumsText}
 DELIVERY ADDRESS:
@@ -253,12 +259,12 @@ ${orderData.notes ? `DELIVERY NOTES:\n${orderData.notes}\n\n` : ''}TOTAL: $${ord
 
 PAYMENT: Cash on Delivery
 
-Order Date: ${new Date(orderData.timestamp).toLocaleString()}
+Order Date: ${orderData.timestamp ? new Date(orderData.timestamp).toLocaleString() : new Date().toLocaleString()}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 WHAT'S NEXT?
-We'll print your photos, assemble your beautiful ${orderData.albums.length > 1 ? 'albums' : 'album'}, and deliver ${orderData.albums.length > 1 ? 'them' : 'it'} to your door.
+We'll print your photos, assemble your ${orderData.albums.length > 1 ? 'albums' : 'album'}, and deliver ${orderData.albums.length > 1 ? 'them' : 'it'} to your doorstep.
 
 If you have any questions, feel free to contact us via WhatsApp: ${whatsappLink}
 

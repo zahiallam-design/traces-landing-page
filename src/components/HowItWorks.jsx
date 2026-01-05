@@ -11,7 +11,7 @@ const steps = [
   {
     number: 2,
     title: 'Choose your album size and color',
-    description: 'Select 50 or 100 photos and pick your favorite color (green or grey)'
+    description: 'Select 50 or 100 photos and pick your preferred color (green or grey)'
   },
   {
     number: 3,

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import jsPDF from 'jspdf';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import HowItWorks from './components/HowItWorks';
@@ -11,6 +12,12 @@ import Gallery from './components/Gallery';
 import Footer from './components/Footer';
 import WhatsAppButton from './components/WhatsAppButton';
 import { sendOrderEmail, sendCustomerConfirmationEmail } from './services/emailService';
+
+// Generate unique order number based on timestamp
+// Uses Unix timestamp in milliseconds - a single number that's always increasing
+const generateOrderNumber = () => {
+  return Date.now().toString();
+};
 
 function App() {
   const [albumCount, setAlbumCount] = useState(null);
@@ -67,9 +74,14 @@ function App() {
   };
 
   const handleOrderSubmit = async (orderData) => {
+    // Generate unique order number
+    const orderNumber = generateOrderNumber();
+    
     // Combine albums data with customer info
     const completeOrderData = {
       ...orderData,
+      orderNumber,
+      timestamp: new Date().toISOString(),
       albums: albums.map(album => ({
         album: {
           size: album.selectedAlbum?.size,
@@ -155,6 +167,8 @@ ALBUM ${index + 1}:
 NEW ALBUM ORDER
 ================
 
+ORDER NUMBER: ${orderData.orderNumber || 'N/A'}
+
 NUMBER OF ALBUMS: ${orderData.albums.length}
 
 ${albumsText}
@@ -169,7 +183,7 @@ ${orderData.notes || 'None'}
 
 TOTAL: $${total.toFixed(2)}
 
-Order Date: ${new Date(orderData.timestamp).toLocaleString()}
+Order Date: ${orderData.timestamp ? new Date(orderData.timestamp).toLocaleString() : new Date().toLocaleString()}
     `.trim();
   };
 
@@ -217,7 +231,7 @@ Order Date: ${new Date(orderData.timestamp).toLocaleString()}
       <p style="margin-bottom: 1rem;">We've received your order and will process it soon.${orderData.customer.email ? ' Check your email for order confirmation.' : ''}</p>
       <div id="order-summary-content" style="background-color: #f5f5f5; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; font-family: monospace; font-size: 0.9rem; white-space: pre-wrap;">${orderText}</div>
       <div style="display: flex; gap: 0.75rem; margin-bottom: 1rem;">
-        <button id="print-order" style="background-color: #4a90e2; color: white; border: none; padding: 0.75rem 2rem; border-radius: 8px; cursor: pointer; font-size: 1rem; flex: 1;">Print Order Summary</button>
+        <button id="download-pdf" style="background-color: #4a90e2; color: white; border: none; padding: 0.75rem 2rem; border-radius: 8px; cursor: pointer; font-size: 1rem; flex: 1;">Download Order Summary</button>
         <button id="close-modal" style="background-color: var(--pastel-green-dark); color: white; border: none; padding: 0.75rem 2rem; border-radius: 8px; cursor: pointer; font-size: 1rem; flex: 1;">Close</button>
       </div>
     `;
@@ -225,53 +239,90 @@ Order Date: ${new Date(orderData.timestamp).toLocaleString()}
     modal.appendChild(modalContent);
     document.body.appendChild(modal);
     
-    // Print handler
-    const printBtn = modalContent.querySelector('#print-order');
-    printBtn.addEventListener('click', () => {
-      const printWindow = window.open('', '_blank');
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>Order Summary - ${orderData.customer.fullName}</title>
-            <style>
-              body {
-                font-family: Arial, sans-serif;
-                padding: 2rem;
-                max-width: 800px;
-                margin: 0 auto;
-              }
-              h1 {
-                color: #2d8659;
-                margin-bottom: 1rem;
-              }
-              .order-details {
-                background-color: #f5f5f5;
-                padding: 1.5rem;
-                border-radius: 8px;
-                font-family: monospace;
-                font-size: 0.9rem;
-                white-space: pre-wrap;
-                margin: 1rem 0;
-              }
-              @media print {
-                body {
-                  padding: 1rem;
-                }
-              }
-            </style>
-          </head>
-          <body>
-            <h1>Order Summary</h1>
-            <p><strong>Customer:</strong> ${orderData.customer.fullName}</p>
-            <p><strong>Order Date:</strong> ${new Date().toLocaleString()}</p>
-            <div class="order-details">${orderText}</div>
-          </body>
-        </html>
-      `);
-      printWindow.document.close();
-      setTimeout(() => {
-        printWindow.print();
-      }, 250);
+    // PDF Download handler
+    const downloadBtn = modalContent.querySelector('#download-pdf');
+    downloadBtn.addEventListener('click', () => {
+      const pdf = new jsPDF();
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 20;
+      let yPosition = margin;
+      
+      // Helper function to add text with word wrap
+      const addText = (text, fontSize = 12, isBold = false, color = [0, 0, 0]) => {
+        pdf.setFontSize(fontSize);
+        pdf.setTextColor(color[0], color[1], color[2]);
+        if (isBold) {
+          pdf.setFont(undefined, 'bold');
+        } else {
+          pdf.setFont(undefined, 'normal');
+        }
+        
+        const lines = pdf.splitTextToSize(text, pageWidth - 2 * margin);
+        lines.forEach((line) => {
+          if (yPosition > pageHeight - margin - 10) {
+            pdf.addPage();
+            yPosition = margin;
+          }
+          pdf.text(line, margin, yPosition);
+          yPosition += fontSize * 0.5;
+        });
+        yPosition += 5;
+      };
+      
+      // Title
+      addText('ORDER SUMMARY', 18, true, [45, 134, 89]);
+      yPosition += 5;
+      
+      // Order Number
+      addText(`Order Number: ${orderData.orderNumber || 'N/A'}`, 14, true);
+      yPosition += 5;
+      
+      // Customer Info
+      addText(`Customer: ${orderData.customer.fullName}`, 12, true);
+      addText(`Order Date: ${orderData.timestamp ? new Date(orderData.timestamp).toLocaleString() : new Date().toLocaleString()}`, 10);
+      yPosition += 5;
+      
+      // Order Details
+      addText('ORDER DETAILS:', 12, true);
+      orderData.albums.forEach((albumData, index) => {
+        const coverInfo = albumData.cover?.type === 'image' 
+          ? (albumData.cover.imageUrl ? 'Image cover' : 'Image cover')
+          : albumData.cover?.type === 'text' 
+            ? `Text: "${albumData.cover.title}"${albumData.cover.date ? ` - ${albumData.cover.date}` : ''}`
+            : 'Not selected';
+        
+        addText(`Album ${index + 1}:`, 11, true);
+        addText(`  Size: ${albumData.album.size} Photos`, 10);
+        addText(`  Color: ${albumData.album.color.charAt(0).toUpperCase() + albumData.album.color.slice(1)}`, 10);
+        addText(`  Price: $${albumData.album.price.toFixed(2)}`, 10);
+        addText(`  Photos: ${albumData.fileCount} photos`, 10);
+        addText(`  Cover: ${coverInfo}`, 10);
+        yPosition += 3;
+      });
+      
+      yPosition += 5;
+      
+      // Customer Details
+      addText('CUSTOMER DETAILS:', 12, true);
+      addText(`Name: ${orderData.customer.fullName}`, 10);
+      addText(`Email: ${orderData.customer.email || 'Not provided'}`, 10);
+      addText(`Address: ${orderData.customer.deliveryAddress}`, 10);
+      addText(`Mobile: ${orderData.customer.mobileNumber}`, 10);
+      
+      if (orderData.notes) {
+        yPosition += 5;
+        addText('DELIVERY NOTES:', 12, true);
+        addText(orderData.notes, 10);
+      }
+      
+      yPosition += 5;
+      const total = orderData.albums.reduce((sum, album) => sum + album.album.price, 0);
+      addText(`TOTAL: $${total.toFixed(2)}`, 14, true, [45, 134, 89]);
+      
+      // Download PDF
+      const fileName = `Order_Summary_${orderData.orderNumber || 'N/A'}.pdf`;
+      pdf.save(fileName);
     });
     
     // Close modal handlers
