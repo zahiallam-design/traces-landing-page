@@ -13,11 +13,29 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
   const dropzoneRef = useRef(null);
+  const abortControllerRef = useRef(null);
 
   const maxFiles = selectedAlbum?.size || 50;
 
+  const cancelUpload = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsUploading(false);
+    setUploadProgress(0);
+    setUploadStatus({ 
+      type: 'error', 
+      message: 'Upload cancelled by user.' 
+    });
+  }, []);
+
   const uploadToSmash = useCallback(async () => {
     if (selectedFiles.length === 0 || isUploading) return;
+
+    // Create new abort controller for this upload
+    abortControllerRef.current = new AbortController();
+    const signal = abortControllerRef.current.signal;
 
     setIsUploading(true);
     setUploadProgress(0);
@@ -103,13 +121,14 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
           formData.append('transferId', transferId);
         }
 
-        // Update progress before upload
+        // Update progress before upload - more granular for better feedback
         const progress = Math.floor(((batchIndex + 1) / batches.length) * 95);
-        setUploadProgress(progress);
+        setUploadProgress(Math.min(progress, 95)); // Cap at 95% until all batches complete
 
         const response = await fetch('/api/upload', {
           method: 'POST',
           body: formData,
+          signal: signal
         });
 
         if (!response.ok) {
@@ -181,6 +200,11 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
     } catch (error) {
       console.error('Upload error:', error);
       
+      // Don't show error if upload was cancelled
+      if (signal.aborted) {
+        return;
+      }
+      
       // Clear interval on error
       if (progressInterval) {
         clearInterval(progressInterval);
@@ -188,7 +212,9 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
       
       let errorMessage = 'Upload failed. ';
       
-      if (error.message?.includes('timeout')) {
+      if (error.name === 'AbortError' || signal.aborted) {
+        errorMessage = 'Upload cancelled.';
+      } else if (error.message?.includes('timeout')) {
         errorMessage += 'Upload took too long. Please try with fewer or smaller files.';
       } else if (error.message?.includes('API key')) {
         errorMessage += 'Server configuration error. Please contact support.';
@@ -198,20 +224,26 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
       
       setUploadStatus({ type: 'error', message: errorMessage });
       setUploadProgress(0);
-    } finally {
       setIsUploading(false);
+    } finally {
+      if (!signal.aborted) {
+        setIsUploading(false);
+      }
+      abortControllerRef.current = null;
     }
   }, [selectedFiles, isUploading, onUploadComplete]);
 
-  useEffect(() => {
-    if (selectedFiles.length > 0 && !isUploading && uploadProgress === 0 && (!uploadStatus || uploadStatus.type !== 'success')) {
-      // Small delay to ensure files are fully loaded
-      const timer = setTimeout(() => {
-        uploadToSmash();
-      }, 100);
-      return () => clearTimeout(timer);
+  // Manual upload - no automatic trigger
+  const handleUploadClick = () => {
+    if (selectedFiles.length === 0) {
+      alert('Please select at least one photo to upload.');
+      return;
     }
-  }, [selectedFiles, isUploading, uploadProgress, uploadStatus, uploadToSmash]);
+    if (isUploading) {
+      return;
+    }
+    uploadToSmash();
+  };
 
   const handleFileSelect = (files) => {
     // Prevent uploads if no album is selected
@@ -221,7 +253,15 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
       return;
     }
     
+    // If currently uploading, cancel it first
+    if (isUploading) {
+      cancelUpload();
+    }
+    
     const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+    
+    // If we already have uploaded files and are adding more, reset upload status
+    const willResetUpload = uploadStatus?.type === 'success';
     
     if (selectedFiles.length + imageFiles.length > maxFiles) {
       alert(`You can only upload up to ${maxFiles} photos. Please remove some files or select a different album size.`);
@@ -251,6 +291,13 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
       return file;
     });
 
+    // Reset upload state if adding files after successful upload
+    if (willResetUpload) {
+      setUploadStatus(null);
+      setUploadProgress(0);
+      onUploadComplete(null, 0);
+    }
+
     setSelectedFiles(prev => [...prev, ...newFiles]);
   };
 
@@ -275,12 +322,37 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
   };
 
   const removeFile = (index) => {
-    if (isUploading) return;
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
-    if (selectedFiles.length === 1) {
+    // Don't allow removing files after upload is complete
+    if (uploadStatus?.type === 'success') {
+      return;
+    }
+    
+    if (isUploading) {
+      // If uploading, cancel the upload first
+      cancelUpload();
+    }
+    
+    const newFiles = selectedFiles.filter((_, i) => i !== index);
+    setSelectedFiles(newFiles);
+    
+    // If all files removed, clear upload status and notify parent
+    if (newFiles.length === 0) {
       setUploadStatus(null);
       setUploadProgress(0);
+      // Clear the transfer URL in parent component
+      onUploadComplete(null, 0);
     }
+  };
+  
+  const clearAllFiles = () => {
+    if (isUploading) {
+      cancelUpload();
+    }
+    
+    setSelectedFiles([]);
+    setUploadStatus(null);
+    setUploadProgress(0);
+    onUploadComplete(null, 0);
   };
 
   const formatFileSize = (bytes) => {
@@ -340,19 +412,51 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
                       index={index}
                       onRemove={removeFile}
                       formatFileSize={formatFileSize}
+                      isUploadComplete={uploadStatus?.type === 'success'}
                     />
                   ))}
                 </div>
               )}
-              {isUploading && uploadProgress < 100 && (
+              {selectedFiles.length > 0 && !isUploading && uploadStatus?.type !== 'success' && (
+                <div style={{ marginTop: '1rem', display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+                  <button 
+                    onClick={handleUploadClick}
+                    className="btn btn-primary"
+                    style={{ padding: '0.75rem 2rem', fontSize: '1rem' }}
+                  >
+                    Upload Photos
+                  </button>
+                </div>
+              )}
+              {uploadStatus?.type === 'success' && (
+                <div style={{ marginTop: '1rem', display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+                  <button 
+                    onClick={clearAllFiles}
+                    className="btn btn-secondary"
+                    style={{ padding: '0.75rem 2rem', fontSize: '1rem' }}
+                  >
+                    Clear All & Start Over
+                  </button>
+                </div>
+              )}
+              {isUploading && (
                 <div className="upload-progress">
                   <div className="progress-bar">
                     <div className="progress-fill" style={{ width: `${uploadProgress}%` }}></div>
                   </div>
-                  <p className="progress-text">Uploading... {uploadProgress}%</p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <p className="progress-text">Uploading... {uploadProgress}% ({selectedFiles.length} files)</p>
+                    <button 
+                      onClick={cancelUpload}
+                      className="btn btn-secondary"
+                      style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+                    >
+                      Cancel Upload
+                    </button>
+                  </div>
                 </div>
               )}
-              {uploadStatus && (
+              {uploadStatus && !isUploading && (
                 <div className={`upload-status ${uploadStatus.type}`}>
                   {uploadStatus.type === 'success' ? '✓' : '✗'} {uploadStatus.message}
                 </div>
@@ -365,7 +469,7 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
   );
 }
 
-function FileItem({ file, index, onRemove, formatFileSize }) {
+function FileItem({ file, index, onRemove, formatFileSize, isUploadComplete }) {
   const [preview, setPreview] = useState(null);
 
   useEffect(() => {
@@ -383,7 +487,18 @@ function FileItem({ file, index, onRemove, formatFileSize }) {
           <div className="file-size">{formatFileSize(file.size)}</div>
         </div>
       </div>
-      <button className="file-remove" onClick={() => onRemove(index)} aria-label="Remove file">
+      <button 
+        className="file-remove" 
+        onClick={() => onRemove(index)} 
+        aria-label="Remove file"
+        disabled={isUploadComplete}
+        style={{ 
+          opacity: isUploadComplete ? 0.5 : 1,
+          cursor: isUploadComplete ? 'not-allowed' : 'pointer',
+          pointerEvents: isUploadComplete ? 'none' : 'auto'
+        }}
+        title={isUploadComplete ? 'Files are locked after upload. Use "Clear All" to start over.' : 'Remove file'}
+      >
         ×
       </button>
     </div>
