@@ -240,7 +240,7 @@ ALBUM ${index + 1}:
 ORDER CONFIRMATION
 ==================
 
-Thank you for your order, ${orderData.customer.fullName}!
+Hello! Thank you for your order, ${orderData.customer.fullName}!
 
 Your order has been received and we'll start processing it soon.
 
@@ -258,7 +258,7 @@ Order Date: ${new Date(orderData.timestamp).toLocaleString()}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 WHAT'S NEXT?
-We'll print your photos, assemble your beautiful ${orderData.albums.length > 1 ? 'albums' : 'album'}, and deliver ${orderData.albums.length > 1 ? 'them' : 'it'} to your door. You'll receive updates via WhatsApp at ${orderData.customer.mobileNumber}.
+We'll print your photos, assemble your beautiful ${orderData.albums.length > 1 ? 'albums' : 'album'}, and deliver ${orderData.albums.length > 1 ? 'them' : 'it'} to your door.
 
 If you have any questions, feel free to contact us via WhatsApp: ${whatsappLink}
 

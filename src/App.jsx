@@ -277,6 +277,8 @@ Order Date: ${new Date(orderData.timestamp).toLocaleString()}
     // Close modal handlers
     const closeModal = () => {
       document.body.removeChild(modal);
+      // Scroll to top before refresh
+      window.scrollTo(0, 0);
       // Refresh the page to reset the form
       window.location.reload();
     };
@@ -343,6 +345,18 @@ Order Date: ${new Date(orderData.timestamp).toLocaleString()}
       )}
       
       <Gallery />
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '4rem 2rem', backgroundColor: 'transparent' }}>
+        <img 
+          src="/logo.jpeg" 
+          alt="Traces Logo" 
+          style={{ 
+            maxWidth: '300px', 
+            width: '100%', 
+            height: 'auto',
+            objectFit: 'contain'
+          }} 
+        />
+      </div>
       <Footer />
       <WhatsAppButton />
     </div>
