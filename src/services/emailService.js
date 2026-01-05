@@ -144,7 +144,7 @@ export const sendCustomerConfirmationEmail = async (orderData) => {
 };
 
 /**
- * Format albums details as text
+ * Format albums details as text for email templates
  */
 function formatAlbumsDetails(albums) {
   return albums.map((albumData, index) => {
@@ -154,7 +154,7 @@ function formatAlbumsDetails(albums) {
         ? `Text: "${albumData.cover.title}"${albumData.cover.date ? ` - ${albumData.cover.date}` : ''}`
         : 'Not selected';
     
-    return `Album ${index + 1}: ${albumData.album.size} Photos, ${albumData.album.color.charAt(0).toUpperCase() + albumData.album.color.slice(1)}, $${albumData.album.price.toFixed(2)} | ${albumData.fileCount} photos | Cover: ${coverInfo}`;
+    return `• Album ${index + 1}: ${albumData.album.size} Photos, ${albumData.album.color.charAt(0).toUpperCase() + albumData.album.color.slice(1)} Color - $${albumData.album.price.toFixed(2)} (${albumData.fileCount} photos, Cover: ${coverInfo})`;
   }).join('\n');
 }
 
@@ -209,7 +209,20 @@ Order Date: ${new Date(orderData.timestamp).toLocaleString()}
 function formatCustomerOrderSummary(orderData) {
   let albumsText = '';
   orderData.albums.forEach((albumData, index) => {
-    albumsText += `- Album ${index + 1}: ${albumData.album.size} Photos, ${albumData.album.color.charAt(0).toUpperCase() + albumData.album.color.slice(1)} Color - $${albumData.album.price.toFixed(2)}\n`;
+    const coverInfo = albumData.cover?.type === 'image' 
+      ? 'Image cover' 
+      : albumData.cover?.type === 'text' 
+        ? `Text: "${albumData.cover.title}"${albumData.cover.date ? ` - ${albumData.cover.date}` : ''}`
+        : 'Not selected';
+    
+    albumsText += `
+ALBUM ${index + 1}:
+• Size: ${albumData.album.size} Photos
+• Color: ${albumData.album.color.charAt(0).toUpperCase() + albumData.album.color.slice(1)}
+• Price: $${albumData.album.price.toFixed(2)}
+• Photos: ${albumData.fileCount} photos
+• Cover: ${coverInfo}
+`;
   });
 
   return `
@@ -221,11 +234,11 @@ Thank you for your order, ${orderData.customer.fullName}!
 Your order has been received and we'll start processing it soon.
 
 ORDER DETAILS:
-${albumsText}${orderData.notes ? `- Delivery Notes: ${orderData.notes}\n` : ''}
+${albumsText}
 DELIVERY ADDRESS:
 ${orderData.customer.deliveryAddress}
 
-TOTAL: $${orderData.total.toFixed(2)}
+${orderData.notes ? `DELIVERY NOTES:\n${orderData.notes}\n\n` : ''}TOTAL: $${orderData.total.toFixed(2)}
 
 PAYMENT: Cash on Delivery
 
@@ -234,7 +247,7 @@ Order Date: ${new Date(orderData.timestamp).toLocaleString()}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 WHAT'S NEXT?
-We'll print your photos, assemble your beautiful albums, and deliver them to your door. You'll receive updates via WhatsApp at ${orderData.customer.mobileNumber}.
+We'll print your photos, assemble your beautiful ${orderData.albums.length > 1 ? 'albums' : 'album'}, and deliver ${orderData.albums.length > 1 ? 'them' : 'it'} to your door. You'll receive updates via WhatsApp at ${orderData.customer.mobileNumber}.
 
 If you have any questions, feel free to contact us via WhatsApp.
 

@@ -37,37 +37,26 @@ New Album Order Received!
 
 Order Date: {{order_date}}
 Order Total: {{order_total}}
+Number of Albums: {{album_count}}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-ALBUM DETAILS:
-• Size: {{album_size}}
-• Color: {{album_color}}
-• Price: {{album_price}}
+ORDER DETAILS:
+{{order_summary}}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 CUSTOMER DETAILS:
 • Name: {{customer_name}}
+• Email: {{customer_email}}
 • Address: {{customer_address}}
 • Phone: {{customer_phone}}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{{#customer_notes}}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-PHOTO DETAILS:
-• Number of Photos: {{photo_count}}
-• Smash Transfer URL: {{photo_transfer_url}}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-EXTRAS:
-• Gift Wrap: {{gift_wrap}}
-• Customer Notes: {{customer_notes}}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Order Summary:
-{{order_summary}}
+DELIVERY NOTES:
+{{customer_notes}}
+{{/customer_notes}}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -93,11 +82,16 @@ Thank you for your order! We've received it and will start processing soon.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-ORDER DETAILS:
-• Album: {{album_size}}, {{album_color}} Color
-• Price: {{album_price}}
-• Gift Wrap: {{gift_wrap}}
-{{#customer_notes}}• Special Notes: {{customer_notes}}{{/customer_notes}}
+ORDER SUMMARY:
+Number of Albums: {{album_count}}
+
+{{order_summary}}
+
+{{#customer_notes}}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+DELIVERY NOTES:
+{{customer_notes}}
+{{/customer_notes}}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -114,7 +108,7 @@ Order Date: {{order_date}}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 WHAT'S NEXT?
-We'll print your photos, assemble your beautiful album, and deliver it to your door. You'll receive updates via WhatsApp.
+We'll print your photos, assemble your beautiful albums, and deliver them to your door. You'll receive updates via WhatsApp.
 
 If you have any questions, feel free to contact us via WhatsApp.
 
