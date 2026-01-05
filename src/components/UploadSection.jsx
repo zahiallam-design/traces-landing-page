@@ -157,7 +157,17 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
                   throw new Error(`${file.name} could not be compressed below 4MB. Final size: ${compressedSizeMB} MB`);
                 }
                 
-                processedFiles[i] = compressed;
+                // Convert Blob to File if needed (browser-image-compression returns Blob)
+                let compressedFile = compressed;
+                if (compressed instanceof Blob && !(compressed instanceof File)) {
+                  compressedFile = new File([compressed], file.name, {
+                    type: file.type,
+                    lastModified: file.lastModified || Date.now()
+                  });
+                  console.log(`Converted compressed Blob to File object for ${file.name}`);
+                }
+                
+                processedFiles[i] = compressedFile;
                 console.log(`✓ File ${file.name} successfully compressed and ready for upload`);
               } catch (compressionError) {
                 console.error(`Compression failed for ${file.name}:`, compressionError);
@@ -287,7 +297,6 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
       // Track progress
       let uploadedCount = 0;
       const totalFiles = filesToUpload.length;
-      let progressInterval = null;
 
       // Upload first batch to create transfer, then add remaining files
       let transferId = null;
