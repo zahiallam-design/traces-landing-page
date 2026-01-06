@@ -20,36 +20,101 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
 
   const maxFiles = selectedAlbum?.size || 50;
 
+  // Convert DNG (RAW) files to JPEG for compression
+  const convertDngToJpeg = async (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            
+            canvas.toBlob((blob) => {
+              if (!blob) {
+                reject(new Error('Failed to convert DNG to JPEG'));
+                return;
+              }
+              const jpegFile = new File([blob], file.name.replace(/\.dng$/i, '.jpg'), {
+                type: 'image/jpeg',
+                lastModified: file.lastModified || Date.now()
+              });
+              console.log(`Converted DNG ${file.name} to JPEG (${(file.size / 1024 / 1024).toFixed(2)} MB → ${(jpegFile.size / 1024 / 1024).toFixed(2)} MB)`);
+              resolve(jpegFile);
+            }, 'image/jpeg', 0.95); // High quality JPEG
+          } catch (error) {
+            reject(new Error(`Failed to convert DNG: ${error.message}`));
+          }
+        };
+        img.onerror = () => {
+          reject(new Error('Browser does not support DNG format. Please convert to JPEG first.'));
+        };
+        img.src = e.target.result;
+      };
+      reader.onerror = () => {
+        reject(new Error('Failed to read DNG file'));
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
   // Compress images that are larger than 4MB
   const compressImageIfNeeded = async (file) => {
     const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
     
-    // If file is already under 4MB, return as-is
-    if (file.size <= MAX_FILE_SIZE) {
-      return file;
+    // Check if file is DNG - convert to JPEG first
+    const isDng = file.name.toLowerCase().endsWith('.dng') || 
+                  file.type === 'image/x-adobe-dng' || 
+                  file.type === 'image/dng';
+    
+    let fileToCompress = file;
+    
+    if (isDng) {
+      console.log(`DNG file detected: ${file.name}, converting to JPEG first...`);
+      try {
+        fileToCompress = await convertDngToJpeg(file);
+      } catch (error) {
+        throw new Error(`DNG conversion failed: ${error.message}`);
+      }
     }
     
-    console.log(`Compressing ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)...`);
+    // If file is already under 4MB, return as-is
+    if (fileToCompress.size <= MAX_FILE_SIZE) {
+      return fileToCompress;
+    }
+    
+    console.log(`Compressing ${fileToCompress.name} (${(fileToCompress.size / 1024 / 1024).toFixed(2)} MB)...`);
     
     // Target just below 4MB (3.8MB) to preserve quality
     const TARGET_SIZE_MB = 3.8;
     const TARGET_SIZE = TARGET_SIZE_MB * 1024 * 1024;
     
     // For very large files (>20MB), disable web worker (can cause memory issues)
-    const isVeryLarge = file.size > 20 * 1024 * 1024;
+    const isVeryLarge = fileToCompress.size > 20 * 1024 * 1024;
     
-    let currentFile = file; // Use current file (original or previously compressed) for next attempt
+    let currentFile = fileToCompress; // Use current file (original or previously compressed) for next attempt
     let quality = 0.9; // Start with high quality (90%)
     let maxSizeMB = TARGET_SIZE_MB; // Target 3.8MB
     const maxAttempts = 5;
     
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
+        // For AVIF, try to preserve format; for others, convert to JPEG if needed
+        let outputType = currentFile.type;
+        if (isDng || currentFile.type === 'image/avif') {
+          // Convert AVIF and DNG to JPEG for better compression support
+          outputType = 'image/jpeg';
+        }
+        
         const options = {
           maxSizeMB: maxSizeMB,
           maxWidthOrHeight: 4000, // Keep high resolution
           useWebWorker: !isVeryLarge, // Disable web worker for very large files (can cause memory issues)
-          fileType: currentFile.type, // Preserve original type
+          fileType: outputType, // Convert DNG/AVIF to JPEG for compression
           initialQuality: quality,
           alwaysKeepResolution: true, // Try to keep resolution, only compress quality
         };
@@ -64,11 +129,11 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
         });
         
         const compressedFile = await Promise.race([compressionPromise, timeoutPromise]);
-        console.log(`Attempt ${attempt}: Compressed ${file.name}: ${(currentFile.size / 1024 / 1024).toFixed(2)} MB → ${(compressedFile.size / 1024 / 1024).toFixed(2)} MB`);
+        console.log(`Attempt ${attempt}: Compressed ${fileToCompress.name}: ${(currentFile.size / 1024 / 1024).toFixed(2)} MB → ${(compressedFile.size / 1024 / 1024).toFixed(2)} MB`);
         
         // If file is now under 4MB, we're done
         if (compressedFile.size <= MAX_FILE_SIZE) {
-          console.log(`✓ Successfully compressed ${file.name} to ${(compressedFile.size / 1024 / 1024).toFixed(2)} MB (target: ~${TARGET_SIZE_MB} MB)`);
+          console.log(`✓ Successfully compressed ${fileToCompress.name} to ${(compressedFile.size / 1024 / 1024).toFixed(2)} MB (target: ~${TARGET_SIZE_MB} MB)`);
           return compressedFile;
         }
         
@@ -89,23 +154,23 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
               maxSizeMB: 3.5,
               maxWidthOrHeight: 4000,
               useWebWorker: !isVeryLarge,
-              fileType: currentFile.type,
+              fileType: (isDng || currentFile.type === 'image/avif' || currentFile.name.toLowerCase().endsWith('.avif')) ? 'image/jpeg' : currentFile.type, // Convert DNG/AVIF to JPEG
               initialQuality: 0.6,
               alwaysKeepResolution: false, // Allow resizing as last resort
             };
             const finalCompressed = await imageCompression(currentFile, finalOptions);
             if (finalCompressed.size <= MAX_FILE_SIZE) {
-              console.log(`✓ Successfully compressed ${file.name} to ${(finalCompressed.size / 1024 / 1024).toFixed(2)} MB (final attempt)`);
+              console.log(`✓ Successfully compressed ${fileToCompress.name} to ${(finalCompressed.size / 1024 / 1024).toFixed(2)} MB (final attempt)`);
               return finalCompressed;
             }
-            throw new Error(`Unable to compress ${file.name} below 4MB after ${maxAttempts} attempts. Final size: ${(finalCompressed.size / 1024 / 1024).toFixed(2)} MB`);
+            throw new Error(`Unable to compress ${fileToCompress.name} below 4MB after ${maxAttempts} attempts. Final size: ${(finalCompressed.size / 1024 / 1024).toFixed(2)} MB`);
           }
         }
       } catch (error) {
-        console.error(`Compression attempt ${attempt} failed for ${file.name}:`, error);
+        console.error(`Compression attempt ${attempt} failed for ${fileToCompress.name}:`, error);
         if (attempt === maxAttempts) {
           // Last attempt failed, throw error
-          throw new Error(`Failed to compress ${file.name} after ${maxAttempts} attempts: ${error.message}`);
+          throw new Error(`Failed to compress ${fileToCompress.name} after ${maxAttempts} attempts: ${error.message}`);
         }
         // Try again with more aggressive settings
         quality = Math.max(0.3, quality - 0.2);
@@ -114,7 +179,7 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
     }
     
     // Should never reach here, but just in case
-    throw new Error(`Unable to compress ${file.name} below 4MB. Please use a smaller image.`);
+    throw new Error(`Unable to compress ${fileToCompress.name} below 4MB. Please use a smaller image.`);
   };
 
   const cancelUpload = useCallback(() => {
@@ -228,10 +293,38 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
       }
       
       // Ensure files have proper extensions and unique names
-      // GIF files should have been filtered out already, but double-check
-      const gifFiles = processedFiles.filter(file => file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif'));
-      if (gifFiles.length > 0) {
-        throw new Error('GIF files are not supported. Please remove GIF files and try again.');
+      // Validate file types before upload (double-check for any unsupported formats)
+      const supportedTypes = [
+        'image/jpeg', 'image/jpg', 'image/png', 'image/webp',
+        'image/heic', 'image/heif', 'image/avif', 'image/x-adobe-dng', 'image/dng'
+      ];
+      const supportedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif', '.avif', '.dng'];
+      const unsupportedFormats = ['gif', 'bmp', 'tiff', 'tif', 'svg'];
+      
+      const invalidFiles = processedFiles.filter(file => {
+        if (!(file instanceof File)) {
+          return true;
+        }
+        const hasSupportedType = supportedTypes.includes(file.type.toLowerCase());
+        const hasSupportedExtension = supportedExtensions.some(ext => 
+          file.name.toLowerCase().endsWith(ext)
+        );
+        const hasUnsupportedExtension = unsupportedFormats.some(ext =>
+          file.name.toLowerCase().endsWith(`.${ext}`)
+        );
+        const isUnsupportedType = file.type && (
+          file.type.toLowerCase().includes('gif') ||
+          file.type.toLowerCase().includes('bmp') ||
+          file.type.toLowerCase().includes('tiff') ||
+          file.type.toLowerCase().includes('svg')
+        );
+        
+        return (!hasSupportedType && !hasSupportedExtension) || hasUnsupportedExtension || isUnsupportedType;
+      });
+      
+      if (invalidFiles.length > 0) {
+        const invalidNames = invalidFiles.map(f => f.name).join(', ');
+        throw new Error(`Unsupported image format detected: ${invalidNames}\n\nSupported formats: JPEG, PNG, WebP, HEIC, HEIF, AVIF, DNG\n\nPlease convert these files to a supported format and try again.`);
       }
       
       const mimeToExt = {
@@ -240,7 +333,10 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
         'image/png': '.png',
         'image/webp': '.webp',
         'image/heic': '.heic',
-        'image/heif': '.heif'
+        'image/heif': '.heif',
+        'image/avif': '.avif',
+        'image/x-adobe-dng': '.dng',
+        'image/dng': '.dng'
       };
       
       const usedNames = new Set();
@@ -259,8 +355,13 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
         let fileName = file.name;
         
         // Fix extension if needed (excluding GIF)
-        if (!fileName.toLowerCase().match(/\.(jpg|jpeg|png|webp|heic|heif)$/i)) {
+        if (!fileName.toLowerCase().match(/\.(jpg|jpeg|png|webp|heic|heif|avif|dng)$/i)) {
           fileName = fileName.replace(/\.[^/.]+$/, '') + extension;
+        }
+        
+        // If DNG was converted to JPEG, update extension
+        if (fileName.toLowerCase().endsWith('.dng')) {
+          fileName = fileName.replace(/\.dng$/i, '.jpg');
         }
         
         // Ensure unique filename
@@ -485,12 +586,52 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
       cancelUpload();
     }
     
+    // List of supported image formats
+    const supportedTypes = [
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/webp',
+      'image/heic',
+      'image/heif',
+      'image/avif',
+      'image/x-adobe-dng',
+      'image/dng'
+    ];
+    
+    const supportedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif', '.avif', '.dng'];
+    
     const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
     
-    // Check for GIF files and reject them
-    const gifFiles = imageFiles.filter(file => file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif'));
-    if (gifFiles.length > 0) {
-      alert(`GIF files are not supported. Please remove the GIF file(s) and upload JPEG, PNG, HEIC, or WebP images instead.\n\nGIF files found: ${gifFiles.map(f => f.name).join(', ')}`);
+    // Check for unsupported file types
+    const unsupportedFiles = imageFiles.filter(file => {
+      const hasSupportedType = supportedTypes.includes(file.type.toLowerCase());
+      const hasSupportedExtension = supportedExtensions.some(ext => 
+        file.name.toLowerCase().endsWith(ext)
+      );
+      // If file has no type or extension doesn't match, check if it's a known unsupported format
+      const isGif = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif');
+      const isBmp = file.type === 'image/bmp' || file.name.toLowerCase().endsWith('.bmp');
+      const isTiff = file.type === 'image/tiff' || file.name.toLowerCase().endsWith('.tiff') || file.name.toLowerCase().endsWith('.tif');
+      const isSvg = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg');
+      
+      // File is unsupported if:
+      // 1. It's a known unsupported format (GIF, BMP, TIFF, SVG)
+      // 2. OR it doesn't have a supported type AND doesn't have a supported extension
+      return isGif || isBmp || isTiff || isSvg || (!hasSupportedType && !hasSupportedExtension);
+    });
+    
+    if (unsupportedFiles.length > 0) {
+      const unsupportedNames = unsupportedFiles.map(f => f.name).join(', ');
+      const unsupportedTypes = unsupportedFiles.map(f => {
+        if (f.type === 'image/gif' || f.name.toLowerCase().endsWith('.gif')) return 'GIF';
+        if (f.type === 'image/bmp' || f.name.toLowerCase().endsWith('.bmp')) return 'BMP';
+        if (f.type === 'image/tiff' || f.name.toLowerCase().match(/\.(tiff|tif)$/i)) return 'TIFF';
+        if (f.type === 'image/svg+xml' || f.name.toLowerCase().endsWith('.svg')) return 'SVG';
+        return f.type || 'Unknown format';
+      }).join(', ');
+      
+      alert(`Unsupported image format detected!\n\nSupported formats: JPEG, PNG, WebP, HEIC, HEIF, AVIF, DNG\n\nUnsupported files:\n${unsupportedNames}\n\nFormat(s): ${unsupportedTypes}\n\nPlease convert these files to a supported format and try again.`);
       return;
     }
     
@@ -620,7 +761,7 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
                 ref={fileInputRef}
                 type="file"
                 multiple
-                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,image/avif,image/x-adobe-dng,image/dng,.dng,.avif"
                 style={{ display: 'none' }}
                 onChange={(e) => handleFileSelect(e.target.files)}
               />
