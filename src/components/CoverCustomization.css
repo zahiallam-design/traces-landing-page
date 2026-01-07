@@ -96,6 +96,20 @@
   gap: 1rem;
 }
 
+.cover-size-note {
+  background-color: var(--pastel-green-light);
+  padding: 1rem;
+  border-radius: 8px;
+  border-left: 4px solid var(--pastel-green-dark);
+  color: var(--text-dark);
+  font-size: 0.95rem;
+  margin-bottom: 1rem;
+}
+
+.cover-upload-error {
+  margin-top: 0.5rem;
+}
+
 .cover-image-preview {
   margin-top: 1rem;
   text-align: center;
@@ -107,7 +121,7 @@
   width: auto;
   height: auto;
   border-radius: 8px;
-  border: 2px solid var(--border-light);
+  border: 2px solid var(--border-color);
   object-fit: contain;
 }
 
@@ -136,7 +150,7 @@
 
 .cover-text-section input {
   padding: 0.75rem;
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   font-size: 1rem;
   font-family: inherit;

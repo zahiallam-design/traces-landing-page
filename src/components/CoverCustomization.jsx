@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useBreakpoint } from '../hooks/useBreakpoint';
+import imageCompression from 'browser-image-compression';
 import './CoverCustomization.css';
 
 function CoverCustomization({ albumIndex, onCoverChange }) {
@@ -10,6 +11,8 @@ function CoverCustomization({ albumIndex, onCoverChange }) {
   const [coverTitle, setCoverTitle] = useState('');
   const [coverDate, setCoverDate] = useState('');
   const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const [isCompressingCover, setIsCompressingCover] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
   const fileInputRef = useRef(null);
 
   const handleCoverTypeSelect = (type) => {
@@ -34,45 +37,175 @@ function CoverCustomization({ albumIndex, onCoverChange }) {
     }
   };
 
+  // Compress cover image if needed (same logic as main upload)
+  const compressCoverImageIfNeeded = async (file) => {
+    const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
+    
+    if (file.size <= MAX_FILE_SIZE) {
+      return file;
+    }
+    
+    console.log(`Compressing cover image ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)...`);
+    
+    const TARGET_SIZE_MB = 3.8;
+    const isVeryLarge = file.size > 20 * 1024 * 1024;
+    let currentFile = file;
+    let quality = 0.9;
+    let maxSizeMB = TARGET_SIZE_MB;
+    const maxAttempts = 5;
+    
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const isAvif = currentFile.type === 'image/avif' || currentFile.name.toLowerCase().endsWith('.avif');
+        let outputType = currentFile.type;
+        if (isAvif || currentFile.type === 'image/avif') {
+          outputType = 'image/jpeg';
+        }
+        
+        const options = {
+          maxSizeMB: maxSizeMB,
+          maxWidthOrHeight: 4000,
+          useWebWorker: !isVeryLarge,
+          fileType: outputType,
+          initialQuality: quality,
+          alwaysKeepResolution: true,
+        };
+        
+        const compressionTimeout = isVeryLarge ? 60000 : 30000;
+        const compressionPromise = imageCompression(currentFile, options);
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Compression timeout')), compressionTimeout);
+        });
+        
+        const compressedFile = await Promise.race([compressionPromise, timeoutPromise]);
+        
+        if (compressedFile.size <= MAX_FILE_SIZE) {
+          console.log(`✓ Successfully compressed cover image to ${(compressedFile.size / 1024 / 1024).toFixed(2)} MB`);
+          return compressedFile;
+        }
+        
+        currentFile = compressedFile;
+        if (attempt < maxAttempts) {
+          quality = Math.max(0.5, quality - (attempt === 1 ? 0.05 : 0.1));
+          maxSizeMB = Math.max(3.0, maxSizeMB - 0.1);
+        } else {
+          const finalOptions = {
+            maxSizeMB: 3.5,
+            maxWidthOrHeight: 4000,
+            useWebWorker: !isVeryLarge,
+            fileType: (isAvif || currentFile.type === 'image/avif') ? 'image/jpeg' : currentFile.type,
+            initialQuality: 0.6,
+            alwaysKeepResolution: false,
+          };
+          const finalCompressed = await imageCompression(currentFile, finalOptions);
+          if (finalCompressed.size <= MAX_FILE_SIZE) {
+            return finalCompressed;
+          }
+          throw new Error(`Unable to compress cover image below 4MB. Final size: ${(finalCompressed.size / 1024 / 1024).toFixed(2)} MB`);
+        }
+      } catch (error) {
+        if (attempt === maxAttempts) {
+          throw new Error(`Failed to compress cover image: ${error.message}`);
+        }
+        quality = Math.max(0.3, quality - 0.2);
+        maxSizeMB = Math.max(2.0, maxSizeMB - 0.4);
+      }
+    }
+    
+    throw new Error(`Unable to compress cover image below 4MB`);
+  };
+
   const handleImageSelect = async (e) => {
     const file = e.target.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-      setCoverImage(file);
-      setIsUploadingCover(true);
-      
-      try {
-        // Upload cover image to Smash
-        const formData = new FormData();
-        formData.append('files', file);
-        
-        const response = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to upload cover image');
-        }
-        
-        const result = await response.json();
-        
-        if (!result.success || !result.transferUrl) {
-          throw new Error('No transfer URL received for cover image');
-        }
-        
-        setCoverImageUrl(result.transferUrl);
-        onCoverChange({
-          type: 'image',
-          image: file,
-          imageUrl: result.transferUrl
-        });
-      } catch (error) {
-        console.error('Cover image upload error:', error);
-        alert('Failed to upload cover image. Please try again.');
-        setCoverImage(null);
-      } finally {
-        setIsUploadingCover(false);
+    if (!file) return;
+    
+    // Validate file type (same as main upload)
+    const supportedTypes = [
+      'image/jpeg', 'image/jpg', 'image/png', 'image/webp',
+      'image/heic', 'image/heif', 'image/avif'
+    ];
+    const supportedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif', '.avif'];
+    const unsupportedFormats = ['gif', 'bmp', 'tiff', 'tif', 'svg', 'dng'];
+    
+    // Check for DNG
+    const isDng = file.name.toLowerCase().endsWith('.dng') || 
+                  file.type === 'image/x-adobe-dng' || 
+                  file.type === 'image/dng';
+    
+    if (isDng) {
+      alert(`DNG (RAW) files are not supported!\n\nBrowsers cannot convert RAW image files. Please convert your DNG file to JPEG first.\n\nSupported formats: JPEG, PNG, WebP, HEIC, HEIF, AVIF`);
+      return;
+    }
+    
+    // Check for other unsupported formats
+    const hasSupportedType = supportedTypes.includes(file.type.toLowerCase());
+    const hasSupportedExtension = supportedExtensions.some(ext => 
+      file.name.toLowerCase().endsWith(ext)
+    );
+    const hasUnsupportedExtension = unsupportedFormats.some(ext =>
+      file.name.toLowerCase().endsWith(`.${ext}`)
+    );
+    const isUnsupportedType = file.type && (
+      file.type.toLowerCase().includes('gif') ||
+      file.type.toLowerCase().includes('bmp') ||
+      file.type.toLowerCase().includes('tiff') ||
+      file.type.toLowerCase().includes('svg')
+    );
+    
+    if ((!hasSupportedType && !hasSupportedExtension) || hasUnsupportedExtension || isUnsupportedType) {
+      const formatName = file.type || 'Unknown format';
+      alert(`Unsupported image format detected!\n\nFile: ${file.name}\nFormat: ${formatName}\n\nSupported formats: JPEG, PNG, WebP, HEIC, HEIF, AVIF\n\nPlease convert this file to a supported format and try again.`);
+      return;
+    }
+    
+    setUploadError(null);
+    setIsCompressingCover(true);
+    
+    try {
+      // Compress if needed
+      let fileToUpload = file;
+      if (file.size > 4 * 1024 * 1024) {
+        fileToUpload = await compressCoverImageIfNeeded(file);
       }
+      
+      setIsCompressingCover(false);
+      setIsUploadingCover(true);
+      setCoverImage(fileToUpload);
+      
+      // Upload cover image to Smash
+      const formData = new FormData();
+      formData.append('files', fileToUpload);
+      
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Failed to upload cover image');
+      }
+      
+      const result = await response.json();
+      
+      if (!result.success || !result.transferUrl) {
+        throw new Error('No transfer URL received for cover image');
+      }
+      
+      setCoverImageUrl(result.transferUrl);
+      onCoverChange({
+        type: 'image',
+        image: fileToUpload,
+        imageUrl: result.transferUrl
+      });
+    } catch (error) {
+      console.error('Cover image upload error:', error);
+      setUploadError(error.message || 'Failed to upload cover image. Please try again.');
+      setCoverImage(null);
+      setCoverImageUrl(null);
+    } finally {
+      setIsUploadingCover(false);
+      setIsCompressingCover(false);
     }
   };
 
@@ -134,29 +267,32 @@ function CoverCustomization({ albumIndex, onCoverChange }) {
 
           {coverType === 'image' && (
             <div className="cover-image-section">
+              <p className="cover-size-note">
+                <strong>Note:</strong> Your cover image will be printed in A7 size (7.4 cm × 10.5 cm / 2.9" × 4.1")
+              </p>
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,image/avif,.avif"
                 style={{ display: 'none' }}
                 onChange={handleImageSelect}
               />
               <button
                 className="btn btn-secondary"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={isUploadingCover}
+                disabled={isUploadingCover || isCompressingCover}
               >
-                {isUploadingCover ? 'Uploading...' : coverImage ? 'Change Cover Image' : 'Upload Cover Image'}
+                {isCompressingCover ? 'Compressing...' : isUploadingCover ? 'Uploading...' : coverImage ? 'Change Cover Image' : 'Select Cover Image'}
               </button>
+              {uploadError && (
+                <div className="cover-upload-error">
+                  <p style={{ color: '#e74c3c', fontSize: '0.9rem', marginTop: '0.5rem' }}>{uploadError}</p>
+                </div>
+              )}
               {coverImage && (
                 <div className="cover-image-preview">
                   <img src={URL.createObjectURL(coverImage)} alt="Cover preview" />
                   <p className="preview-label">{coverImage.name}</p>
-                  {coverImageUrl && (
-                    <p className="preview-url" style={{ fontSize: '0.8rem', color: 'var(--pastel-green-dark)', marginTop: '0.5rem', wordBreak: 'break-all' }}>
-                      Cover uploaded: {coverImageUrl}
-                    </p>
-                  )}
                 </div>
               )}
             </div>
