@@ -145,7 +145,7 @@ function App() {
     let albumsText = '';
     orderData.albums.forEach((albumData, index) => {
       const coverInfo = albumData.cover?.type === 'image' 
-        ? (albumData.cover.imageUrl ? `Image cover - URL: ${albumData.cover.imageUrl}` : 'Image cover')
+        ? 'Image cover'
         : albumData.cover?.type === 'text' 
           ? `Text: "${albumData.cover.title}"${albumData.cover.date ? ` - ${albumData.cover.date}` : ''}`
           : 'Not selected';
@@ -156,7 +156,6 @@ ALBUM ${index + 1}:
 - Color: ${albumData.album.color.charAt(0).toUpperCase() + albumData.album.color.slice(1)}
 - Price: $${albumData.album.price.toFixed(2)}
 - Photos: ${albumData.fileCount} photos
-- Transfer URL: ${albumData.smashTransferUrl}
 - Cover: ${coverInfo}
 `;
     });
@@ -292,7 +291,7 @@ Order Date: ${orderData.timestamp ? new Date(orderData.timestamp).toLocaleString
       addText('ORDER DETAILS:', 12, true);
       orderData.albums.forEach((albumData, index) => {
         const coverInfo = albumData.cover?.type === 'image' 
-          ? (albumData.cover.imageUrl ? 'Image cover' : 'Image cover')
+          ? 'Image cover'
           : albumData.cover?.type === 'text' 
             ? `Text: "${albumData.cover.title}"${albumData.cover.date ? ` - ${albumData.cover.date}` : ''}`
             : 'Not selected';

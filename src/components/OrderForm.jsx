@@ -126,9 +126,6 @@ function OrderForm({
                 value={deliveryNotes}
                 onChange={(e) => onDeliveryNotesChange(e.target.value)}
               />
-              <small style={{ color: 'var(--text-light)', fontSize: '0.85rem', marginTop: '0.25rem', display: 'block' }}>
-                Add any special delivery instructions or notes for us
-              </small>
             </div>
             <div className="form-group">
               <label htmlFor="email">Email Address *</label>
