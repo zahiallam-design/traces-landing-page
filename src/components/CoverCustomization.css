@@ -45,6 +45,7 @@
   gap: 1.5rem;
   margin-bottom: 2rem;
   justify-content: center;
+  align-items: center;
 }
 
 .cover-type-btn {
@@ -55,27 +56,38 @@
   align-items: center;
   gap: 0.75rem;
   padding: 2rem 1.5rem;
-  background: var(--neutral-bg);
-  border: 2px solid var(--border-light);
+  background: white;
+  border: 2px solid var(--border-color);
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.3s ease;
   font-family: inherit;
+  font-weight: 600;
+  color: var(--text-dark);
+  box-shadow: var(--shadow);
 }
 
 .cover-type-btn:hover {
-  border-color: var(--pastel-green);
+  border-color: var(--pastel-green-dark);
   transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
+  background-color: var(--pastel-green-light);
 }
 
 .cover-type-btn.selected {
   border-color: var(--pastel-green-dark);
-  background-color: var(--pastel-green-light);
-  box-shadow: var(--shadow);
+  background-color: var(--pastel-green-dark);
+  color: white;
+  box-shadow: var(--shadow-hover);
+}
+
+.cover-type-btn.selected svg {
+  color: white;
 }
 
 .cover-type-btn svg {
   color: var(--pastel-green-dark);
+  transition: color 0.3s ease;
 }
 
 .cover-image-section {
@@ -143,6 +155,14 @@
 @media (max-width: 600px) {
   .cover-type-selection {
     flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  
+  .cover-type-btn {
+    flex: 1;
+    max-width: 100%;
+    width: 100%;
   }
   
   .cover-customization {

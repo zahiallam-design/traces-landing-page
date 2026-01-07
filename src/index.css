@@ -6,9 +6,12 @@
 }
 
 :root {
-  --pastel-green: #a8d5ba;
-  --pastel-green-dark: #7fb99a;
-  --pastel-green-light: #d4e9dc;
+  --pastel-green: #8DB7A5;
+  --pastel-green-dark: #6B9A87;
+  --pastel-green-light: #B4D4C4;
+  --grey: #929191;
+  --grey-light: #B5B5B5;
+  --grey-dark: #6F6F6F;
   --neutral-bg: #fafafa;
   --text-dark: #333;
   --text-light: #666;

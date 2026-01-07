@@ -36,19 +36,13 @@
   margin-bottom: 1.5rem;
 }
 
-.album-placeholder {
+.album-image-preview {
   width: 100%;
   height: 200px;
+  object-fit: cover;
   border-radius: 8px;
   margin: 0 auto;
-}
-
-.album-placeholder.green {
-  background: linear-gradient(135deg, #a8d5ba 0%, #7fb99a 100%);
-}
-
-.album-placeholder.grey {
-  background: linear-gradient(135deg, #d0d0d0 0%, #a0a0a0 100%);
+  display: block;
 }
 
 .album-title {
@@ -107,6 +101,6 @@
 }
 
 .color-swatch.grey {
-  background-color: #888;
+  background-color: #929191;
 }
 

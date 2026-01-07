@@ -28,7 +28,11 @@ function AlbumCard({ album, isSelected, onSelect, selectedColor, onColorChange, 
   return (
     <div className={`album-card ${isSelected ? 'selected' : ''}`}>
       <div className="album-image">
-        <div className={`album-placeholder ${displayColor}`}></div>
+        <img 
+          src={displayColor === 'green' ? '/Green Album.jpg' : '/Grey Album.jpg'} 
+          alt={`${displayColor} album`}
+          className="album-image-preview"
+        />
       </div>
       <h3 className="album-title">Up to {album.size} Photos</h3>
       <p className="album-price">${album.price}</p>
