@@ -797,7 +797,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
               {selectedFiles.length > 0 && (
                 <>
                   <p style={{ marginTop: '1rem', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-light)', fontStyle: 'italic' }}>
-                    💡 You can drag and drop images to reorder them. The order you set will be the printing order.
+                    💡 Images are listed in your selection order. Want to change it? Drag the handle (☰) on the right—this order will be used for printing.
                   </p>
                   <div className="file-list">
                     {selectedFiles.map((file, index) => (
