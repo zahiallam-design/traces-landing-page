@@ -778,9 +778,11 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                 style={{ display: 'none' }}
                 onChange={(e) => handleFileSelect(e.target.files)}
               />
-              <p style={{ marginBottom: '1rem', fontSize: '0.95rem', color: 'var(--text-dark)', textAlign: 'center', lineHeight: '1.5' }}>
-                📸 <strong>Tip:</strong> The order you select your photos is how they'll be printed and assembled in your album. Don't worry—you can drag and reorder them after selection if needed!
-              </p>
+              {selectedFiles.length === 0 && (
+                <p style={{ marginBottom: '1rem', fontSize: '0.95rem', color: 'var(--text-dark)', textAlign: 'center', lineHeight: '1.5' }}>
+                  📸 <strong>Tip:</strong> The order you select your photos is how they'll be printed and assembled in your album. Don't worry—you can drag and reorder them after selection if needed!
+                </p>
+              )}
               <div
                 ref={dropzoneRef}
                 className="upload-dropzone"
@@ -800,7 +802,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
               {selectedFiles.length > 0 && (
                 <>
                   <p style={{ marginTop: '1rem', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-light)', fontStyle: 'italic' }}>
-                    💡 Images are listed in your selection order. Want to change it? Drag the handle (☰) on the right—this order will be used for printing.
+                    💡 Images are listed in your selection order. Want to change it? Drag the handle (☰) on the right.
                   </p>
                   <div className="file-list">
                     {selectedFiles.map((file, index) => (
