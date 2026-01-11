@@ -94,7 +94,9 @@ function Footer() {
               <p>We use the information you provide to:</p>
               <ul>
                 <li>Process and fulfill your photo album orders</li>
-                <li>Communicate with you about your order status via email and WhatsApp</li>
+                <li>Communicate with you about your order status via WhatsApp (primary) and email (if provided)</li>
+                <li>Generate unique order numbers for tracking</li>
+                <li>Create downloadable PDF order summaries</li>
                 <li>Deliver your albums to the specified address</li>
                 <li>Send order confirmations and updates</li>
                 <li>Improve our services and customer experience</li>
@@ -103,11 +105,14 @@ function Footer() {
               <h3>3. Photo Storage and Security</h3>
               <p>Your photos are uploaded securely using Smash API, a trusted file transfer service. Photos are:</p>
               <ul>
+                <li>Automatically compressed if they exceed 4MB to ensure smooth upload and processing</li>
+                <li>Renamed with sequential numbers based on your selected order for accurate printing</li>
                 <li>Stored temporarily for order processing</li>
                 <li>Used solely for creating your photo albums</li>
                 <li>Not shared with third parties except our printing partners</li>
                 <li>Deleted after order completion, unless you request otherwise</li>
               </ul>
+              <p><strong>Photo Ordering:</strong> The order in which you select photos determines how they will be printed in your album. You can reorder photos by dragging them before uploading. This order is final once your order is submitted.</p>
               
               <h3>4. Data Protection</h3>
               <p>We implement appropriate security measures to protect your personal information and photos. However, no method of transmission over the internet is 100% secure.</p>
@@ -161,7 +166,11 @@ function Footer() {
                 <li>You must provide accurate and complete information</li>
                 <li>You must own or have permission to use all uploaded photos</li>
                 <li>Photos must be in supported formats (JPEG, PNG, WebP, HEIC, HEIF, AVIF)</li>
+                <li>Large photos (over 4MB) will be automatically compressed to ensure quality while maintaining reasonable file sizes</li>
+                <li>You can arrange photos in your preferred order before uploading - this order determines how photos will be printed</li>
+                <li>Cover images can be cropped to square format (9×9 cm) if needed</li>
                 <li>You are responsible for ensuring photo quality meets your expectations</li>
+                <li>Each order receives a unique order number for tracking purposes</li>
               </ul>
               
               <h3>4. Pricing and Payment</h3>
@@ -169,8 +178,9 @@ function Footer() {
               <ul>
                 <li>Album printing and assembly</li>
                 <li>Cover customization</li>
-                <li>Delivery within Lebanon</li>
+                <li>Delivery within Lebanon ($4 delivery charge applies to all orders)</li>
               </ul>
+              <p>Current pricing: 52 photos - $33, 100 photos - $47, plus $4 delivery charge.</p>
               
               <h3>5. Photo Quality and Content</h3>
               <p>You are responsible for:</p>
@@ -183,7 +193,8 @@ function Footer() {
               <p>We reserve the right to refuse orders containing inappropriate content.</p>
               
               <h3>6. Delivery</h3>
-              <p>Delivery times vary based on order volume and complexity. We will contact you via WhatsApp or email with delivery updates. You must provide a valid delivery address and be available to receive the order.</p>
+              <p>Orders are typically delivered within 3 to 5 business days. We will contact you via WhatsApp (primary) or email (if provided) with delivery updates. You must provide a valid delivery address and be available to receive the order.</p>
+              <p>After placing your order, you can download a PDF summary of your order details for your records.</p>
               
               <h3>7. Returns and Refunds</h3>
               <p>Due to the custom nature of our products:</p>

@@ -767,7 +767,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
           <>
             <div className="upload-instructions">
               <p>Select and upload your photos directly (up to {maxFiles} photos):</p>
-              <p className="upload-note">You can select multiple photos at once. Supported formats: JPG, PNG, HEIC</p>
+              <p className="upload-note">You can select multiple photos at once. Supported formats: JPG, JPEG, PNG, WebP, HEIC, HEIF, AVIF</p>
             </div>
             <div className="upload-area">
               <input

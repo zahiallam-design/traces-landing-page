@@ -489,6 +489,12 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
             </div>
             <div className="crop-actions">
               <button
+                className="btn btn-primary"
+                onClick={handleCropComplete}
+              >
+                Apply Crop
+              </button>
+              <button
                 className="btn btn-secondary"
                 onClick={() => {
                   setShowCropModal(false);
@@ -499,12 +505,6 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
                 }}
               >
                 Cancel
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={handleCropComplete}
-              >
-                Apply Crop
               </button>
             </div>
           </div>
