@@ -890,14 +890,31 @@ function FileItem({ file, index, onRemove, formatFileSize, isUploadComplete, onD
     if (isUploadComplete) return;
     onDragStart(index);
     e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/html', e.target);
+    // Set a simple string identifier instead of DOM element to avoid "[object HTMLDivElement]" issue
+    // Use a non-URL format to prevent mobile browsers from treating it as a link
+    e.dataTransfer.setData('text/plain', `file-${index}`);
+    // Prevent mobile browsers from using drag data as navigation
+    e.dataTransfer.setData('text/html', ''); // Empty HTML to override any default
+    e.stopPropagation();
   };
 
   const handleDragOverLocal = (e) => {
     if (isUploadComplete) return;
     e.preventDefault();
+    e.stopPropagation(); // Prevent event bubbling that might cause navigation
     e.dataTransfer.dropEffect = 'move';
     onDragOver(e, index);
+  };
+
+  // Handle drag over on the file item (for receiving drops)
+  const handleFileItemDragOver = (e) => {
+    if (isUploadComplete) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    // Only call onDragOver if this item is not the one being dragged
+    if (!isDragging) {
+      onDragOver(e, index);
+    }
   };
 
   const handleDragEndLocal = () => {
@@ -908,12 +925,8 @@ function FileItem({ file, index, onRemove, formatFileSize, isUploadComplete, onD
   return (
     <div 
       className={`file-item ${isDragging ? 'dragging' : ''}`}
-      draggable={!isUploadComplete}
-      onDragStart={handleDragStartLocal}
-      onDragOver={handleDragOverLocal}
-      onDragEnd={handleDragEndLocal}
+      onDragOver={handleFileItemDragOver}
       style={{
-        cursor: isUploadComplete ? 'default' : 'move',
         opacity: isDragging ? 0.5 : 1
       }}
     >
@@ -921,26 +934,47 @@ function FileItem({ file, index, onRemove, formatFileSize, isUploadComplete, onD
         {preview && <img className="file-icon" src={preview} alt="Preview" />}
         <div className="file-details">
           <div className="file-name">
-            {!isUploadComplete && <span style={{ marginRight: '0.5rem', color: 'var(--text-light)' }}>☰</span>}
             {file.name}
           </div>
           <div className="file-size">{formatFileSize(file.size)}</div>
         </div>
       </div>
-      <button 
-        className="file-remove" 
-        onClick={() => onRemove(index)} 
-        aria-label="Remove file"
-        disabled={isUploadComplete}
-        style={{ 
-          opacity: isUploadComplete ? 0.5 : 1,
-          cursor: isUploadComplete ? 'not-allowed' : 'pointer',
-          pointerEvents: isUploadComplete ? 'none' : 'auto'
-        }}
-        title={isUploadComplete ? 'Files are locked after upload. Use "Clear All" to start over.' : 'Remove file'}
-      >
-        ×
-      </button>
+      <div className="file-actions">
+        {!isUploadComplete && (
+          <div 
+            className="drag-handle"
+            draggable={true}
+            onDragStart={handleDragStartLocal}
+            onDragOver={handleDragOverLocal}
+            onDragEnd={handleDragEndLocal}
+            aria-label="Drag to reorder"
+            title="Drag to reorder"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="9" cy="12" r="1"></circle>
+              <circle cx="9" cy="5" r="1"></circle>
+              <circle cx="9" cy="19" r="1"></circle>
+              <circle cx="15" cy="12" r="1"></circle>
+              <circle cx="15" cy="5" r="1"></circle>
+              <circle cx="15" cy="19" r="1"></circle>
+            </svg>
+          </div>
+        )}
+        <button 
+          className="file-remove" 
+          onClick={() => onRemove(index)} 
+          aria-label="Remove file"
+          disabled={isUploadComplete}
+          style={{ 
+            opacity: isUploadComplete ? 0.5 : 1,
+            cursor: isUploadComplete ? 'not-allowed' : 'pointer',
+            pointerEvents: isUploadComplete ? 'none' : 'auto'
+          }}
+          title={isUploadComplete ? 'Files are locked after upload. Use "Clear All" to start over.' : 'Remove file'}
+        >
+          ×
+        </button>
+      </div>
     </div>
   );
 }
