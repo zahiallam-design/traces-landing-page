@@ -25,10 +25,17 @@ function App() {
   const [notes, setNotes] = useState('');
   const [notesForUs, setNotesForUs] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [orderNumber, setOrderNumber] = useState(null); // Generate order number early for file naming
 
   // Initialize albums array when count is selected
   const handleAlbumCountSelect = (count) => {
     setAlbumCount(count);
+    
+    // Generate order number when album count is selected (for file naming)
+    if (!orderNumber) {
+      const newOrderNumber = generateOrderNumber();
+      setOrderNumber(newOrderNumber);
+    }
     
     // Preserve existing albums if increasing count, remove extras if decreasing
     if (count > albums.length) {
@@ -75,13 +82,14 @@ function App() {
   };
 
   const handleOrderSubmit = async (orderData) => {
-    // Generate unique order number
-    const orderNumber = generateOrderNumber();
+    // Use existing order number (generated when album count was selected)
+    // If for some reason it doesn't exist, generate a new one
+    const finalOrderNumber = orderNumber || generateOrderNumber();
     
     // Combine albums data with customer info
     const completeOrderData = {
       ...orderData,
-      orderNumber,
+      orderNumber: finalOrderNumber,
       timestamp: new Date().toISOString(),
       albums: albums.map(album => ({
         album: {
@@ -149,7 +157,7 @@ function App() {
       const coverInfo = albumData.cover?.type === 'image' 
         ? 'Image cover'
         : albumData.cover?.type === 'text' 
-          ? `Text: "${albumData.cover.title}"${albumData.cover.date ? ` - ${albumData.cover.date}` : ''}`
+          ? `Text: "${albumData.cover.title}"`
           : 'Not selected';
       
       albumsText += `
@@ -303,7 +311,7 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
         const coverInfo = albumData.cover?.type === 'image' 
           ? 'Image cover'
           : albumData.cover?.type === 'text' 
-            ? `Text: "${albumData.cover.title}"${albumData.cover.date ? ` - ${albumData.cover.date}` : ''}`
+            ? `Text: "${albumData.cover.title}"`
             : 'Not selected';
         
         addText(`Album ${index + 1}:`, 11, true);
@@ -415,6 +423,7 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
                   <UploadSection
                     albumIndex={index}
                     selectedAlbum={album.selectedAlbum}
+                    orderNumber={orderNumber}
                     onUploadComplete={(transferUrl, count) => handleUploadComplete(index, transferUrl, count)}
                   />
                 )}

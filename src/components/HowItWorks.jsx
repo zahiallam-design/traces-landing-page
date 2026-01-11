@@ -21,7 +21,7 @@ const steps = [
   {
     number: 4,
     title: 'Customize your album cover',
-    description: 'Choose an image cover or add a text title with optional date'
+    description: 'Choose an image cover or add a text title'
   },
   {
     number: 5,

@@ -6,7 +6,7 @@ import './UploadSection.css';
 // Smash API key is now handled server-side via Vercel Serverless Functions
 // No API key needed in frontend - more secure!
 
-function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
+function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplete }) {
   const breakpoint = useBreakpoint();
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -723,16 +723,28 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
     setDraggedIndex(null);
   };
 
-  // Rename files with sequential numbers based on order before upload
+  // Rename files with sequential numbers and order number before upload
   const renameFilesWithOrder = (files) => {
+    if (!orderNumber) {
+      console.warn('Order number not available, using timestamp as fallback');
+      const fallbackOrderNumber = Date.now().toString();
+      return files.map((file, index) => {
+        const lastDot = file.name.lastIndexOf('.');
+        const extension = lastDot !== -1 ? file.name.substring(lastDot) : '';
+        const paddedNumber = String(index + 1).padStart(2, '0');
+        const newName = `photo_${paddedNumber}_${fallbackOrderNumber}${extension}`;
+        return new File([file], newName, { type: file.type });
+      });
+    }
+    
     return files.map((file, index) => {
       // Get file extension
       const lastDot = file.name.lastIndexOf('.');
       const extension = lastDot !== -1 ? file.name.substring(lastDot) : '';
       
-      // Create new filename with sequential number (01, 02, 03, etc.)
+      // Create new filename: photo_01_ordernumber.extension
       const paddedNumber = String(index + 1).padStart(2, '0');
-      const newName = `photo_${paddedNumber}${extension}`;
+      const newName = `photo_${paddedNumber}_${orderNumber}${extension}`;
       
       // Create new File object with renamed file
       return new File([file], newName, { type: file.type });

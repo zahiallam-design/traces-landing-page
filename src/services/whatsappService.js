@@ -46,7 +46,7 @@ function formatOrderSummaryForWhatsApp(orderData) {
     const coverInfo = albumData.cover?.type === 'image' 
       ? 'Image cover'
       : albumData.cover?.type === 'text' 
-        ? `Text: "${albumData.cover.title}"${albumData.cover.date ? ` - ${albumData.cover.date}` : ''}`
+        ? `Text: "${albumData.cover.title}"`
         : 'Not selected';
     
     albumsText += `\n*Album ${index + 1}:*\n`;

@@ -10,7 +10,6 @@ function CoverCustomization({ albumIndex, onCoverChange }) {
   const [coverImage, setCoverImage] = useState(null);
   const [coverImageUrl, setCoverImageUrl] = useState(null);
   const [coverTitle, setCoverTitle] = useState('');
-  const [coverDate, setCoverDate] = useState('');
   const [isUploadingCover, setIsUploadingCover] = useState(false);
   const [isCompressingCover, setIsCompressingCover] = useState(false);
   const [uploadError, setUploadError] = useState(null);
@@ -37,8 +36,7 @@ function CoverCustomization({ albumIndex, onCoverChange }) {
       // Notify parent immediately for text type
       onCoverChange({
         type: 'text',
-        title: coverTitle,
-        date: coverDate
+        title: coverTitle
       });
     }
   };
@@ -320,20 +318,7 @@ function CoverCustomization({ albumIndex, onCoverChange }) {
     if (coverType === 'text') {
       onCoverChange({
         type: 'text',
-        title: title,
-        date: coverDate
-      });
-    }
-  };
-
-  const handleDateChange = (e) => {
-    const date = e.target.value;
-    setCoverDate(date);
-    if (coverType === 'text') {
-      onCoverChange({
-        type: 'text',
-        title: coverTitle,
-        date: date
+        title: title
       });
     }
   };
@@ -423,17 +408,6 @@ function CoverCustomization({ albumIndex, onCoverChange }) {
                   required={coverType === 'text'}
                 />
                 <small>Enter a title or sentence for your album cover</small>
-              </div>
-              <div className="form-group">
-                <label htmlFor={`cover-date-${albumIndex}`}>Date (Optional)</label>
-                <input
-                  type="text"
-                  id={`cover-date-${albumIndex}`}
-                  value={coverDate}
-                  onChange={handleDateChange}
-                  placeholder="e.g., June 2024, 2024, Summer 2024"
-                />
-                <small>Add a date if you'd like</small>
               </div>
             </div>
           )}

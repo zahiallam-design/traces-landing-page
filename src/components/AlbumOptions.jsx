@@ -66,7 +66,7 @@ function AlbumOptions({ albumIndex, selectedAlbum, onAlbumSelect, selectedColor,
                 onClick={() => handleColorSelect('green')}
               >
                 <img 
-                  src="/Green Album.JPEG" 
+                  src="/Green Album.jpeg" 
                   alt="Green Album"
                   className="color-album-image"
                 />
@@ -77,7 +77,7 @@ function AlbumOptions({ albumIndex, selectedAlbum, onAlbumSelect, selectedColor,
                 onClick={() => handleColorSelect('grey')}
               >
                 <img 
-                  src="/Grey Album.JPEG" 
+                  src="/Grey Album.jpeg" 
                   alt="Grey Album"
                   className="color-album-image"
                 />
