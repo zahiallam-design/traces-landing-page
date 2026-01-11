@@ -7,88 +7,85 @@ const albums = [
   { size: 100, price: 55 }
 ];
 
-function AlbumCard({ album, isSelected, onSelect, selectedColor, onColorChange, albumIndex }) {
-  const handleColorClick = (color) => {
-    // If album is not selected yet, select it with this color
-    if (!isSelected) {
-      onSelect(album);
-      // Small delay to ensure album is selected before changing color
-      setTimeout(() => {
-        onColorChange(color);
-      }, 10);
-    } else {
-      // Album is already selected, just change color
-      onColorChange(color);
-    }
-  };
-  
-  // Use selectedColor only if this album is selected, otherwise use default green for display
-  const displayColor = isSelected ? selectedColor : 'green';
-
-  return (
-    <div className={`album-card ${isSelected ? 'selected' : ''}`}>
-      <div className="album-image">
-        <img 
-          src={displayColor === 'green' ? '/Green Album.jpg' : '/Grey Album.jpg'} 
-          alt={`${displayColor} album`}
-          className="album-image-preview"
-        />
-      </div>
-      <h3 className="album-title">Up to {album.size} Photos</h3>
-      <p className="album-price">${album.price}</p>
-      <p className="album-details">A6 size prints</p>
-      <div className="color-selection">
-        <button 
-          className={`color-btn ${isSelected && selectedColor === 'green' ? 'active' : ''}`}
-          onClick={() => handleColorClick('green')}
-          aria-label="Green color"
-        >
-          <span className="color-swatch green"></span>
-        </button>
-        <button 
-          className={`color-btn ${isSelected && selectedColor === 'grey' ? 'active' : ''}`}
-          onClick={() => handleColorClick('grey')}
-          aria-label="Grey color"
-        >
-          <span className="color-swatch grey"></span>
-        </button>
-      </div>
-    </div>
-  );
-}
-
 function AlbumOptions({ albumIndex, selectedAlbum, onAlbumSelect, selectedColor, onColorChange }) {
   const breakpoint = useBreakpoint();
   const isMobile = ['xs', 'ss', 'sm'].includes(breakpoint);
 
-  const handleSelect = (album) => {
+  const handleSizeSelect = (album) => {
     onAlbumSelect(album);
-    // Scroll to upload section for this album
-    setTimeout(() => {
-      const element = document.getElementById(`upload-photos-${albumIndex}`);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 100);
   };
+
+  const handleColorSelect = (color) => {
+    onColorChange(color);
+  };
+
+  // Show album preview only when both size and color are selected
+  const showPreview = selectedAlbum && selectedColor;
 
   return (
     <section id={`album-options-${albumIndex}`} className="album-options">
       <div className="container">
         <h2 className="section-title">Album {albumIndex + 1} - Choose Your Album</h2>
-        <div className={`album-cards ${isMobile ? 'album-cards-mobile' : ''}`}>
-          {albums.map((album) => (
-            <AlbumCard
-              key={album.size}
-              album={album}
-              albumIndex={albumIndex}
-              isSelected={selectedAlbum?.size === album.size}
-              onSelect={handleSelect}
-              selectedColor={selectedColor}
-              onColorChange={onColorChange}
-            />
-          ))}
+        
+        {/* Step 1: Size Selection */}
+        <div className="album-selection-step">
+          <h3 className="step-title">Step 1: Choose Size</h3>
+          <div className="size-buttons">
+            {albums.map((album) => (
+              <button
+                key={album.size}
+                className={`size-btn ${selectedAlbum?.size === album.size ? 'selected' : ''}`}
+                onClick={() => handleSizeSelect(album)}
+              >
+                <span className="size-number">{album.size}</span>
+                <span className="size-label">Photos</span>
+                <span className="size-price">${album.price}</span>
+              </button>
+            ))}
+          </div>
         </div>
+
+        {/* Step 2: Color Selection (only show if size is selected) */}
+        {selectedAlbum && (
+          <div className="album-selection-step">
+            <h3 className="step-title">Step 2: Choose Color</h3>
+            <div className="color-buttons">
+              <button
+                className={`color-selection-btn ${selectedColor === 'green' ? 'selected' : ''}`}
+                onClick={() => handleColorSelect('green')}
+              >
+                <span className="color-swatch green"></span>
+                <span className="color-label">Green</span>
+              </button>
+              <button
+                className={`color-selection-btn ${selectedColor === 'grey' ? 'selected' : ''}`}
+                onClick={() => handleColorSelect('grey')}
+              >
+                <span className="color-swatch grey"></span>
+                <span className="color-label">Grey</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: Album Preview (only show if both size and color are selected) */}
+        {showPreview && (
+          <div className="album-selection-step">
+            <h3 className="step-title">Your Selected Album</h3>
+            <div className="album-preview">
+              <img 
+                src={selectedColor === 'green' ? '/Green Album.jpg' : '/Grey Album.jpg'} 
+                alt={`${selectedColor} album`}
+                className="album-preview-image"
+              />
+              <div className="album-preview-details">
+                <p className="preview-size">{selectedAlbum.size} Photos</p>
+                <p className="preview-color">{selectedColor.charAt(0).toUpperCase() + selectedColor.slice(1)} Color</p>
+                <p className="preview-price">${selectedAlbum.price}</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );

@@ -1,6 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 import imageCompression from 'browser-image-compression';
+import Cropper from 'react-easy-crop';
 import './CoverCustomization.css';
 
 function CoverCustomization({ albumIndex, onCoverChange }) {
@@ -13,6 +14,11 @@ function CoverCustomization({ albumIndex, onCoverChange }) {
   const [isUploadingCover, setIsUploadingCover] = useState(false);
   const [isCompressingCover, setIsCompressingCover] = useState(false);
   const [uploadError, setUploadError] = useState(null);
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
   const fileInputRef = useRef(null);
 
   const handleCoverTypeSelect = (type) => {
@@ -115,6 +121,23 @@ function CoverCustomization({ albumIndex, onCoverChange }) {
     throw new Error(`Unable to compress cover image below 4MB`);
   };
 
+  // Check if image is square
+  const isImageSquare = (file) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        resolve(Math.abs(img.width - img.height) < 5); // Allow 5px tolerance
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(false);
+      };
+      img.src = url;
+    });
+  };
+
   const handleImageSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -159,6 +182,87 @@ function CoverCustomization({ albumIndex, onCoverChange }) {
     }
     
     setUploadError(null);
+    
+    // Check if image is square - if not, show crop modal
+    const isSquare = await isImageSquare(file);
+    if (!isSquare) {
+      setImageToCrop(file);
+      setShowCropModal(true);
+      return;
+    }
+    
+    // If square, proceed with upload
+    await uploadCoverImage(file);
+  };
+
+  const onCropComplete = useCallback((croppedArea, croppedAreaPixels) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
+
+  const createImage = (url) =>
+    new Promise((resolve, reject) => {
+      const image = new Image();
+      image.addEventListener('load', () => resolve(image));
+      image.addEventListener('error', (error) => reject(error));
+      image.src = url;
+    });
+
+  const getCroppedImg = async (imageSrc, pixelCrop) => {
+    const image = await createImage(imageSrc);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    const maxSize = Math.max(image.width, image.height);
+    canvas.width = maxSize;
+    canvas.height = maxSize;
+
+    ctx.drawImage(
+      image,
+      pixelCrop.x,
+      pixelCrop.y,
+      pixelCrop.width,
+      pixelCrop.height,
+      0,
+      0,
+      maxSize,
+      maxSize
+    );
+
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          reject(new Error('Canvas is empty'));
+          return;
+        }
+        const file = new File([blob], 'cropped-cover.jpg', { type: 'image/jpeg' });
+        resolve(file);
+      }, 'image/jpeg', 0.95);
+    });
+  };
+
+  const handleCropComplete = async () => {
+    if (!imageToCrop || !croppedAreaPixels) return;
+
+    try {
+      const imageUrl = URL.createObjectURL(imageToCrop);
+      const croppedFile = await getCroppedImg(imageUrl, croppedAreaPixels);
+      URL.revokeObjectURL(imageUrl);
+      
+      setShowCropModal(false);
+      setImageToCrop(null);
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
+      setCroppedAreaPixels(null);
+      
+      await uploadCoverImage(croppedFile);
+    } catch (error) {
+      console.error('Crop error:', error);
+      setUploadError('Failed to crop image. Please try again.');
+      setShowCropModal(false);
+    }
+  };
+
+  const uploadCoverImage = async (file) => {
     setIsCompressingCover(true);
     
     try {
@@ -268,7 +372,7 @@ function CoverCustomization({ albumIndex, onCoverChange }) {
           {coverType === 'image' && (
             <div className="cover-image-section">
               <p className="cover-size-note">
-                <strong>Note:</strong> Your cover image will be printed in A7 size (7.4 cm × 10.5 cm / 2.9" × 4.1")
+                <strong>Note:</strong> Your cover image must be square and will be printed in 9×9 cm (3.5" × 3.5") size. If your image is not square, you'll be able to crop it.
               </p>
               <input
                 ref={fileInputRef}
@@ -327,6 +431,71 @@ function CoverCustomization({ albumIndex, onCoverChange }) {
           )}
         </div>
       </div>
+
+      {/* Crop Modal */}
+      {showCropModal && imageToCrop && (
+        <div className="crop-modal-overlay">
+          <div className="crop-modal-content">
+            <h3>Crop Your Cover Image</h3>
+            <p style={{ marginBottom: '1rem', color: 'var(--text-light)' }}>
+              Your cover image must be square (9×9 cm). Please select the square area you want to use.
+            </p>
+            <div className="crop-container">
+              <Cropper
+                image={URL.createObjectURL(imageToCrop)}
+                crop={crop}
+                zoom={zoom}
+                aspect={1}
+                onCropChange={setCrop}
+                onZoomChange={setZoom}
+                onCropComplete={onCropComplete}
+                style={{
+                  containerStyle: {
+                    width: '100%',
+                    height: '400px',
+                    position: 'relative',
+                    background: '#000'
+                  }
+                }}
+              />
+            </div>
+            <div className="crop-controls">
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                Zoom:
+                <input
+                  type="range"
+                  min={1}
+                  max={3}
+                  step={0.1}
+                  value={zoom}
+                  onChange={(e) => setZoom(parseFloat(e.target.value))}
+                  style={{ flex: 1, maxWidth: '200px' }}
+                />
+              </label>
+            </div>
+            <div className="crop-actions">
+              <button
+                className="btn btn-secondary"
+                onClick={() => {
+                  setShowCropModal(false);
+                  setImageToCrop(null);
+                  setCrop({ x: 0, y: 0 });
+                  setZoom(1);
+                  setCroppedAreaPixels(null);
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleCropComplete}
+              >
+                Apply Crop
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

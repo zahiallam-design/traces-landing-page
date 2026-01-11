@@ -128,18 +128,17 @@ function OrderForm({
               />
             </div>
             <div className="form-group">
-              <label htmlFor="email">Email Address *</label>
+              <label htmlFor="email">Email Address (Optional)</label>
               <input
                 type="email"
                 id="email"
                 name="email"
-                required
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="your.email@example.com"
               />
               <small style={{ color: 'var(--text-light)', fontSize: '0.85rem', marginTop: '0.25rem', display: 'block' }}>
-                We'll send you an order confirmation email
+                If provided, we'll send you an order confirmation email
               </small>
             </div>
             <div className="form-group">

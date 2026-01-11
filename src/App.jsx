@@ -12,6 +12,7 @@ import Gallery from './components/Gallery';
 import Footer from './components/Footer';
 import WhatsAppButton from './components/WhatsAppButton';
 import { sendOrderEmail, sendCustomerConfirmationEmail } from './services/emailService';
+import { sendWhatsAppConfirmation } from './services/whatsappService';
 
 // Generate unique order number based on timestamp
 // Uses Unix timestamp in milliseconds - a single number that's always increasing
@@ -106,9 +107,17 @@ function App() {
       await sendOrderEmail(completeOrderData);
       ownerEmailSent = true;
       
-      // Send confirmation email to customer
+      // Send confirmation email to customer (if email provided)
       const customerEmailResult = await sendCustomerConfirmationEmail(completeOrderData);
       customerEmailSent = customerEmailResult.success;
+      
+      // Send WhatsApp confirmation (always sent since phone is mandatory)
+      try {
+        await sendWhatsAppConfirmation(completeOrderData, orderData.customer.mobileNumber);
+      } catch (whatsappError) {
+        console.error('Failed to send WhatsApp confirmation:', whatsappError);
+        // Don't block order submission if WhatsApp fails
+      }
       
       // Format order data for display
       const orderText = formatOrderForEmail(completeOrderData);
@@ -387,11 +396,13 @@ Order Date: ${orderData.timestamp ? new Date(orderData.timestamp).toLocaleString
                   selectedColor={album.selectedColor}
                   onColorChange={(color) => handleColorChange(index, color)}
                 />
-                <UploadSection
-                  albumIndex={index}
-                  selectedAlbum={album.selectedAlbum}
-                  onUploadComplete={(transferUrl, count) => handleUploadComplete(index, transferUrl, count)}
-                />
+                {album.selectedAlbum && album.selectedColor && (
+                  <UploadSection
+                    albumIndex={index}
+                    selectedAlbum={album.selectedAlbum}
+                    onUploadComplete={(transferUrl, count) => handleUploadComplete(index, transferUrl, count)}
+                  />
+                )}
                 {album.smashTransferUrl && (
                   <CoverCustomization
                     albumIndex={index}
