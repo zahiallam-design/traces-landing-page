@@ -104,7 +104,7 @@ function OrderForm({
                 </div>
                 <div className="summary-item">
                   <span>Color:</span>
-                  <span>{album.selectedAlbum ? album.selectedColor.charAt(0).toUpperCase() + album.selectedColor.slice(1) : '-'}</span>
+                  <span>{album.selectedAlbum && album.selectedColor ? album.selectedColor.charAt(0).toUpperCase() + album.selectedColor.slice(1) : '-'}</span>
                 </div>
                 <div className="summary-item">
                   <span>Price:</span>
