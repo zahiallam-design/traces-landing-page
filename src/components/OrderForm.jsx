@@ -6,6 +6,8 @@ function OrderForm({
   albums,
   deliveryNotes,
   onDeliveryNotesChange,
+  notesForUs,
+  onNotesForUsChange,
   onSubmit,
   isSubmitting = false
 }) {
@@ -125,9 +127,21 @@ function OrderForm({
                 id="delivery-notes"
                 name="delivery-notes"
                 rows="3"
-                placeholder="Any special instructions for delivery or notes for us..."
+                placeholder="Any special instructions for delivery..."
                 value={deliveryNotes}
                 onChange={(e) => onDeliveryNotesChange(e.target.value)}
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="notes-for-us">Notes for Us (Optional)</label>
+              <textarea
+                id="notes-for-us"
+                name="notes-for-us"
+                rows="3"
+                placeholder="Any special notes for us..."
+                value={notesForUs || ''}
+                onChange={(e) => onNotesForUsChange(e.target.value)}
+                style={{ backgroundColor: '#f5f5f5', color: '#666' }}
               />
             </div>
             <div className="form-group">
@@ -156,7 +170,10 @@ function OrderForm({
               />
             </div>
             <div className="form-disclaimer">
-              <p><small>Your personal photos will be permanently deleted once your album is printed and delivered.</small></p>
+              <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.9rem', color: 'var(--text-light)' }}>
+                <li>Your personal photos will be permanently deleted once your album is printed and delivered.</li>
+                <li>You will receive a confirmation message once your order is placed on your WhatsApp number{formData.email ? ' and email' : ''}.</li>
+              </ul>
             </div>
             <button 
               type="submit" 

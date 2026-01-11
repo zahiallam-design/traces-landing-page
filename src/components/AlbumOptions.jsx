@@ -33,9 +33,6 @@ function AlbumOptions({ albumIndex, selectedAlbum, onAlbumSelect, selectedColor,
     }, 300);
   };
 
-  // Show album preview only when both size and color are selected
-  const showPreview = selectedAlbum && selectedColor;
-
   return (
     <section id={`album-options-${albumIndex}`} className="album-options">
       <div className="container">
@@ -86,25 +83,6 @@ function AlbumOptions({ albumIndex, selectedAlbum, onAlbumSelect, selectedColor,
                 />
                 <span className="color-album-label">Grey</span>
               </button>
-            </div>
-          </div>
-        )}
-
-        {/* Step 3: Album Preview (only show if both size and color are selected) */}
-        {showPreview && (
-          <div className="album-selection-step">
-            <h3 className="step-title">Your Selected Album</h3>
-            <div className="album-preview">
-              <img 
-                src={selectedColor === 'green' ? '/Green Album.jpg' : '/Grey Album.jpg'} 
-                alt={`${selectedColor} album`}
-                className="album-preview-image"
-              />
-              <div className="album-preview-details">
-                <p className="preview-size">{selectedAlbum.size} Photos</p>
-                <p className="preview-color">{selectedColor.charAt(0).toUpperCase() + selectedColor.slice(1)} Color</p>
-                <p className="preview-price">${selectedAlbum.price}</p>
-              </div>
             </div>
           </div>
         )}

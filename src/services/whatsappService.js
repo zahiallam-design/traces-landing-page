@@ -11,25 +11,25 @@ export const sendWhatsAppConfirmation = async (orderData, phoneNumber) => {
   // Format order summary for WhatsApp
   const orderSummary = formatOrderSummaryForWhatsApp(orderData);
   
-  // Clean phone number (remove spaces, dashes, etc.)
-  const cleanPhone = phoneNumber.replace(/[\s\-+()]/g, '');
+  // Clean customer phone number (remove spaces, dashes, etc.)
+  // Ensure it starts with country code (add 961 for Lebanon if missing)
+  let cleanPhone = phoneNumber.replace(/[\s\-+()]/g, '');
   
-  // Create WhatsApp link with pre-filled message
-  // Format: https://api.whatsapp.com/send?phone=[number]&text=[message]
-  const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || '71532156';
-  const cleanWhatsAppNumber = whatsappNumber.replace(/[\s\-+()]/g, '');
+  // If phone doesn't start with country code, add Lebanon code (961)
+  if (!cleanPhone.startsWith('961') && cleanPhone.length <= 8) {
+    cleanPhone = '961' + cleanPhone;
+  }
   
-  // For now, we'll return the link to open WhatsApp
-  // In the future, this can be upgraded to use WhatsApp Business API or Twilio
-  // to automatically send the message
-  
+  // Create WhatsApp link with pre-filled message TO THE CUSTOMER
+  // Format: https://api.whatsapp.com/send?phone=[customer_number]&text=[message]
   const message = encodeURIComponent(orderSummary);
-  const whatsappUrl = `https://api.whatsapp.com/send?phone=${cleanWhatsAppNumber}&text=${message}`;
+  const whatsappUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${message}`;
   
-  // Open WhatsApp with pre-filled message
-  // Note: This opens WhatsApp, but doesn't automatically send
-  // For automatic sending, you'll need WhatsApp Business API or Twilio
-  window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+  // Open WhatsApp with pre-filled message to customer
+  // Note: WhatsApp Web API doesn't support automatic sending - it only opens WhatsApp with a pre-filled message
+  // The user still needs to click send. For true automation, you'd need WhatsApp Business API or Twilio
+  // Using window.location instead of window.open to avoid opening in new tab
+  window.location.href = whatsappUrl;
   
   return {
     success: true,

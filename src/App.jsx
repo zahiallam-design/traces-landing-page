@@ -12,7 +12,6 @@ import Gallery from './components/Gallery';
 import Footer from './components/Footer';
 import WhatsAppButton from './components/WhatsAppButton';
 import { sendOrderEmail, sendCustomerConfirmationEmail } from './services/emailService';
-import { sendWhatsAppConfirmation } from './services/whatsappService';
 
 // Generate unique order number based on timestamp
 // Uses Unix timestamp in milliseconds - a single number that's always increasing
@@ -24,6 +23,7 @@ function App() {
   const [albumCount, setAlbumCount] = useState(null);
   const [albums, setAlbums] = useState([]); // Array of album objects
   const [notes, setNotes] = useState('');
+  const [notesForUs, setNotesForUs] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Initialize albums array when count is selected
@@ -93,7 +93,8 @@ function App() {
         fileCount: album.fileCount,
         cover: album.cover
       })),
-      notes
+      notes,
+      notesForUs
     };
     
     setIsSubmitting(true);
@@ -110,14 +111,6 @@ function App() {
       // Send confirmation email to customer (if email provided)
       const customerEmailResult = await sendCustomerConfirmationEmail(completeOrderData);
       customerEmailSent = customerEmailResult.success;
-      
-      // Send WhatsApp confirmation (always sent since phone is mandatory)
-      try {
-        await sendWhatsAppConfirmation(completeOrderData, orderData.customer.mobileNumber);
-      } catch (whatsappError) {
-        console.error('Failed to send WhatsApp confirmation:', whatsappError);
-        // Don't block order submission if WhatsApp fails
-      }
       
       // Format order data for display
       const orderText = formatOrderForEmail(completeOrderData);
@@ -423,6 +416,8 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
             albums={albums}
             deliveryNotes={notes}
             onDeliveryNotesChange={setNotes}
+            notesForUs={notesForUs}
+            onNotesForUsChange={setNotesForUs}
             onSubmit={handleOrderSubmit}
             isSubmitting={isSubmitting}
           />

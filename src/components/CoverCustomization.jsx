@@ -371,9 +371,11 @@ function CoverCustomization({ albumIndex, onCoverChange }) {
 
           {coverType === 'image' && (
             <div className="cover-image-section">
-              <p className="cover-size-note">
-                <strong>Note:</strong> Your cover image must be square and will be printed in 9×9 cm (3.5" × 3.5") size. If your image is not square, you'll be able to crop it.
-              </p>
+              {!coverImage && (
+                <p className="cover-size-note">
+                  <strong>Note:</strong> Your cover image must be square and will be printed in 9×9 cm (3.5" × 3.5") size. If your image is not square, you'll be able to crop it.
+                </p>
+              )}
               <input
                 ref={fileInputRef}
                 type="file"
