@@ -53,6 +53,9 @@ function OrderForm({
       } else if (!album.cover) {
         errors[`album-${i}-cover`] = `Please customize the cover for Album ${i + 1}`;
         if (!firstErrorSection) firstErrorSection = `cover-customization-${i}`;
+      } else if (album.cover?.type === 'text' && (!album.cover.title || album.cover.title.trim() === '')) {
+        errors[`album-${i}-cover`] = `Please enter a cover title for Album ${i + 1}`;
+        if (!firstErrorSection) firstErrorSection = `cover-customization-${i}`;
       }
     }
     

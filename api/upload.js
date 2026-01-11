@@ -119,19 +119,31 @@ export default async function handler(req, res) {
             
             try {
               console.log('Writing files to temp directory...');
+              const usedFileNames = new Set();
               for (const file of files) {
-                // Create unique filename to avoid conflicts
-                const timestamp = Date.now();
-                const random = Math.random().toString(36).substring(7);
-                const safeFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-                const tempFilePath = path.join(tmpDir, `${timestamp}_${random}_${safeFileName}`);
+                // Use the filename as-is (already renamed to photo_01_ordernumber.extension format)
+                // Just sanitize it for filesystem safety
+                let safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+                
+                // Ensure uniqueness (shouldn't be needed but safety check)
+                let finalFileName = safeFileName;
+                let counter = 1;
+                while (usedFileNames.has(finalFileName)) {
+                  const baseName = safeFileName.replace(/\.[^/.]+$/, '');
+                  const ext = safeFileName.split('.').pop();
+                  finalFileName = `${baseName}_${counter}.${ext}`;
+                  counter++;
+                }
+                usedFileNames.add(finalFileName);
+                
+                const tempFilePath = path.join(tmpDir, finalFileName);
                 
                 // Write buffer to temp file
                 await fs.writeFile(tempFilePath, file.data);
                 filePaths.push(tempFilePath);
                 tempFiles.push(tempFilePath);
                 
-                console.log(`Written temp file: ${tempFilePath}`);
+                console.log(`Written temp file: ${tempFilePath} (original name: ${file.name})`);
               }
 
               console.log(`Starting Smash upload with ${filePaths.length} files...`);

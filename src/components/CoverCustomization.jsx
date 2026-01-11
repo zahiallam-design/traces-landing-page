@@ -33,11 +33,17 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
         image: coverImage
       });
     } else {
-      // Notify parent immediately for text type
-      onCoverChange({
-        type: 'text',
-        title: coverTitle
-      });
+      // For text type, don't notify parent until title is filled
+      // Only notify if title already exists
+      if (coverTitle && coverTitle.trim() !== '') {
+        onCoverChange({
+          type: 'text',
+          title: coverTitle.trim()
+        });
+      } else {
+        // Clear cover if switching to text but no title yet
+        onCoverChange(null);
+      }
     }
   };
 
@@ -316,10 +322,16 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
     const title = e.target.value;
     setCoverTitle(title);
     if (coverType === 'text') {
-      onCoverChange({
-        type: 'text',
-        title: title
-      });
+      // Only notify parent if title is filled (not empty)
+      if (title && title.trim() !== '') {
+        onCoverChange({
+          type: 'text',
+          title: title.trim()
+        });
+      } else {
+        // Clear cover if title is empty
+        onCoverChange(null);
+      }
     }
   };
 
@@ -408,9 +420,16 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
                   value={coverTitle}
                   onChange={handleTitleChange}
                   placeholder="e.g., Our Wedding Day, Family Memories 2024"
-                  required={coverType === 'text'}
+                  required
+                  minLength={1}
+                  className={hasError && (!coverTitle || coverTitle.trim() === '') ? 'error-input' : ''}
                 />
-                <small>Enter a title or sentence for your album cover</small>
+                <small>Enter a title or sentence for your album cover (required)</small>
+                {hasError && (!coverTitle || coverTitle.trim() === '') && (
+                  <small style={{ color: '#e74c3c', display: 'block', marginTop: '0.25rem' }}>
+                    Please enter a cover title to proceed
+                  </small>
+                )}
               </div>
             </div>
           )}

@@ -184,6 +184,16 @@
   border-color: var(--pastel-green);
 }
 
+.cover-text-section input.error-input {
+  border-color: #e74c3c;
+  background-color: #fff5f5;
+}
+
+.cover-text-section input.error-input:focus {
+  border-color: #e74c3c;
+  box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
+}
+
 .cover-text-section small {
   color: var(--text-light);
   font-size: 0.85rem;

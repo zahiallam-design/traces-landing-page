@@ -44,7 +44,7 @@ function App() {
       const newAlbums = Array.from({ length: count - albums.length }, (_, index) => ({
         id: albums.length + index,
         selectedAlbum: null,
-        selectedColor: 'green',
+        selectedColor: null,
         smashTransferUrl: null,
         fileCount: 0,
         cover: null
