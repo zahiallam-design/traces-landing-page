@@ -8,7 +8,6 @@ import AlbumOptions from './components/AlbumOptions';
 import UploadSection from './components/UploadSection';
 import CoverCustomization from './components/CoverCustomization';
 import OrderForm from './components/OrderForm';
-import Gallery from './components/Gallery';
 import Footer from './components/Footer';
 import WhatsAppButton from './components/WhatsAppButton';
 import { sendOrderEmail, sendCustomerConfirmationEmail } from './services/emailService';
@@ -494,7 +493,6 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
         </>
       )}
       
-      <Gallery />
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '4rem 2rem', backgroundColor: 'transparent' }}>
         <img 
           src="/logo.jpeg" 

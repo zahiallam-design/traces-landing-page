@@ -28,10 +28,18 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
       setTimeout(() => {
         fileInputRef.current?.click();
       }, 100);
-      onCoverChange({
-        type: 'image',
-        image: coverImage
-      });
+      // Don't set cover until image is actually uploaded
+      // Clear cover if switching to image but no image uploaded yet
+      if (!coverImage && !coverImageUrl) {
+        onCoverChange(null);
+      } else {
+        // Only set cover if image already exists
+        onCoverChange({
+          type: 'image',
+          image: coverImage,
+          imageUrl: coverImageUrl
+        });
+      }
     } else {
       // For text type, don't notify parent until title is filled
       // Only notify if title already exists
@@ -312,6 +320,8 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
       setUploadError(error.message || 'Failed to upload cover image. Please try again.');
       setCoverImage(null);
       setCoverImageUrl(null);
+      // Clear cover when upload fails
+      onCoverChange(null);
     } finally {
       setIsUploadingCover(false);
       setIsCompressingCover(false);
