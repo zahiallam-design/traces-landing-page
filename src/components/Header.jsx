@@ -15,7 +15,7 @@ function Header() {
         <div className="header-content">
           <div className="logo">
             <img 
-              src="/logo.png" 
+              src="/Traces_1.png" 
               alt="Traces Logo" 
               onError={(e) => {
                 e.target.style.display = 'none';

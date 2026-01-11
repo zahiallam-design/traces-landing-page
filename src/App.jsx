@@ -492,19 +492,6 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
           />
         </>
       )}
-      
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '4rem 2rem', backgroundColor: 'transparent' }}>
-        <img 
-          src="/logo.jpeg" 
-          alt="Traces Logo" 
-          style={{ 
-            maxWidth: '300px', 
-            width: '100%', 
-            height: 'auto',
-            objectFit: 'contain'
-          }} 
-        />
-      </div>
       <Footer />
       <WhatsAppButton />
     </div>

@@ -778,6 +778,9 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                 style={{ display: 'none' }}
                 onChange={(e) => handleFileSelect(e.target.files)}
               />
+              <p style={{ marginBottom: '1rem', fontSize: '0.95rem', color: 'var(--text-dark)', textAlign: 'center', lineHeight: '1.5' }}>
+                📸 <strong>Tip:</strong> The order you select your photos is how they'll be printed and assembled in your album. Don't worry—you can drag and reorder them after selection if needed!
+              </p>
               <div
                 ref={dropzoneRef}
                 className="upload-dropzone"
