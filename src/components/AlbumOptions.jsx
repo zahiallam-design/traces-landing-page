@@ -3,7 +3,7 @@ import { useBreakpoint } from '../hooks/useBreakpoint';
 import './AlbumOptions.css';
 
 const albums = [
-  { size: 50, price: 33 },
+  { size: 52, price: 33 },
   { size: 100, price: 47 }
 ];
 
@@ -66,7 +66,7 @@ function AlbumOptions({ albumIndex, selectedAlbum, onAlbumSelect, selectedColor,
                 onClick={() => handleColorSelect('green')}
               >
                 <img 
-                  src="/Green Album.jpg" 
+                  src="/Green Album.JPEG" 
                   alt="Green Album"
                   className="color-album-image"
                 />
@@ -77,7 +77,7 @@ function AlbumOptions({ albumIndex, selectedAlbum, onAlbumSelect, selectedColor,
                 onClick={() => handleColorSelect('grey')}
               >
                 <img 
-                  src="/Grey Album.jpg" 
+                  src="/Grey Album.JPEG" 
                   alt="Grey Album"
                   className="color-album-image"
                 />

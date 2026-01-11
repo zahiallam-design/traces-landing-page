@@ -297,6 +297,7 @@ function CoverCustomization({ albumIndex, onCoverChange }) {
       }
       
       setCoverImageUrl(result.transferUrl);
+      setUploadError(null); // Clear any previous errors
       onCoverChange({
         type: 'image',
         image: fileToUpload,
@@ -393,6 +394,11 @@ function CoverCustomization({ albumIndex, onCoverChange }) {
               {uploadError && (
                 <div className="cover-upload-error">
                   <p style={{ color: '#e74c3c', fontSize: '0.9rem', marginTop: '0.5rem' }}>{uploadError}</p>
+                </div>
+              )}
+              {coverImage && !isUploadingCover && !uploadError && (
+                <div style={{ marginTop: '0.5rem' }}>
+                  <p style={{ color: 'var(--pastel-green-dark)', fontSize: '0.9rem', fontWeight: '500' }}>✓ Cover image uploaded successfully! You can now proceed.</p>
                 </div>
               )}
               {coverImage && (

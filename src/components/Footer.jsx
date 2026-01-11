@@ -149,7 +149,7 @@ function Footer() {
               <h3>2. Service Description</h3>
               <p>Traces provides custom photo album printing and delivery services. We offer:</p>
               <ul>
-                <li>Photo albums in various sizes (50 or 100 photos)</li>
+                <li>Photo albums in various sizes (52 or 100 photos)</li>
                 <li>Customizable album covers (image or text)</li>
                 <li>High-quality A6 size prints</li>
                 <li>Delivery to your specified address</li>

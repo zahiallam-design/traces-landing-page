@@ -144,6 +144,19 @@
   max-width: 100%;
   box-sizing: border-box;
   overflow: hidden;
+  transition: all 0.2s ease;
+  margin-bottom: 0.5rem;
+}
+
+.file-item:hover:not(.dragging) {
+  border-color: var(--pastel-green);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.file-item.dragging {
+  opacity: 0.5;
+  border-color: var(--pastel-green-dark);
+  transform: scale(0.98);
 }
 
 .file-info {

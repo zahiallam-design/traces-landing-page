@@ -3,8 +3,8 @@ import { useBreakpoint } from '../hooks/useBreakpoint';
 import './Gallery.css';
 
 const galleryItems = [
-  { size: 50, color: 'green' },
-  { size: 50, color: 'grey' },
+  { size: 52, color: 'green' },
+  { size: 52, color: 'grey' },
   { size: 100, color: 'green' },
   { size: 100, color: 'grey' }
 ];

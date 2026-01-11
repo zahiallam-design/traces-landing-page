@@ -266,7 +266,7 @@ ${albumsText}
 *DELIVERY ADDRESS:*
 ${orderData.customer.deliveryAddress}
 
-${orderData.notes ? `*DELIVERY NOTES:*\n${orderData.notes}\n\n` : ''}*SUBTOTAL:* $${subtotal.toFixed(2)}
+${orderData.notes ? `*DELIVERY NOTES:*\n${orderData.notes}\n\n` : ''}${orderData.notesForUs ? `*NOTES FOR US:*\n${orderData.notesForUs}\n\n` : ''}*SUBTOTAL:* $${subtotal.toFixed(2)}
 *DELIVERY CHARGE:* $${deliveryCharge.toFixed(2)}
 *TOTAL:* $${total.toFixed(2)}
 

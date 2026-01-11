@@ -14,11 +14,12 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
   const [isUploading, setIsUploading] = useState(false);
   const [isCompressing, setIsCompressing] = useState(false);
   const [compressionProgress, setCompressionProgress] = useState(0);
+  const [draggedIndex, setDraggedIndex] = useState(null);
   const fileInputRef = useRef(null);
   const dropzoneRef = useRef(null);
   const abortControllerRef = useRef(null);
 
-  const maxFiles = selectedAlbum?.size || 50;
+  const maxFiles = selectedAlbum?.size || 52;
 
   // Compress images that are larger than 4MB
   const compressImageIfNeeded = async (file) => {
@@ -156,10 +157,13 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
     try {
       console.log('Starting upload via API...', { fileCount: selectedFiles.length });
       
+      // Rename files with sequential numbers based on user's order
+      const renamedFiles = renameFilesWithOrder(selectedFiles);
+      
       // Compress large images before upload
       const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
-      const filesToCompress = selectedFiles.filter(file => file.size > MAX_FILE_SIZE);
-      let processedFiles = [...selectedFiles];
+      const filesToCompress = renamedFiles.filter(file => file.size > MAX_FILE_SIZE);
+      let processedFiles = [...renamedFiles];
       
       if (filesToCompress.length > 0) {
         console.log(`Found ${filesToCompress.length} files to compress:`, filesToCompress.map(f => `${f.name} (${(f.size / 1024 / 1024).toFixed(2)} MB)`));
@@ -699,6 +703,42 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
   };
 
+  const handleDragStart = (index) => {
+    setDraggedIndex(index);
+  };
+
+  const handleFileDragOver = (e, index) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) return;
+    
+    const newFiles = [...selectedFiles];
+    const draggedFile = newFiles[draggedIndex];
+    newFiles.splice(draggedIndex, 1);
+    newFiles.splice(index, 0, draggedFile);
+    setSelectedFiles(newFiles);
+    setDraggedIndex(index);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+  };
+
+  // Rename files with sequential numbers based on order before upload
+  const renameFilesWithOrder = (files) => {
+    return files.map((file, index) => {
+      // Get file extension
+      const lastDot = file.name.lastIndexOf('.');
+      const extension = lastDot !== -1 ? file.name.substring(lastDot) : '';
+      
+      // Create new filename with sequential number (01, 02, 03, etc.)
+      const paddedNumber = String(index + 1).padStart(2, '0');
+      const newName = `photo_${paddedNumber}${extension}`;
+      
+      // Create new File object with renamed file
+      return new File([file], newName, { type: file.type });
+    });
+  };
+
   return (
     <section id={`upload-photos-${albumIndex}`} className="upload-section">
       <div className="container">
@@ -740,18 +780,27 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
                 <p className="upload-hint">Select up to {maxFiles} photos</p>
               </div>
               {selectedFiles.length > 0 && (
-                <div className="file-list">
-                  {selectedFiles.map((file, index) => (
-                    <FileItem
-                      key={`${file.name}-${index}`}
-                      file={file}
-                      index={index}
-                      onRemove={removeFile}
-                      formatFileSize={formatFileSize}
-                      isUploadComplete={uploadStatus?.type === 'success'}
-                    />
-                  ))}
-                </div>
+                <>
+                  <p style={{ marginTop: '1rem', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-light)', fontStyle: 'italic' }}>
+                    💡 You can drag and drop images to reorder them. The order you set will be the printing order.
+                  </p>
+                  <div className="file-list">
+                    {selectedFiles.map((file, index) => (
+                      <FileItem
+                        key={`${file.name}-${index}`}
+                        file={file}
+                        index={index}
+                        onRemove={removeFile}
+                        formatFileSize={formatFileSize}
+                        isUploadComplete={uploadStatus?.type === 'success'}
+                        onDragStart={handleDragStart}
+                        onDragOver={handleFileDragOver}
+                        onDragEnd={handleDragEnd}
+                        isDragging={draggedIndex === index}
+                      />
+                    ))}
+                  </div>
+                </>
               )}
               {selectedFiles.length > 0 && !isUploading && uploadStatus?.type !== 'success' && (
                 <div style={{ marginTop: '1rem', display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
@@ -813,7 +862,7 @@ function UploadSection({ albumIndex, selectedAlbum, onUploadComplete }) {
   );
 }
 
-function FileItem({ file, index, onRemove, formatFileSize, isUploadComplete }) {
+function FileItem({ file, index, onRemove, formatFileSize, isUploadComplete, onDragStart, onDragOver, onDragEnd, isDragging }) {
   const [preview, setPreview] = useState(null);
 
   useEffect(() => {
@@ -822,12 +871,44 @@ function FileItem({ file, index, onRemove, formatFileSize, isUploadComplete }) {
     reader.readAsDataURL(file);
   }, [file]);
 
+  const handleDragStartLocal = (e) => {
+    if (isUploadComplete) return;
+    onDragStart(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', e.target);
+  };
+
+  const handleDragOverLocal = (e) => {
+    if (isUploadComplete) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    onDragOver(e, index);
+  };
+
+  const handleDragEndLocal = () => {
+    if (isUploadComplete) return;
+    onDragEnd();
+  };
+
   return (
-    <div className="file-item">
+    <div 
+      className={`file-item ${isDragging ? 'dragging' : ''}`}
+      draggable={!isUploadComplete}
+      onDragStart={handleDragStartLocal}
+      onDragOver={handleDragOverLocal}
+      onDragEnd={handleDragEndLocal}
+      style={{
+        cursor: isUploadComplete ? 'default' : 'move',
+        opacity: isDragging ? 0.5 : 1
+      }}
+    >
       <div className="file-info">
         {preview && <img className="file-icon" src={preview} alt="Preview" />}
         <div className="file-details">
-          <div className="file-name">{file.name}</div>
+          <div className="file-name">
+            {!isUploadComplete && <span style={{ marginRight: '0.5rem', color: 'var(--text-light)' }}>☰</span>}
+            {file.name}
+          </div>
           <div className="file-size">{formatFileSize(file.size)}</div>
         </div>
       </div>

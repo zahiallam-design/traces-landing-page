@@ -225,8 +225,10 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
     
     if (ownerEmailSent && customerEmailSent) {
       emailStatusHtml = '<p style="color: var(--pastel-green-dark); margin-bottom: 1rem;">✓ Order confirmation email sent to your inbox!</p>';
-    } else if (ownerEmailSent) {
+    } else if (ownerEmailSent && orderData.customer.email) {
       emailStatusHtml = '<p style="color: var(--pastel-green-dark); margin-bottom: 1rem;">✓ Order received! Check your email for confirmation.</p>';
+    } else if (ownerEmailSent && !orderData.customer.email) {
+      emailStatusHtml = '<p style="color: var(--pastel-green-dark); margin-bottom: 1rem;">✓ Order received! You will receive a WhatsApp message for confirmation.</p>';
     } else if (emailError) {
       emailStatusHtml = `<p style="color: #c33; margin-bottom: 1rem;">⚠ Email could not be sent: ${emailError}<br/>Your order has been logged and we will contact you via WhatsApp.</p>`;
     }
@@ -235,7 +237,7 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
       <h2 style="color: var(--pastel-green-dark); margin-bottom: 1rem;">Order Submitted Successfully!</h2>
       <p style="margin-bottom: 1rem;">Thank you for your order, ${orderData.customer.fullName}!</p>
       ${emailStatusHtml}
-      <p style="margin-bottom: 1rem;">We've received your order and will process it soon.${orderData.customer.email ? ' Check your email for order confirmation.' : ''}</p>
+      <p style="margin-bottom: 1rem;">We've received your order and will process it soon.${orderData.customer.email ? ' Check your email for order confirmation.' : ' You will receive a WhatsApp message for confirmation.'}</p>
       <div id="order-summary-content" style="background-color: #f5f5f5; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; font-family: monospace; font-size: 0.9rem; white-space: pre-wrap;">${orderText}</div>
       <div style="display: flex; gap: 0.75rem; margin-bottom: 1rem;">
         <button id="download-pdf" style="background-color: #4a90e2; color: white; border: none; padding: 0.75rem 2rem; border-radius: 8px; cursor: pointer; font-size: 1rem; flex: 1;">Download Order Summary</button>
