@@ -3,8 +3,8 @@ import { useBreakpoint } from '../hooks/useBreakpoint';
 import './AlbumOptions.css';
 
 const albums = [
-  { size: 50, price: 40 },
-  { size: 100, price: 55 }
+  { size: 50, price: 33 },
+  { size: 100, price: 47 }
 ];
 
 function AlbumOptions({ albumIndex, selectedAlbum, onAlbumSelect, selectedColor, onColorChange }) {

@@ -212,7 +212,9 @@ CUSTOMER DETAILS:
 DELIVERY NOTES:
 ${orderData.notes || 'None'}
 
-${orderData.notesForUs ? `NOTES FOR US:\n${orderData.notesForUs}\n\n` : ''}TOTAL: $${orderData.total.toFixed(2)}
+${orderData.notesForUs ? `NOTES FOR US:\n${orderData.notesForUs}\n\n` : ''}SUBTOTAL: $${(orderData.total - 4).toFixed(2)}
+DELIVERY CHARGE: $4.00
+TOTAL: $${orderData.total.toFixed(2)}
 
 Order Date: ${orderData.timestamp ? new Date(orderData.timestamp).toLocaleString() : new Date().toLocaleString()}
 
@@ -244,20 +246,14 @@ function formatWhatsAppMessageForBusiness(orderData) {
     albumsText += `• Cover: ${coverInfo}\n`;
   });
 
-  const total = orderData.albums.reduce((sum, album) => sum + album.album.price, 0);
+  const subtotal = orderData.albums.reduce((sum, album) => sum + album.album.price, 0);
+  const deliveryCharge = 4;
+  const total = subtotal + deliveryCharge;
   const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || '71532156';
   const cleanWhatsAppNumber = whatsappNumber.replace(/[\s\-+()]/g, '');
 
-  return `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-📱 WHATSAPP MESSAGE TO SEND TO CUSTOMER
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Copy and paste the message below to send to the customer via WhatsApp:
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-*ORDER CONFIRMATION*
+  // Format WhatsApp message
+  const whatsappMessage = `*ORDER CONFIRMATION*
 
 Hello! Thank you for your order, ${orderData.customer.fullName}!
 
@@ -270,7 +266,9 @@ ${albumsText}
 *DELIVERY ADDRESS:*
 ${orderData.customer.deliveryAddress}
 
-${orderData.notes ? `*DELIVERY NOTES:*\n${orderData.notes}\n\n` : ''}*TOTAL:* $${total.toFixed(2)}
+${orderData.notes ? `*DELIVERY NOTES:*\n${orderData.notes}\n\n` : ''}*SUBTOTAL:* $${subtotal.toFixed(2)}
+*DELIVERY CHARGE:* $${deliveryCharge.toFixed(2)}
+*TOTAL:* $${total.toFixed(2)}
 
 *PAYMENT:* Cash on Delivery
 
@@ -285,7 +283,39 @@ We'll print your photos, assemble your ${orderData.albums.length > 1 ? 'albums' 
 
 If you have any questions, feel free to contact us via WhatsApp: https://api.whatsapp.com/send?phone=${cleanWhatsAppNumber}
 
-Thank you for choosing Traces!
+Thank you for choosing Traces!`.trim();
+
+  // Clean customer phone number for WhatsApp link
+  let cleanCustomerPhone = orderData.customer.mobileNumber.replace(/[\s\-+()]/g, '');
+  // Add Lebanon country code if missing
+  if (!cleanCustomerPhone.startsWith('961') && cleanCustomerPhone.length <= 8) {
+    cleanCustomerPhone = '961' + cleanCustomerPhone;
+  }
+
+  // Create WhatsApp link
+  const encodedMessage = encodeURIComponent(whatsappMessage);
+  const whatsappLink = `https://api.whatsapp.com/send?phone=${cleanCustomerPhone}&text=${encodedMessage}`;
+
+  return `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📱 SEND WHATSAPP MESSAGE TO CUSTOMER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Click the link below to open WhatsApp with a pre-filled message ready to send to the customer:
+
+${whatsappLink}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The message includes:
+• Order confirmation
+• Order number: ${orderData.orderNumber || 'N/A'}
+• Complete order details
+• Delivery address
+• Delivery notes (if provided)
+• Subtotal, delivery charge, and total
+• Delivery time information
+• Contact information
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`.trim();
 }
@@ -331,7 +361,9 @@ ${albumsText}
 DELIVERY ADDRESS:
 ${orderData.customer.deliveryAddress}
 
-${orderData.notes ? `DELIVERY NOTES:\n${orderData.notes}\n\n` : ''}TOTAL: $${orderData.total.toFixed(2)}
+${orderData.notes ? `DELIVERY NOTES:\n${orderData.notes}\n\n` : ''}${orderData.notesForUs ? `NOTES FOR US:\n${orderData.notesForUs}\n\n` : ''}SUBTOTAL: $${(orderData.total - 4).toFixed(2)}
+DELIVERY CHARGE: $4.00
+TOTAL: $${orderData.total.toFixed(2)}
 
 PAYMENT: Cash on Delivery
 

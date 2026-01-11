@@ -21,9 +21,11 @@ function OrderForm({
     mobileNumber: ''
   });
 
-  const total = albums.reduce((sum, album) => {
+  const subtotal = albums.reduce((sum, album) => {
     return sum + (album.selectedAlbum?.price || 0);
   }, 0);
+  const deliveryCharge = 4;
+  const total = subtotal + deliveryCharge;
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -90,6 +92,14 @@ function OrderForm({
                 </div>
               </div>
             ))}
+            <div className="summary-item">
+              <span>Subtotal:</span>
+              <span>${subtotal.toFixed(2)}</span>
+            </div>
+            <div className="summary-item">
+              <span>Delivery Charge:</span>
+              <span>${deliveryCharge.toFixed(2)}</span>
+            </div>
             <div className="summary-total">
               <span>Total:</span>
               <span>${total.toFixed(2)}</span>
@@ -141,7 +151,6 @@ function OrderForm({
                 placeholder="Any special notes for us..."
                 value={notesForUs || ''}
                 onChange={(e) => onNotesForUsChange(e.target.value)}
-                style={{ backgroundColor: '#f5f5f5', color: '#666' }}
               />
             </div>
             <div className="form-group">

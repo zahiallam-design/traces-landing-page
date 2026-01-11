@@ -162,7 +162,9 @@ ALBUM ${index + 1}:
 `;
     });
 
-    const total = orderData.albums.reduce((sum, album) => sum + album.album.price, 0);
+    const subtotal = orderData.albums.reduce((sum, album) => sum + album.album.price, 0);
+    const deliveryCharge = 4;
+    const total = subtotal + deliveryCharge;
 
     return `
 NEW ALBUM ORDER
@@ -182,6 +184,8 @@ CUSTOMER DETAILS:
 DELIVERY NOTES:
 ${orderData.notes || 'None'}
 
+${orderData.notesForUs ? `NOTES FOR US:\n${orderData.notesForUs}\n\n` : ''}SUBTOTAL: $${subtotal.toFixed(2)}
+DELIVERY CHARGE: $${deliveryCharge.toFixed(2)}
 TOTAL: $${total.toFixed(2)}
 
 Order Date: ${orderData.timestamp ? new Date(orderData.timestamp).toLocaleString() : new Date().toLocaleString()}
@@ -324,8 +328,18 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
         addText(orderData.notes, 10);
       }
       
+      if (orderData.notesForUs) {
+        yPosition += 5;
+        addText('NOTES FOR US:', 12, true);
+        addText(orderData.notesForUs, 10);
+      }
+      
       yPosition += 5;
-      const total = orderData.albums.reduce((sum, album) => sum + album.album.price, 0);
+      const subtotal = orderData.albums.reduce((sum, album) => sum + album.album.price, 0);
+      const deliveryCharge = 4;
+      const total = subtotal + deliveryCharge;
+      addText(`SUBTOTAL: $${subtotal.toFixed(2)}`, 10);
+      addText(`DELIVERY CHARGE: $${deliveryCharge.toFixed(2)}`, 10);
       addText(`TOTAL: $${total.toFixed(2)}`, 14, true, [45, 134, 89]);
       
       yPosition += 10;
