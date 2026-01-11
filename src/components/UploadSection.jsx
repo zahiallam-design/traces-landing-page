@@ -888,13 +888,41 @@ function FileItem({ file, index, onRemove, formatFileSize, isUploadComplete, onD
 
   const handleDragStartLocal = (e) => {
     if (isUploadComplete) return;
+    // Don't call preventDefault here as it prevents dragging
     onDragStart(index);
     e.dataTransfer.effectAllowed = 'move';
-    // Set a simple string identifier instead of DOM element to avoid "[object HTMLDivElement]" issue
-    // Use a non-URL format to prevent mobile browsers from treating it as a link
-    e.dataTransfer.setData('text/plain', `file-${index}`);
-    // Prevent mobile browsers from using drag data as navigation
-    e.dataTransfer.setData('text/html', ''); // Empty HTML to override any default
+    
+    // Create a transparent 1x1 pixel image to use as drag image
+    // This prevents mobile browsers from using text content for search
+    const dragImage = document.createElement('img');
+    dragImage.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+    dragImage.style.width = '1px';
+    dragImage.style.height = '1px';
+    dragImage.style.position = 'absolute';
+    dragImage.style.top = '-1000px';
+    document.body.appendChild(dragImage);
+    e.dataTransfer.setDragImage(dragImage, 0, 0);
+    // Remove the temporary image after a short delay
+    setTimeout(() => document.body.removeChild(dragImage), 0);
+    
+    // Prevent mobile browsers from treating drag data as a search query
+    // Use formats that browsers won't interpret as URLs or search queries
+    try {
+      // Use custom MIME type for our internal use
+      e.dataTransfer.setData('application/x-drag-item', String(index));
+      // Use a non-searchable format: Zero-width spaces make it non-searchable
+      e.dataTransfer.setData('text/plain', '\u200B\u200B'); // Zero-width spaces only
+      // Set empty text/html to prevent any HTML interpretation
+      e.dataTransfer.setData('text/html', '');
+    } catch (err) {
+      // Fallback: use zero-width space to make it non-searchable
+      try {
+        e.dataTransfer.setData('text/plain', '\u200B\u200B'); // Zero-width spaces
+        e.dataTransfer.setData('text/html', '');
+      } catch (e2) {
+        // Ignore if dataTransfer is not available
+      }
+    }
     e.stopPropagation();
   };
 
