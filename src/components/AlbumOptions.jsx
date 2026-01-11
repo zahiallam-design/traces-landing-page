@@ -13,10 +13,24 @@ function AlbumOptions({ albumIndex, selectedAlbum, onAlbumSelect, selectedColor,
 
   const handleSizeSelect = (album) => {
     onAlbumSelect(album);
+    // Scroll to color selection after a short delay
+    setTimeout(() => {
+      const colorSection = document.getElementById(`color-selection-${albumIndex}`);
+      if (colorSection) {
+        colorSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 300);
   };
 
   const handleColorSelect = (color) => {
     onColorChange(color);
+    // Scroll to upload section after color is selected
+    setTimeout(() => {
+      const uploadSection = document.getElementById(`upload-photos-${albumIndex}`);
+      if (uploadSection) {
+        uploadSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 300);
   };
 
   // Show album preview only when both size and color are selected
@@ -47,22 +61,30 @@ function AlbumOptions({ albumIndex, selectedAlbum, onAlbumSelect, selectedColor,
 
         {/* Step 2: Color Selection (only show if size is selected) */}
         {selectedAlbum && (
-          <div className="album-selection-step">
+          <div id={`color-selection-${albumIndex}`} className="album-selection-step">
             <h3 className="step-title">Step 2: Choose Color</h3>
-            <div className="color-buttons">
+            <div className="color-album-selection">
               <button
-                className={`color-selection-btn ${selectedColor === 'green' ? 'selected' : ''}`}
+                className={`color-album-btn ${selectedColor === 'green' ? 'selected' : ''}`}
                 onClick={() => handleColorSelect('green')}
               >
-                <span className="color-swatch green"></span>
-                <span className="color-label">Green</span>
+                <img 
+                  src="/Green Album.jpg" 
+                  alt="Green Album"
+                  className="color-album-image"
+                />
+                <span className="color-album-label">Green</span>
               </button>
               <button
-                className={`color-selection-btn ${selectedColor === 'grey' ? 'selected' : ''}`}
+                className={`color-album-btn ${selectedColor === 'grey' ? 'selected' : ''}`}
                 onClick={() => handleColorSelect('grey')}
               >
-                <span className="color-swatch grey"></span>
-                <span className="color-label">Grey</span>
+                <img 
+                  src="/Grey Album.jpg" 
+                  alt="Grey Album"
+                  className="color-album-image"
+                />
+                <span className="color-album-label">Grey</span>
               </button>
             </div>
           </div>

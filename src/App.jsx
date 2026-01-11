@@ -192,6 +192,8 @@ ${orderData.notes || 'None'}
 TOTAL: $${total.toFixed(2)}
 
 Order Date: ${orderData.timestamp ? new Date(orderData.timestamp).toLocaleString() : new Date().toLocaleString()}
+
+DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 business days.
     `.trim();
   };
 
@@ -333,6 +335,10 @@ Order Date: ${orderData.timestamp ? new Date(orderData.timestamp).toLocaleString
       const total = orderData.albums.reduce((sum, album) => sum + album.album.price, 0);
       addText(`TOTAL: $${total.toFixed(2)}`, 14, true, [45, 134, 89]);
       
+      yPosition += 10;
+      addText('DELIVERY TIME:', 12, true, [45, 134, 89]);
+      addText('Your order will be delivered to your doorstep within 3 to 5 business days.', 10);
+      
       // Contact Information Footer
       yPosition += 15;
       // Use regular dashes instead of Unicode characters to avoid rendering issues
@@ -344,7 +350,7 @@ Order Date: ${orderData.timestamp ? new Date(orderData.timestamp).toLocaleString
       
       addText('Email: traces.leb@gmail.com', 10);
       addText('WhatsApp: 00961 71 5321 56', 10);
-      addText('Website: https://traces-landing-page.vercel.app/', 10);
+      addText('Website: https://traces-leb.vercel.app/', 10);
       
       // Download PDF
       const fileName = `Order_Summary_${orderData.orderNumber || 'N/A'}.pdf`;

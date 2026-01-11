@@ -83,7 +83,7 @@ Order Date: ${orderData.timestamp ? new Date(orderData.timestamp).toLocaleString
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 *WHAT'S NEXT?*
-We'll print your photos, assemble your ${orderData.albums.length > 1 ? 'albums' : 'album'}, and deliver ${orderData.albums.length > 1 ? 'them' : 'it'} to your doorstep.
+We'll print your photos, assemble your ${orderData.albums.length > 1 ? 'albums' : 'album'}, and deliver ${orderData.albums.length > 1 ? 'them' : 'it'} to your doorstep within 3 to 5 business days.
 
 If you have any questions, feel free to contact us via WhatsApp: https://api.whatsapp.com/send?phone=${cleanWhatsAppNumber}
 

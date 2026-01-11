@@ -92,6 +92,9 @@ function OrderForm({
               <span>Total:</span>
               <span>${total.toFixed(2)}</span>
             </div>
+            <div className="summary-delivery-info" style={{ marginTop: '1rem', padding: '1rem', backgroundColor: 'var(--pastel-green-light)', borderRadius: '8px', fontSize: '0.9rem', color: 'var(--text-dark)' }}>
+              <strong>Delivery Time:</strong> Your order will be delivered to your doorstep within 3 to 5 business days.
+            </div>
           </div>
           <form className="order-form-form" onSubmit={handleSubmit}>
             <div className="form-group">

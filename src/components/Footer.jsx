@@ -211,7 +211,7 @@ function Footer() {
               <ul>
                 <li>Email: traces.leb@gmail.com</li>
                 <li>WhatsApp: 00961 71 5321 56</li>
-                <li>Website: https://traces-landing-page.vercel.app/</li>
+                <li>Website: https://traces-leb.vercel.app/</li>
               </ul>
             </div>
           </div>

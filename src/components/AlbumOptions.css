@@ -70,59 +70,53 @@
   margin-top: 0.5rem;
 }
 
-/* Color Buttons */
-.color-buttons {
-  display: flex;
+/* Color Album Selection */
+.color-album-selection {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 1.5rem;
-  justify-content: center;
-  flex-wrap: wrap;
+  max-width: 600px;
+  margin: 0 auto;
 }
 
-.color-selection-btn {
+.color-album-btn {
   background-color: var(--white);
   border: 3px solid var(--border-light);
   border-radius: 12px;
-  padding: 1.5rem 2rem;
+  padding: 0;
   cursor: pointer;
   transition: all 0.3s;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 0.75rem;
-  min-width: 150px;
+  overflow: hidden;
+  position: relative;
 }
 
-.color-selection-btn:hover {
+.color-album-btn:hover {
   transform: translateY(-3px);
   box-shadow: var(--shadow);
   border-color: var(--pastel-green);
 }
 
-.color-selection-btn.selected {
+.color-album-btn.selected {
   border-color: var(--pastel-green-dark);
-  background-color: var(--pastel-green-light);
-  box-shadow: var(--shadow);
+  box-shadow: 0 0 0 3px var(--pastel-green-light), var(--shadow);
 }
 
-.color-swatch {
+.color-album-image {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
   display: block;
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
 }
 
-.color-swatch.green {
-  background-color: var(--pastel-green-dark);
-}
-
-.color-swatch.grey {
-  background-color: #929191;
-}
-
-.color-label {
+.color-album-label {
+  padding: 1rem;
   font-size: 1rem;
   font-weight: 600;
   color: var(--text-dark);
+  text-align: center;
+  background-color: var(--white);
 }
 
 /* Album Preview */
@@ -172,16 +166,23 @@
 
 /* Mobile Responsive */
 @media (max-width: 768px) {
-  .size-buttons,
-  .color-buttons {
+  .size-buttons {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .size-btn,
-  .color-selection-btn {
+  .size-btn {
     width: 100%;
     min-width: auto;
+  }
+
+  .color-album-selection {
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .color-album-image {
+    height: 180px;
   }
 
   .album-preview {

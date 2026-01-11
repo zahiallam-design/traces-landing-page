@@ -259,12 +259,14 @@ ${orderData.notes ? `DELIVERY NOTES:\n${orderData.notes}\n\n` : ''}TOTAL: $${ord
 
 PAYMENT: Cash on Delivery
 
+DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 business days.
+
 Order Date: ${orderData.timestamp ? new Date(orderData.timestamp).toLocaleString() : new Date().toLocaleString()}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 WHAT'S NEXT?
-We'll print your photos, assemble your ${orderData.albums.length > 1 ? 'albums' : 'album'}, and deliver ${orderData.albums.length > 1 ? 'them' : 'it'} to your doorstep.
+We'll print your photos, assemble your ${orderData.albums.length > 1 ? 'albums' : 'album'}, and deliver ${orderData.albums.length > 1 ? 'them' : 'it'} to your doorstep within 3 to 5 business days.
 
 If you have any questions, feel free to contact us via WhatsApp: ${whatsappLink}
 
