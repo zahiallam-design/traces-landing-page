@@ -14,7 +14,8 @@
     "busboy": "^1.6.0",
     "jspdf": "^4.0.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "react-easy-crop": "^5.0.4"
   },
   "devDependencies": {
     "@types/react": "^18.2.43",
