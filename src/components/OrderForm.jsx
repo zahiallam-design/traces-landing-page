@@ -9,7 +9,8 @@ function OrderForm({
   notesForUs,
   onNotesForUsChange,
   onSubmit,
-  isSubmitting = false
+  isSubmitting = false,
+  onValidationError
 }) {
   const breakpoint = useBreakpoint();
   const isMobile = ['xs', 'ss', 'sm'].includes(breakpoint);
@@ -35,24 +36,40 @@ function OrderForm({
     }
     
     // Validate all albums are complete
+    const errors = {};
+    let firstErrorSection = null;
+    
     for (let i = 0; i < albums.length; i++) {
       const album = albums[i];
       if (!album.selectedAlbum) {
-        alert(`Please select an album size for Album ${i + 1}.`);
-        document.getElementById(`album-options-${i}`)?.scrollIntoView({ behavior: 'smooth' });
-        return;
+        errors[`album-${i}-size`] = `Please select an album size for Album ${i + 1}`;
+        if (!firstErrorSection) firstErrorSection = `album-options-${i}`;
+      } else if (!album.selectedColor) {
+        errors[`album-${i}-color`] = `Please select a color for Album ${i + 1}`;
+        if (!firstErrorSection) firstErrorSection = `color-selection-${i}`;
+      } else if (!album.smashTransferUrl) {
+        errors[`album-${i}-photos`] = `Please upload photos for Album ${i + 1}`;
+        if (!firstErrorSection) firstErrorSection = `upload-photos-${i}`;
+      } else if (!album.cover) {
+        errors[`album-${i}-cover`] = `Please customize the cover for Album ${i + 1}`;
+        if (!firstErrorSection) firstErrorSection = `cover-customization-${i}`;
       }
-
-      if (!album.smashTransferUrl) {
-        alert(`Please upload photos for Album ${i + 1}.`);
-        document.getElementById(`upload-photos-${i}`)?.scrollIntoView({ behavior: 'smooth' });
-        return;
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      if (onValidationError) {
+        onValidationError(errors);
       }
-
-      if (!album.cover) {
-        alert(`Please customize the cover for Album ${i + 1}.`);
-        return;
+      // Scroll to first error section
+      if (firstErrorSection) {
+        setTimeout(() => {
+          const element = document.getElementById(firstErrorSection);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 100);
       }
+      return;
     }
 
     const orderData = {

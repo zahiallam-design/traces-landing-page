@@ -7,7 +7,7 @@ const albums = [
   { size: 100, price: 47 }
 ];
 
-function AlbumOptions({ albumIndex, selectedAlbum, onAlbumSelect, selectedColor, onColorChange }) {
+function AlbumOptions({ albumIndex, selectedAlbum, onAlbumSelect, selectedColor, onColorChange, hasError }) {
   const breakpoint = useBreakpoint();
   const isMobile = ['xs', 'ss', 'sm'].includes(breakpoint);
 
@@ -34,9 +34,12 @@ function AlbumOptions({ albumIndex, selectedAlbum, onAlbumSelect, selectedColor,
   };
 
   return (
-    <section id={`album-options-${albumIndex}`} className="album-options">
+    <section id={`album-options-${albumIndex}`} className={`album-options ${hasError ? 'has-error' : ''}`}>
       <div className="container">
-        <h2 className="section-title">Album {albumIndex + 1} - Choose Your Album</h2>
+        <h2 className="section-title">
+          Album {albumIndex + 1} - Choose Your Album
+          {hasError && <span className="error-badge" title="This step needs to be completed">⚠</span>}
+        </h2>
         
         {/* Step 1: Size Selection */}
         <div className="album-selection-step">
@@ -58,8 +61,11 @@ function AlbumOptions({ albumIndex, selectedAlbum, onAlbumSelect, selectedColor,
 
         {/* Step 2: Color Selection (only show if size is selected) */}
         {selectedAlbum && (
-          <div id={`color-selection-${albumIndex}`} className="album-selection-step">
-            <h3 className="step-title">Step 2: Choose Color</h3>
+          <div id={`color-selection-${albumIndex}`} className={`album-selection-step ${hasError && !selectedColor ? 'has-error' : ''}`}>
+            <h3 className="step-title">
+              Step 2: Choose Color
+              {hasError && !selectedColor && <span className="error-badge" title="This step needs to be completed">⚠</span>}
+            </h3>
             <div className="color-album-selection">
               <button
                 className={`color-album-btn ${selectedColor === 'green' ? 'selected' : ''}`}

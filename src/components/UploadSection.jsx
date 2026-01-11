@@ -6,7 +6,7 @@ import './UploadSection.css';
 // Smash API key is now handled server-side via Vercel Serverless Functions
 // No API key needed in frontend - more secure!
 
-function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplete }) {
+function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplete, hasError }) {
   const breakpoint = useBreakpoint();
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -752,9 +752,12 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
   };
 
   return (
-    <section id={`upload-photos-${albumIndex}`} className="upload-section">
+    <section id={`upload-photos-${albumIndex}`} className={`upload-section ${hasError ? 'has-error' : ''}`}>
       <div className="container">
-        <h2 className="section-title">Album {albumIndex + 1} - Upload Your Photos</h2>
+        <h2 className="section-title">
+          Album {albumIndex + 1} - Upload Your Photos
+          {hasError && <span className="error-badge" title="This step needs to be completed">⚠</span>}
+        </h2>
         {!selectedAlbum ? (
           <div className="upload-disabled-message">
             <p>Please select an album size above to enable photo uploads.</p>

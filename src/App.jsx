@@ -26,6 +26,7 @@ function App() {
   const [notesForUs, setNotesForUs] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderNumber, setOrderNumber] = useState(null); // Generate order number early for file naming
+  const [validationErrors, setValidationErrors] = useState({}); // Track validation errors per album
 
   // Initialize albums array when count is selected
   const handleAlbumCountSelect = (count) => {
@@ -415,22 +416,65 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
                 <AlbumOptions
                   albumIndex={index}
                   selectedAlbum={album.selectedAlbum}
-                  onAlbumSelect={(albumData) => handleAlbumSelect(index, albumData)}
+                  onAlbumSelect={(albumData) => {
+                    handleAlbumSelect(index, albumData);
+                    // Clear validation error when album is selected
+                    if (validationErrors[`album-${index}-size`]) {
+                      setValidationErrors(prev => {
+                        const newErrors = { ...prev };
+                        delete newErrors[`album-${index}-size`];
+                        return newErrors;
+                      });
+                    }
+                  }}
                   selectedColor={album.selectedColor}
-                  onColorChange={(color) => handleColorChange(index, color)}
+                  onColorChange={(color) => {
+                    handleColorChange(index, color);
+                    // Clear validation error when color is selected
+                    if (validationErrors[`album-${index}-color`]) {
+                      setValidationErrors(prev => {
+                        const newErrors = { ...prev };
+                        delete newErrors[`album-${index}-color`];
+                        return newErrors;
+                      });
+                    }
+                  }}
+                  hasError={validationErrors[`album-${index}-size`] || validationErrors[`album-${index}-color`]}
                 />
                 {album.selectedAlbum && album.selectedColor && (
                   <UploadSection
                     albumIndex={index}
                     selectedAlbum={album.selectedAlbum}
                     orderNumber={orderNumber}
-                    onUploadComplete={(transferUrl, count) => handleUploadComplete(index, transferUrl, count)}
+                    onUploadComplete={(transferUrl, count) => {
+                      handleUploadComplete(index, transferUrl, count);
+                      // Clear validation error when photos are uploaded
+                      if (validationErrors[`album-${index}-photos`]) {
+                        setValidationErrors(prev => {
+                          const newErrors = { ...prev };
+                          delete newErrors[`album-${index}-photos`];
+                          return newErrors;
+                        });
+                      }
+                    }}
+                    hasError={validationErrors[`album-${index}-photos`]}
                   />
                 )}
                 {album.smashTransferUrl && (
                   <CoverCustomization
                     albumIndex={index}
-                    onCoverChange={(coverData) => handleCoverChange(index, coverData)}
+                    onCoverChange={(coverData) => {
+                      handleCoverChange(index, coverData);
+                      // Clear validation error when cover is set
+                      if (validationErrors[`album-${index}-cover`]) {
+                        setValidationErrors(prev => {
+                          const newErrors = { ...prev };
+                          delete newErrors[`album-${index}-cover`];
+                          return newErrors;
+                        });
+                      }
+                    }}
+                    hasError={validationErrors[`album-${index}-cover`]}
                   />
                 )}
               </div>
@@ -445,6 +489,7 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
             onNotesForUsChange={setNotesForUs}
             onSubmit={handleOrderSubmit}
             isSubmitting={isSubmitting}
+            onValidationError={setValidationErrors}
           />
         </>
       )}

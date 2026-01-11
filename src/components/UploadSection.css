@@ -1,6 +1,29 @@
 .upload-section {
   background-color: var(--white);
   padding: 4rem 0;
+  transition: all 0.3s ease;
+}
+
+.upload-section.has-error {
+  border-left: 4px solid #e74c3c;
+  padding-left: 1rem;
+}
+
+.upload-section .error-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  color: #e74c3c;
+  font-size: 1.2rem;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 .upload-disabled-message {

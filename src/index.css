@@ -53,6 +53,28 @@ body {
   text-align: center;
   margin-bottom: 3rem;
   color: var(--text-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.section-title .error-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  color: #e74c3c;
+  font-size: 1.2rem;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 .btn {

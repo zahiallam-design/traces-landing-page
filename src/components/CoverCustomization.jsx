@@ -4,7 +4,7 @@ import imageCompression from 'browser-image-compression';
 import Cropper from 'react-easy-crop';
 import './CoverCustomization.css';
 
-function CoverCustomization({ albumIndex, onCoverChange }) {
+function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
   const breakpoint = useBreakpoint();
   const [coverType, setCoverType] = useState(null); // 'image' or 'text'
   const [coverImage, setCoverImage] = useState(null);
@@ -324,9 +324,12 @@ function CoverCustomization({ albumIndex, onCoverChange }) {
   };
 
   return (
-    <section className="cover-customization">
+    <section id={`cover-customization-${albumIndex}`} className={`cover-customization ${hasError ? 'has-error' : ''}`}>
       <div className="container">
-        <h2 className="section-title">Album {albumIndex + 1} - Cover Customization</h2>
+        <h2 className="section-title">
+          Album {albumIndex + 1} - Cover Customization
+          {hasError && <span className="error-badge" title="This step needs to be completed">⚠</span>}
+        </h2>
         <div className="cover-customization-content">
           <p className="cover-subtitle">Choose how you want your album cover to look</p>
           

@@ -1,6 +1,29 @@
 .cover-customization {
   background-color: var(--neutral-bg);
   padding: 4rem 0;
+  transition: all 0.3s ease;
+}
+
+.cover-customization.has-error {
+  border-left: 4px solid #e74c3c;
+  padding-left: 1rem;
+}
+
+.cover-customization .error-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  color: #e74c3c;
+  font-size: 1.2rem;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 .cover-customization .container {

@@ -1,6 +1,36 @@
 .album-options {
   background-color: var(--neutral-bg);
   padding: 4rem 0;
+  transition: all 0.3s ease;
+}
+
+.album-options.has-error {
+  border-left: 4px solid #e74c3c;
+  padding-left: 1rem;
+}
+
+.error-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  color: #e74c3c;
+  font-size: 1.2rem;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.album-selection-step.has-error {
+  border: 2px solid #e74c3c;
+  border-radius: 12px;
+  padding: 1rem;
+  background-color: #fff5f5;
 }
 
 .album-selection-step {
@@ -16,6 +46,17 @@
   color: var(--text-dark);
   margin-bottom: 1.5rem;
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
 /* Size Buttons */
@@ -106,8 +147,9 @@
 .color-album-image {
   width: 100%;
   height: 200px;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
+  background-color: #f5f5f5;
 }
 
 .color-album-label {
