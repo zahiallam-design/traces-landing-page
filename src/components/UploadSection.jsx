@@ -907,11 +907,11 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                       </p>
                     </div>
                   )}
-                  <div style={{ marginTop: '1rem', marginBottom: '0.5rem', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                  <div style={{ marginTop: '1rem', marginBottom: '0.5rem' }}>
                     <p style={{ 
                       margin: 0, 
                       fontSize: '0.95rem', 
-                      fontWeight: '500',
+                      fontWeight: '700',
                       color: selectedFiles.length > maxFiles ? '#e74c3c' : 'var(--text-dark)'
                     }}>
                       {selectedFiles.length} of {maxFiles} selected
