@@ -13,7 +13,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
   const [uploadStatus, setUploadStatus] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isCompressing, setIsCompressing] = useState(false);
-  const [compressionProgress, setCompressionProgress] = useState(0); // Number of files compressed
+  const [compressionProgress, setCompressionProgress] = useState(0); // Percentage of compression progress (0-100)
   const [draggedIndex, setDraggedIndex] = useState(null);
   const fileInputRef = useRef(null);
   const dropzoneRef = useRef(null);
@@ -175,6 +175,9 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
         
         // Compress files one by one with progress
         try {
+          let compressedCount = 0;
+          const totalToCompress = filesToCompress.length;
+          
           for (let i = 0; i < selectedFiles.length; i++) {
             const file = selectedFiles[i];
             const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
@@ -203,7 +206,12 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                 }
                 
                 processedFiles[i] = compressedFile;
-                console.log(`✓ File ${file.name} successfully compressed and ready for upload`);
+                compressedCount++;
+                
+                // Update progress based on actual compression progress
+                const progressPercent = totalToCompress > 0 ? (compressedCount / totalToCompress) * 100 : 100;
+                setCompressionProgress(progressPercent);
+                console.log(`Compression progress: ${compressedCount}/${totalToCompress} images compressed (${progressPercent.toFixed(1)}%)`);
               } catch (compressionError) {
                 console.error(`Compression failed for ${file.name}:`, compressionError);
                 setIsCompressing(false);
@@ -213,10 +221,6 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
             } else {
               console.log(`File ${file.name} is already under 4MB (${fileSizeMB} MB), skipping compression`);
             }
-            
-            // Update progress (store as number of files compressed)
-            setCompressionProgress(i + 1);
-            console.log(`Compression progress: ${i + 1}/${selectedFiles.length} images`);
           }
           
           console.log('All files processed. Compression complete.');
@@ -846,9 +850,9 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
               {isCompressing && (
                 <div className="upload-progress">
                   <div className="progress-bar">
-                    <div className="progress-fill" style={{ width: `${(compressionProgress / selectedFiles.length) * 100}%` }}></div>
+                    <div className="progress-fill" style={{ width: `${compressionProgress}%` }}></div>
                   </div>
-                  <p className="progress-text" style={{ marginTop: '0.5rem' }}>Compressing images... {compressionProgress} of {selectedFiles.length} images</p>
+                  <p className="progress-text" style={{ marginTop: '0.5rem' }}>Compressing images...</p>
                 </div>
               )}
               {isUploading && (

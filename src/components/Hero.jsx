@@ -24,7 +24,7 @@ function Hero() {
             <p style={{ marginBottom: '0.5rem' }}>You select, upload and submit</p>
             <p>We print, fill and send you the album</p>
           </div>
-          <p style={{ marginTop: '1rem', color: 'var(--pastel-green-dark)', fontWeight: '500', fontSize: '1rem' }}>
+          <p style={{ marginTop: '1rem', marginBottom: '1.5rem', color: 'var(--pastel-green-dark)', fontWeight: '500', fontSize: '1rem' }}>
             🎉 Free delivery on orders above $90!
           </p>
           <button 
