@@ -907,89 +907,97 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                       </p>
                     </div>
                   )}
-                  <div style={{ marginTop: '1rem', marginBottom: '0.5rem' }}>
-                    <p style={{ 
-                      margin: 0, 
-                      fontSize: '0.95rem', 
-                      fontWeight: '700',
-                      color: selectedFiles.length > maxFiles ? '#e74c3c' : 'var(--text-dark)'
-                    }}>
-                      {selectedFiles.length} of {maxFiles} selected
-                    </p>
-                  </div>
-                  {selectedFiles.length > maxFiles && (
-                    <div style={{ 
-                      marginBottom: '1rem', 
-                      padding: '0.75rem', 
-                      backgroundColor: '#fee', 
-                      border: '1px solid #e74c3c', 
-                      borderRadius: '8px',
-                      fontSize: '0.9rem'
-                    }}>
-                      <p style={{ margin: 0, color: '#e74c3c', fontWeight: '500' }}>
-                        ⚠️ You have selected {selectedFiles.length} photos, but this album only allows {maxFiles} photos.
-                      </p>
-                      <p style={{ margin: '0.5rem 0 0 0', color: '#c33', fontSize: '0.85rem' }}>
-                        Please remove {selectedFiles.length - maxFiles} photo{selectedFiles.length - maxFiles > 1 ? 's' : ''} to proceed with upload.
+                  <div style={{ 
+                    marginTop: '1rem',
+                    padding: '1rem',
+                    backgroundColor: '#f8f9fa',
+                    border: '1px solid #dee2e6',
+                    borderRadius: '8px'
+                  }}>
+                    <div style={{ marginBottom: '0.5rem' }}>
+                      <p style={{ 
+                        margin: 0, 
+                        fontSize: '0.95rem', 
+                        fontWeight: '700',
+                        color: selectedFiles.length > maxFiles ? '#e74c3c' : 'var(--text-dark)'
+                      }}>
+                        {selectedFiles.length} of {maxFiles} selected
                       </p>
                     </div>
-                  )}
-                  <p style={{ marginTop: '0.5rem', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--pastel-green-dark)', fontWeight: '500' }}>
-                    ✓ The below images you selected have been added successfully, waiting for you to upload them.
-                  </p>
-                  <p style={{ marginTop: '0.5rem', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-light)', fontStyle: 'italic' }}>
-                    💡 Images are listed in your selection order. Want to change it? Drag the handle (☰) on the right.
-                  </p>
-                  <div className="file-list">
-                    {selectedFiles.map((file, index) => (
-                      <FileItem
-                        key={`${file.name}-${index}`}
-                        file={file}
-                        index={index}
-                        onRemove={removeFile}
-                        formatFileSize={formatFileSize}
-                        isUploadComplete={uploadStatus?.type === 'success'}
-                        onDragStart={handleDragStart}
-                        onDragOver={handleFileDragOver}
-                        onDragEnd={handleDragEnd}
-                        isDragging={draggedIndex === index}
-                      />
-                    ))}
+                    {selectedFiles.length > maxFiles && (
+                      <div style={{ 
+                        marginBottom: '1rem', 
+                        padding: '0.75rem', 
+                        backgroundColor: '#fee', 
+                        border: '1px solid #e74c3c', 
+                        borderRadius: '8px',
+                        fontSize: '0.9rem'
+                      }}>
+                        <p style={{ margin: 0, color: '#e74c3c', fontWeight: '500' }}>
+                          ⚠️ You have selected {selectedFiles.length} photos, but this album only allows {maxFiles} photos.
+                        </p>
+                        <p style={{ margin: '0.5rem 0 0 0', color: '#c33', fontSize: '0.85rem' }}>
+                          Please remove {selectedFiles.length - maxFiles} photo{selectedFiles.length - maxFiles > 1 ? 's' : ''} to proceed with upload.
+                        </p>
+                      </div>
+                    )}
+                    <p style={{ marginTop: '0.5rem', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--pastel-green-dark)', fontWeight: '500' }}>
+                      ✓ The below images you selected have been added successfully, waiting for you to upload them.
+                    </p>
+                    <p style={{ marginTop: '0.5rem', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-light)', fontStyle: 'italic' }}>
+                      💡 Images are listed in your selection order. Want to change it? Drag the handle (☰) on the right.
+                    </p>
+                    <div className="file-list" style={{ marginTop: '0.5rem' }}>
+                      {selectedFiles.map((file, index) => (
+                        <FileItem
+                          key={`${file.name}-${index}`}
+                          file={file}
+                          index={index}
+                          onRemove={removeFile}
+                          formatFileSize={formatFileSize}
+                          isUploadComplete={uploadStatus?.type === 'success'}
+                          onDragStart={handleDragStart}
+                          onDragOver={handleFileDragOver}
+                          onDragEnd={handleDragEnd}
+                          isDragging={draggedIndex === index}
+                        />
+                      ))}
+                    </div>
+                    {!isUploading && uploadStatus?.type !== 'success' && (
+                      <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', alignItems: 'center' }}>
+                        {selectedFiles.length > maxFiles && (
+                          <p style={{ margin: 0, color: '#e74c3c', fontSize: '0.9rem', fontWeight: '500' }}>
+                            Cannot upload: Too many photos selected
+                          </p>
+                        )}
+                        <button 
+                          onClick={handleUploadClick}
+                          className="btn btn-primary"
+                          disabled={selectedFiles.length > maxFiles}
+                          style={{ 
+                            padding: '0.75rem 2rem', 
+                            fontSize: '1rem',
+                            opacity: selectedFiles.length > maxFiles ? 0.5 : 1,
+                            cursor: selectedFiles.length > maxFiles ? 'not-allowed' : 'pointer'
+                          }}
+                        >
+                          Upload Photos
+                        </button>
+                      </div>
+                    )}
+                    {uploadStatus?.type === 'success' && (
+                      <div style={{ marginTop: '1rem', display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+                        <button 
+                          onClick={clearAllFiles}
+                          className="btn btn-secondary"
+                          style={{ padding: '0.75rem 2rem', fontSize: '1rem' }}
+                        >
+                          Clear All & Start Over
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </>
-              )}
-              {selectedFiles.length > 0 && !isUploading && uploadStatus?.type !== 'success' && (
-                <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', alignItems: 'center' }}>
-                  {selectedFiles.length > maxFiles && (
-                    <p style={{ margin: 0, color: '#e74c3c', fontSize: '0.9rem', fontWeight: '500' }}>
-                      Cannot upload: Too many photos selected
-                    </p>
-                  )}
-                  <button 
-                    onClick={handleUploadClick}
-                    className="btn btn-primary"
-                    disabled={selectedFiles.length > maxFiles}
-                    style={{ 
-                      padding: '0.75rem 2rem', 
-                      fontSize: '1rem',
-                      opacity: selectedFiles.length > maxFiles ? 0.5 : 1,
-                      cursor: selectedFiles.length > maxFiles ? 'not-allowed' : 'pointer'
-                    }}
-                  >
-                    Upload Photos
-                  </button>
-                </div>
-              )}
-              {uploadStatus?.type === 'success' && (
-                <div style={{ marginTop: '1rem', display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
-                  <button 
-                    onClick={clearAllFiles}
-                    className="btn btn-secondary"
-                    style={{ padding: '0.75rem 2rem', fontSize: '1rem' }}
-                  >
-                    Clear All & Start Over
-                  </button>
-                </div>
               )}
               {isCompressing && (
                 <div className="upload-progress">
