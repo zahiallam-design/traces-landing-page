@@ -15,6 +15,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
   const [isCompressing, setIsCompressing] = useState(false);
   const [compressionProgress, setCompressionProgress] = useState(0); // Percentage of compression progress (0-100)
   const [draggedIndex, setDraggedIndex] = useState(null);
+  const [rejectedRawFiles, setRejectedRawFiles] = useState([]); // Track rejected RAW files
   const fileInputRef = useRef(null);
   const dropzoneRef = useRef(null);
   const abortControllerRef = useRef(null);
@@ -553,52 +554,67 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
     
     const supportedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif', '.avif'];
     
+    // Common RAW file extensions (browsers can't convert RAW files)
+    const rawExtensions = ['.dng', '.cr2', '.nef', '.arw', '.orf', '.raf', '.rw2', '.srw', '.pef', '.x3f', '.3fr', '.mef', '.mos', '.ari', '.bay', '.crw', '.cap', '.dcs', '.dcr', '.drf', '.eip', '.erf', '.fff', '.iiq', '.k25', '.kdc', '.mdc', '.mrw', '.nrw', '.obm', '.ptx', '.pxn', '.r3d', '.raw', '.rwl', '.rwz', '.sr2', '.srf', '.srw', '.tif', '.x3f'];
+    const rawMimeTypes = ['image/x-adobe-dng', 'image/dng', 'image/x-canon-cr2', 'image/x-nikon-nef', 'image/x-sony-arw', 'image/x-olympus-orf', 'image/x-fuji-raf', 'image/x-panasonic-rw2', 'image/x-samsung-srw', 'image/x-pentax-pef', 'image/x-sigma-x3f', 'image/x-hasselblad-3fr', 'image/x-mamiya-mef', 'image/x-leaf-mos', 'image/x-arri-ari', 'image/x-casio-bay', 'image/x-canon-crw', 'image/x-kodak-cap', 'image/x-kodak-dcs', 'image/x-kodak-dcr', 'image/x-kodak-drf', 'image/x-phaseone-eip', 'image/x-epson-erf', 'image/x-imacon-fff', 'image/x-phaseone-iiq', 'image/x-kodak-k25', 'image/x-kodak-kdc', 'image/x-minolta-mdc', 'image/x-minolta-mrw', 'image/x-nikon-nrw', 'image/x-olympus-obm', 'image/x-pentax-ptx', 'image/x-logitech-pxn', 'image/x-red-r3d', 'image/x-panasonic-raw', 'image/x-leica-rwl', 'image/x-kodak-rwz', 'image/x-sony-sr2', 'image/x-sony-srf', 'image/x-samsung-srw', 'image/x-tiff', 'image/x-sigma-x3f'];
+    
     const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
     
-    // Check for DNG files specifically (browsers can't convert RAW files)
-    const dngFiles = imageFiles.filter(file => 
-      file.name.toLowerCase().endsWith('.dng') || 
-      file.type === 'image/x-adobe-dng' || 
-      file.type === 'image/dng'
-    );
-    
-    if (dngFiles.length > 0) {
-      const dngNames = dngFiles.map(f => f.name).join(', ');
-      alert(`DNG (RAW) files are not supported!\n\nDNG files found:\n${dngNames}\n\nBrowsers cannot convert RAW image files. Please convert your DNG files to JPEG first using:\n- Adobe Lightroom\n- Adobe Photoshop\n- Online converters (e.g., CloudConvert, Zamzar)\n- Your camera/phone's built-in converter\n\nSupported formats: JPEG, PNG, WebP, HEIC, HEIF, AVIF`);
-      return;
-    }
-    
-    // Check for other unsupported file types
-    const unsupportedFiles = imageFiles.filter(file => {
-      const hasSupportedType = supportedTypes.includes(file.type.toLowerCase());
-      const hasSupportedExtension = supportedExtensions.some(ext => 
-        file.name.toLowerCase().endsWith(ext)
-      );
-      // If file has no type or extension doesn't match, check if it's a known unsupported format
-      const isGif = file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif');
-      const isBmp = file.type === 'image/bmp' || file.name.toLowerCase().endsWith('.bmp');
-      const isTiff = file.type === 'image/tiff' || file.name.toLowerCase().endsWith('.tiff') || file.name.toLowerCase().endsWith('.tif');
-      const isSvg = file.type === 'image/svg+xml' || file.name.toLowerCase().endsWith('.svg');
+    // Check for RAW files (filter them out but don't reject all files)
+    const rawFiles = imageFiles.filter(file => {
+      const fileName = file.name.toLowerCase();
+      const fileType = file.type.toLowerCase();
       
-      // File is unsupported if:
-      // 1. It's a known unsupported format (GIF, BMP, TIFF, SVG)
-      // 2. OR it doesn't have a supported type AND doesn't have a supported extension
-      return isGif || isBmp || isTiff || isSvg || (!hasSupportedType && !hasSupportedExtension);
+      // Check by extension
+      const hasRawExtension = rawExtensions.some(ext => fileName.endsWith(ext));
+      
+      // Check by MIME type
+      const hasRawMimeType = rawMimeTypes.some(mime => fileType.includes(mime));
+      
+      return hasRawExtension || hasRawMimeType;
     });
     
-    if (unsupportedFiles.length > 0) {
-      const unsupportedNames = unsupportedFiles.map(f => f.name).join(', ');
-      const unsupportedTypes = unsupportedFiles.map(f => {
-        if (f.type === 'image/gif' || f.name.toLowerCase().endsWith('.gif')) return 'GIF';
-        if (f.type === 'image/bmp' || f.name.toLowerCase().endsWith('.bmp')) return 'BMP';
-        if (f.type === 'image/tiff' || f.name.toLowerCase().match(/\.(tiff|tif)$/i)) return 'TIFF';
-        if (f.type === 'image/svg+xml' || f.name.toLowerCase().endsWith('.svg')) return 'SVG';
-        return f.type || 'Unknown format';
-      }).join(', ');
+    // Filter out RAW files and other unsupported formats
+    const validFiles = imageFiles.filter(file => {
+      // Exclude RAW files
+      const fileName = file.name.toLowerCase();
+      const fileType = file.type.toLowerCase();
+      const isRaw = rawExtensions.some(ext => fileName.endsWith(ext)) || 
+                    rawMimeTypes.some(mime => fileType.includes(mime));
+      if (isRaw) return false;
       
-      alert(`Unsupported image format detected!\n\nSupported formats: JPEG, PNG, WebP, HEIC, HEIF, AVIF\n\nUnsupported files:\n${unsupportedNames}\n\nFormat(s): ${unsupportedTypes}\n\nPlease convert these files to a supported format and try again.`);
+      // Check for supported formats
+      const hasSupportedType = supportedTypes.includes(fileType);
+      const hasSupportedExtension = supportedExtensions.some(ext => fileName.endsWith(ext));
+      
+      // Exclude other unsupported formats
+      const isGif = fileType === 'image/gif' || fileName.endsWith('.gif');
+      const isBmp = fileType === 'image/bmp' || fileName.endsWith('.bmp');
+      const isTiff = fileType === 'image/tiff' || fileName.match(/\.(tiff|tif)$/);
+      const isSvg = fileType === 'image/svg+xml' || fileName.endsWith('.svg');
+      
+      // File is valid if it has supported type or extension, and is not unsupported format
+      return (hasSupportedType || hasSupportedExtension) && !isGif && !isBmp && !isTiff && !isSvg;
+    });
+    
+    // Track rejected RAW files for display
+    if (rawFiles.length > 0) {
+      setRejectedRawFiles(prev => [...prev, ...rawFiles.map(f => f.name)]);
+    }
+    
+    // If no valid files after filtering, show error
+    if (validFiles.length === 0 && imageFiles.length > 0) {
+      if (rawFiles.length > 0) {
+        const rawNames = rawFiles.map(f => f.name).join(', ');
+        alert(`RAW image files cannot be uploaded!\n\nRAW files found:\n${rawNames}\n\nBrowsers cannot convert RAW image files. Please convert them to JPEG first using:\n- Adobe Lightroom\n- Adobe Photoshop\n- Online converters (e.g., CloudConvert, Zamzar)\n- Your camera/phone's built-in converter\n\nSupported formats: JPEG, PNG, WebP, HEIC, HEIF, AVIF`);
+      } else {
+        alert('No supported image files found. Supported formats: JPEG, PNG, WebP, HEIC, HEIF, AVIF');
+      }
       return;
     }
+    
+    // Continue with valid files only
+    const filesToProcess = validFiles;
     
     // Note: Large files will be automatically compressed when user clicks "Upload Photos"
     // No need to block file selection here - compression happens during upload
@@ -606,13 +622,13 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
     // If we already have uploaded files and are adding more, reset upload status
     const willResetUpload = uploadStatus?.type === 'success';
     
-    if (selectedFiles.length + imageFiles.length > maxFiles) {
+    if (selectedFiles.length + filesToProcess.length > maxFiles) {
       alert(`You can only upload up to ${maxFiles} photos. Please remove some files or select a different album size.`);
       return;
     }
 
     // Handle duplicate file names by adding unique identifiers
-    const newFiles = imageFiles.map(file => {
+    const newFiles = filesToProcess.map(file => {
       // Check if file with same name and size already exists
       const existingFile = selectedFiles.find(f => f.name === file.name && f.size === file.size);
       
@@ -695,6 +711,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
     setSelectedFiles([]);
     setUploadStatus(null);
     setUploadProgress(0);
+    setRejectedRawFiles([]); // Clear rejected RAW files list
     onUploadComplete(null, 0);
   };
 
@@ -777,7 +794,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                 ref={fileInputRef}
                 type="file"
                 multiple
-                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,image/avif,.avif"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,image/avif,.avif,.jpg,.jpeg,.png,.webp,.heic,.heif"
                 style={{ display: 'none' }}
                 onChange={(e) => handleFileSelect(e.target.files)}
               />
@@ -807,6 +824,28 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                   <p style={{ marginTop: '1rem', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-light)', fontStyle: 'italic' }}>
                     💡 Images are listed in your selection order. Want to change it? Drag the handle (☰) on the right.
                   </p>
+                  {rejectedRawFiles.length > 0 && (
+                    <div style={{ 
+                      marginBottom: '1rem', 
+                      padding: '0.75rem', 
+                      backgroundColor: '#fff3cd', 
+                      border: '1px solid #ffc107', 
+                      borderRadius: '8px',
+                      fontSize: '0.9rem'
+                    }}>
+                      <p style={{ margin: 0, marginBottom: '0.5rem', color: '#856404', fontWeight: '500' }}>
+                        ⚠️ The following RAW image files cannot be uploaded:
+                      </p>
+                      <ul style={{ margin: 0, paddingLeft: '1.5rem', color: '#856404' }}>
+                        {rejectedRawFiles.map((fileName, idx) => (
+                          <li key={idx} style={{ marginBottom: '0.25rem' }}>{fileName}</li>
+                        ))}
+                      </ul>
+                      <p style={{ margin: '0.5rem 0 0 0', color: '#856404', fontSize: '0.85rem' }}>
+                        RAW files need to be converted to JPEG first. The other images you selected have been added successfully.
+                      </p>
+                    </div>
+                  )}
                   <div className="file-list">
                     {selectedFiles.map((file, index) => (
                       <FileItem
