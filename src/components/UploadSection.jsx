@@ -359,29 +359,62 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
         throw new Error(`Files exceed the 4MB size limit: ${stillOversized.map(f => `${f.name} (${(f.size / 1024 / 1024).toFixed(2)} MB)`).join(', ')}. Please compress your images.`);
       }
       
-      // Calculate batch size based on file sizes
-      let BATCH_SIZE;
-      if (averageFileSize > 3.5 * 1024 * 1024) {
-        // Files are very large (close to 4MB limit) - one per batch
-        BATCH_SIZE = 1;
-      } else if (averageFileSize > 1.5 * 1024 * 1024) {
-        BATCH_SIZE = 1; // One file per batch for large files
-      } else if (averageFileSize > 1024 * 1024) {
-        BATCH_SIZE = 2; // Two files per batch for medium files
-      } else {
-        // For smaller files, calculate how many can fit in 4MB
-        BATCH_SIZE = Math.floor(MAX_BATCH_SIZE / averageFileSize);
-        BATCH_SIZE = Math.min(BATCH_SIZE, 5); // Cap at 5 files per batch
-      }
+      // Create batches dynamically, ensuring each batch doesn't exceed MAX_BATCH_SIZE
+      // Account for FormData overhead (~100KB per file)
+      const FORM_DATA_OVERHEAD = 100 * 1024; // ~100KB per file for FormData overhead
       const batches = [];
+      let currentBatch = [];
+      let currentBatchSize = 0;
       
-      for (let i = 0; i < filesToUpload.length; i += BATCH_SIZE) {
-        batches.push(filesToUpload.slice(i, i + BATCH_SIZE));
+      for (const file of filesToUpload) {
+        const fileSizeWithOverhead = file.size + FORM_DATA_OVERHEAD;
+        
+        // If adding this file would exceed the limit, start a new batch
+        if (currentBatch.length > 0 && currentBatchSize + fileSizeWithOverhead > MAX_BATCH_SIZE) {
+          batches.push(currentBatch);
+          currentBatch = [file];
+          currentBatchSize = fileSizeWithOverhead;
+        } else {
+          currentBatch.push(file);
+          currentBatchSize += fileSizeWithOverhead;
+        }
       }
       
-      console.log(`Uploading ${filesToUpload.length} files in ${batches.length} batches (batch size: ${BATCH_SIZE}, avg file size: ${(averageFileSize / 1024 / 1024).toFixed(2)} MB)`);
-
-      console.log(`Uploading ${filesToUpload.length} files in ${batches.length} batches`);
+      // Don't forget the last batch
+      if (currentBatch.length > 0) {
+        batches.push(currentBatch);
+      }
+      
+      // Verify all batches are within limit and log batch info
+      const batchSizes = batches.map(batch => {
+        const size = batch.reduce((sum, file) => sum + file.size + FORM_DATA_OVERHEAD, 0);
+        return { count: batch.length, sizeMB: (size / 1024 / 1024).toFixed(2) };
+      });
+      
+      const oversizedBatches = batchSizes.filter(b => b.sizeMB > 4.5);
+      if (oversizedBatches.length > 0) {
+        console.warn('Some batches exceed safe limit:', oversizedBatches);
+        // Re-batch oversized batches more aggressively
+        const rebatched = [];
+        for (let i = 0; i < batches.length; i++) {
+          const batch = batches[i];
+          const batchSize = batch.reduce((sum, file) => sum + file.size + FORM_DATA_OVERHEAD, 0);
+          
+          if (batchSize > MAX_BATCH_SIZE) {
+            // Split this batch - one file per batch
+            batch.forEach(file => rebatched.push([file]));
+          } else {
+            rebatched.push(batch);
+          }
+        }
+        batches.length = 0;
+        batches.push(...rebatched);
+      }
+      
+      console.log(`Uploading ${filesToUpload.length} files in ${batches.length} batches (avg file size: ${(averageFileSize / 1024 / 1024).toFixed(2)} MB)`);
+      batchSizes.forEach((batch, idx) => {
+        console.log(`  Batch ${idx + 1}: ${batch.count} files, ~${batch.sizeMB} MB`);
+      });
 
       // Track progress
       let uploadedCount = 0;
@@ -392,7 +425,22 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
       let transferUrl = null;
 
       for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-        const batch = batches[batchIndex];
+        let batch = batches[batchIndex];
+        
+        // Final safety check: verify batch size before uploading
+        let batchSize = batch.reduce((sum, file) => sum + file.size + FORM_DATA_OVERHEAD, 0);
+        
+        // If batch still exceeds limit, split it further (one file per batch)
+        if (batchSize > MAX_BATCH_SIZE) {
+          console.warn(`Batch ${batchIndex + 1} exceeds limit (${(batchSize / 1024 / 1024).toFixed(2)} MB), splitting further...`);
+          // Split into individual files
+          const splitBatches = batch.map(file => [file]);
+          // Replace current batch with first split, insert rest after
+          batch = splitBatches[0];
+          batches.splice(batchIndex + 1, 0, ...splitBatches.slice(1));
+          batchSize = batch.reduce((sum, file) => sum + file.size + FORM_DATA_OVERHEAD, 0);
+        }
+        
         const formData = new FormData();
         
         batch.forEach((file) => {
@@ -408,7 +456,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
         const filesUploadedSoFar = batches.slice(0, batchIndex + 1).reduce((sum, batch) => sum + batch.length, 0);
         setUploadProgress(filesUploadedSoFar);
 
-        console.log(`Uploading batch ${batchIndex + 1}/${batches.length} (${batch.length} files)...`);
+        console.log(`Uploading batch ${batchIndex + 1}/${batches.length} (${batch.length} files, ~${(batchSize / 1024 / 1024).toFixed(2)} MB)...`);
         
         // Create timeout promise (60 seconds per batch)
         const timeoutPromise = new Promise((_, reject) => {
@@ -811,7 +859,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
               />
               {selectedFiles.length === 0 && (
                 <p style={{ marginBottom: '1rem', fontSize: '0.95rem', color: 'var(--text-dark)', textAlign: 'center', lineHeight: '1.5' }}>
-                  📸 <strong>Tip:</strong> The order you select your photos is how they'll be printed and assembled in your album. Don't worry—you can drag and reorder them after selection if needed!
+                  📸 <strong>Tip:</strong> The order you select your photos is how they'll be printed and filled in your album. Don't worry—you can drag and reorder them after selection if needed!
                 </p>
               )}
               <div
@@ -832,6 +880,32 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
               </div>
               {selectedFiles.length > 0 && (
                 <>
+                  {rejectedRawFiles.length > 0 && (
+                    <div style={{ 
+                      marginBottom: '1rem', 
+                      padding: '0.75rem', 
+                      backgroundColor: '#fff3cd', 
+                      border: '1px solid #ffc107', 
+                      borderRadius: '8px',
+                      fontSize: '0.9rem'
+                    }}>
+                      <p style={{ margin: 0, marginBottom: '0.5rem', color: '#856404', fontWeight: '500' }}>
+                        ⚠️ The following RAW image files were not added:
+                      </p>
+                      <div style={{ 
+                        maxHeight: rejectedRawFiles.length > 5 ? '200px' : 'none',
+                        overflowY: rejectedRawFiles.length > 5 ? 'auto' : 'visible',
+                        marginTop: '0.5rem'
+                      }}>
+                        {rejectedRawFiles.map((file, idx) => (
+                          <RawFileItem key={idx} file={file} formatFileSize={formatFileSize} />
+                        ))}
+                      </div>
+                      <p style={{ margin: '0.5rem 0 0 0', color: '#856404', fontSize: '0.85rem' }}>
+                        RAW files need to be converted to JPEG first then selected again.
+                      </p>
+                    </div>
+                  )}
                   <div style={{ marginTop: '1rem', marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
                     <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-light)', fontStyle: 'italic' }}>
                       💡 Images are listed in your selection order. Want to change it? Drag the handle (☰) on the right.
@@ -845,9 +919,6 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                       {selectedFiles.length} of {maxFiles} selected
                     </p>
                   </div>
-                  <p style={{ marginTop: '0.5rem', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--pastel-green-dark)', fontWeight: '500' }}>
-                    ✓ The below images you selected have been added successfully, waiting for you to upload them.
-                  </p>
                   {selectedFiles.length > maxFiles && (
                     <div style={{ 
                       marginBottom: '1rem', 
@@ -865,32 +936,9 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                       </p>
                     </div>
                   )}
-                  {rejectedRawFiles.length > 0 && (
-                    <div style={{ 
-                      marginBottom: '1rem', 
-                      padding: '0.75rem', 
-                      backgroundColor: '#fff3cd', 
-                      border: '1px solid #ffc107', 
-                      borderRadius: '8px',
-                      fontSize: '0.9rem'
-                    }}>
-                      <p style={{ margin: 0, marginBottom: '0.5rem', color: '#856404', fontWeight: '500' }}>
-                        ⚠️ The following RAW image files cannot be added/uploaded:
-                      </p>
-                      <div style={{ 
-                        maxHeight: rejectedRawFiles.length > 5 ? '200px' : 'none',
-                        overflowY: rejectedRawFiles.length > 5 ? 'auto' : 'visible',
-                        marginTop: '0.5rem'
-                      }}>
-                        {rejectedRawFiles.map((file, idx) => (
-                          <RawFileItem key={idx} file={file} formatFileSize={formatFileSize} />
-                        ))}
-                      </div>
-                      <p style={{ margin: '0.5rem 0 0 0', color: '#856404', fontSize: '0.85rem' }}>
-                        RAW files need to be converted to JPEG first.
-                      </p>
-                    </div>
-                  )}
+                  <p style={{ marginTop: '0.5rem', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--pastel-green-dark)', fontWeight: '500' }}>
+                    ✓ The below images you selected have been added successfully, waiting for you to upload them.
+                  </p>
                   <div className="file-list">
                     {selectedFiles.map((file, index) => (
                       <FileItem
@@ -1114,20 +1162,7 @@ function FileItem({ file, index, onRemove, formatFileSize, isUploadComplete, onD
 }
 
 function RawFileItem({ file, formatFileSize }) {
-  const [preview, setPreview] = useState(null);
-
-  useEffect(() => {
-    // Try to create preview - RAW files may not display, but try anyway
-    try {
-      const reader = new FileReader();
-      reader.onload = (e) => setPreview(e.target.result);
-      reader.onerror = () => setPreview(null);
-      reader.readAsDataURL(file);
-    } catch (error) {
-      setPreview(null);
-    }
-  }, [file]);
-
+  // RAW files cannot be previewed in browsers, so always show placeholder
   return (
     <div style={{
       display: 'flex',
@@ -1139,34 +1174,26 @@ function RawFileItem({ file, formatFileSize }) {
       borderRadius: '4px',
       border: '1px solid #ffc107'
     }}>
-      {preview ? (
-        <img 
-          src={preview} 
-          alt="Preview" 
-          style={{
-            width: '40px',
-            height: '40px',
-            borderRadius: '4px',
-            objectFit: 'cover',
-            flexShrink: 0
-          }}
-        />
-      ) : (
-        <div style={{
-          width: '40px',
-          height: '40px',
-          borderRadius: '4px',
-          backgroundColor: '#f0f0f0',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-          fontSize: '0.75rem',
-          color: '#999'
-        }}>
-          RAW
-        </div>
-      )}
+      <div style={{
+        width: '40px',
+        height: '40px',
+        borderRadius: '4px',
+        backgroundColor: '#e9ecef',
+        border: '1px solid #dee2e6',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+        fontSize: '0.6rem',
+        color: '#6c757d',
+        fontWeight: '600',
+        textAlign: 'center',
+        lineHeight: '1.1'
+      }}>
+        <span>📷</span>
+        <span style={{ fontSize: '0.5rem', marginTop: '2px' }}>RAW</span>
+      </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: '0.9rem', color: '#856404', fontWeight: '500', wordBreak: 'break-word' }}>
           {file.name}
