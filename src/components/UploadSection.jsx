@@ -882,6 +882,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                 <>
                   {rejectedRawFiles.length > 0 && (
                     <div style={{ 
+                      marginTop: '1.5rem',
                       marginBottom: '1rem', 
                       padding: '0.75rem', 
                       backgroundColor: '#fff3cd', 
@@ -906,10 +907,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                       </p>
                     </div>
                   )}
-                  <div style={{ marginTop: '1rem', marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-light)', fontStyle: 'italic' }}>
-                      💡 Images are listed in your selection order. Want to change it? Drag the handle (☰) on the right.
-                    </p>
+                  <div style={{ marginTop: '1rem', marginBottom: '0.5rem', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                     <p style={{ 
                       margin: 0, 
                       fontSize: '0.95rem', 
@@ -938,6 +936,9 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                   )}
                   <p style={{ marginTop: '0.5rem', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--pastel-green-dark)', fontWeight: '500' }}>
                     ✓ The below images you selected have been added successfully, waiting for you to upload them.
+                  </p>
+                  <p style={{ marginTop: '0.5rem', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-light)', fontStyle: 'italic' }}>
+                    💡 Images are listed in your selection order. Want to change it? Drag the handle (☰) on the right.
                   </p>
                   <div className="file-list">
                     {selectedFiles.map((file, index) => (
