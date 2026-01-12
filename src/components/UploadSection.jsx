@@ -141,6 +141,15 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
 
   const uploadToSmash = useCallback(async () => {
     if (selectedFiles.length === 0 || isUploading) return;
+    
+    // Double-check file count limit
+    if (selectedFiles.length > maxFiles) {
+      setUploadStatus({ 
+        type: 'error', 
+        message: `Cannot upload: You have selected ${selectedFiles.length} photos, but this album only allows ${maxFiles} photos. Please remove ${selectedFiles.length - maxFiles} photo${selectedFiles.length - maxFiles > 1 ? 's' : ''}.` 
+      });
+      return;
+    }
 
     // Create new abort controller for this upload
     abortControllerRef.current = new AbortController();
@@ -522,6 +531,10 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
       alert('Please select at least one photo to upload.');
       return;
     }
+    if (selectedFiles.length > maxFiles) {
+      alert(`You have selected ${selectedFiles.length} photos, but this album only allows ${maxFiles} photos. Please remove ${selectedFiles.length - maxFiles} photo${selectedFiles.length - maxFiles > 1 ? 's' : ''} to proceed.`);
+      return;
+    }
     if (isUploading) {
       return;
     }
@@ -622,10 +635,8 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
     // If we already have uploaded files and are adding more, reset upload status
     const willResetUpload = uploadStatus?.type === 'success';
     
-    if (selectedFiles.length + filesToProcess.length > maxFiles) {
-      alert(`You can only upload up to ${maxFiles} photos. Please remove some files or select a different album size.`);
-      return;
-    }
+    // Allow selecting more than maxFiles, but we'll show an error and disable upload
+    // Don't block selection - let them see all files and remove some
 
     // Handle duplicate file names by adding unique identifiers
     const newFiles = filesToProcess.map(file => {
@@ -821,9 +832,36 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
               </div>
               {selectedFiles.length > 0 && (
                 <>
-                  <p style={{ marginTop: '1rem', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-light)', fontStyle: 'italic' }}>
-                    💡 Images are listed in your selection order. Want to change it? Drag the handle (☰) on the right.
-                  </p>
+                  <div style={{ marginTop: '1rem', marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-light)', fontStyle: 'italic' }}>
+                      💡 Images are listed in your selection order. Want to change it? Drag the handle (☰) on the right.
+                    </p>
+                    <p style={{ 
+                      margin: 0, 
+                      fontSize: '0.95rem', 
+                      fontWeight: '500',
+                      color: selectedFiles.length > maxFiles ? '#e74c3c' : 'var(--text-dark)'
+                    }}>
+                      {selectedFiles.length} of {maxFiles} selected
+                    </p>
+                  </div>
+                  {selectedFiles.length > maxFiles && (
+                    <div style={{ 
+                      marginBottom: '1rem', 
+                      padding: '0.75rem', 
+                      backgroundColor: '#fee', 
+                      border: '1px solid #e74c3c', 
+                      borderRadius: '8px',
+                      fontSize: '0.9rem'
+                    }}>
+                      <p style={{ margin: 0, color: '#e74c3c', fontWeight: '500' }}>
+                        ⚠️ You have selected {selectedFiles.length} photos, but this album only allows {maxFiles} photos.
+                      </p>
+                      <p style={{ margin: '0.5rem 0 0 0', color: '#c33', fontSize: '0.85rem' }}>
+                        Please remove {selectedFiles.length - maxFiles} photo{selectedFiles.length - maxFiles > 1 ? 's' : ''} to proceed with upload.
+                      </p>
+                    </div>
+                  )}
                   {rejectedRawFiles.length > 0 && (
                     <div style={{ 
                       marginBottom: '1rem', 
@@ -865,11 +903,22 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                 </>
               )}
               {selectedFiles.length > 0 && !isUploading && uploadStatus?.type !== 'success' && (
-                <div style={{ marginTop: '1rem', display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+                <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', alignItems: 'center' }}>
+                  {selectedFiles.length > maxFiles && (
+                    <p style={{ margin: 0, color: '#e74c3c', fontSize: '0.9rem', fontWeight: '500' }}>
+                      Cannot upload: Too many photos selected
+                    </p>
+                  )}
                   <button 
                     onClick={handleUploadClick}
                     className="btn btn-primary"
-                    style={{ padding: '0.75rem 2rem', fontSize: '1rem' }}
+                    disabled={selectedFiles.length > maxFiles}
+                    style={{ 
+                      padding: '0.75rem 2rem', 
+                      fontSize: '1rem',
+                      opacity: selectedFiles.length > maxFiles ? 0.5 : 1,
+                      cursor: selectedFiles.length > maxFiles ? 'not-allowed' : 'pointer'
+                    }}
                   >
                     Upload Photos
                   </button>
