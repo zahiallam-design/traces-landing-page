@@ -18,6 +18,7 @@ function OrderForm({
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
+    deliveryTown: '',
     deliveryAddress: '',
     mobileNumber: ''
   });
@@ -25,7 +26,7 @@ function OrderForm({
   const subtotal = albums.reduce((sum, album) => {
     return sum + (album.selectedAlbum?.price || 0);
   }, 0);
-  const deliveryCharge = 4;
+  const deliveryCharge = subtotal >= 90 ? 0 : 4; // Free delivery on orders above $90
   const total = subtotal + deliveryCharge;
 
   const handleSubmit = (e) => {
@@ -144,7 +145,19 @@ function OrderForm({
               />
             </div>
             <div className="form-group">
-              <label htmlFor="delivery-address">Delivery Address *</label>
+              <label htmlFor="delivery-town">Town/City *</label>
+              <input
+                type="text"
+                id="delivery-town"
+                name="delivery-town"
+                required
+                value={formData.deliveryTown || ''}
+                onChange={(e) => setFormData({ ...formData, deliveryTown: e.target.value })}
+                placeholder="e.g., Beirut, Jdeideh"
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="delivery-address">Street Address & Details *</label>
               <textarea
                 id="delivery-address"
                 name="delivery-address"
@@ -152,6 +165,7 @@ function OrderForm({
                 required
                 value={formData.deliveryAddress}
                 onChange={(e) => setFormData({ ...formData, deliveryAddress: e.target.value })}
+                placeholder="Street name, building, floor, apartment, landmarks..."
               />
             </div>
             <div className="form-group">

@@ -32,7 +32,9 @@ export const sendOrderEmail = async (orderData) => {
     // Customer Details
     customer_name: orderData.customer.fullName,
     customer_email: orderData.customer.email || 'Not provided',
-    customer_address: orderData.customer.deliveryAddress,
+    customer_address: orderData.customer.deliveryTown 
+      ? `${orderData.customer.deliveryTown}, ${orderData.customer.deliveryAddress}`
+      : orderData.customer.deliveryAddress,
     customer_phone: orderData.customer.mobileNumber,
     
     // Notes
@@ -107,7 +109,9 @@ export const sendCustomerConfirmationEmail = async (orderData) => {
     albums_details: formatAlbumsDetails(orderData.albums),
     
     // Delivery Details
-    delivery_address: orderData.customer.deliveryAddress,
+    delivery_address: orderData.customer.deliveryTown 
+      ? `${orderData.customer.deliveryTown}, ${orderData.customer.deliveryAddress}`
+      : orderData.customer.deliveryAddress,
     
     // Notes
     customer_notes: orderData.notes || 'None',
@@ -206,15 +210,19 @@ ${albumsText}
 CUSTOMER DETAILS:
 - Name: ${orderData.customer.fullName}
 - Email: ${orderData.customer.email || 'Not provided'}
+- Town/City: ${orderData.customer.deliveryTown || 'Not provided'}
 - Address: ${orderData.customer.deliveryAddress}
 - Mobile: ${orderData.customer.mobileNumber}
 
 DELIVERY NOTES:
 ${orderData.notes || 'None'}
 
-${orderData.notesForUs ? `NOTES FOR US:\n${orderData.notesForUs}\n\n` : ''}SUBTOTAL: $${(orderData.total - 4).toFixed(2)}
-DELIVERY CHARGE: $4.00
-TOTAL: $${orderData.total.toFixed(2)}
+${orderData.notesForUs ? `NOTES FOR US:\n${orderData.notesForUs}\n\n` : ''}${(() => {
+  const subtotal = orderData.albums.reduce((sum, album) => sum + album.album.price, 0);
+  const deliveryCharge = subtotal >= 90 ? 0 : 4;
+  const total = subtotal + deliveryCharge;
+  return `SUBTOTAL: $${subtotal.toFixed(2)}\nDELIVERY CHARGE: $${deliveryCharge.toFixed(2)}${deliveryCharge === 0 ? ' (Free delivery on orders above $90!)' : ''}\nTOTAL: $${total.toFixed(2)}`;
+})()}
 
 Order Date: ${orderData.timestamp ? new Date(orderData.timestamp).toLocaleString() : new Date().toLocaleString()}
 
@@ -247,7 +255,7 @@ function formatWhatsAppMessageForBusiness(orderData) {
   });
 
   const subtotal = orderData.albums.reduce((sum, album) => sum + album.album.price, 0);
-  const deliveryCharge = 4;
+  const deliveryCharge = subtotal >= 90 ? 0 : 4; // Free delivery on orders above $90
   const total = subtotal + deliveryCharge;
   const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || '71532156';
   const cleanWhatsAppNumber = whatsappNumber.replace(/[\s\-+()]/g, '');
@@ -264,10 +272,10 @@ Your order has been received and we'll start processing it soon.
 *ORDER DETAILS:*
 ${albumsText}
 *DELIVERY ADDRESS:*
-${orderData.customer.deliveryAddress}
+${orderData.customer.deliveryTown ? `${orderData.customer.deliveryTown}, ` : ''}${orderData.customer.deliveryAddress}
 
 ${orderData.notes ? `*DELIVERY NOTES:*\n${orderData.notes}\n\n` : ''}${orderData.notesForUs ? `*NOTES FOR US:*\n${orderData.notesForUs}\n\n` : ''}*SUBTOTAL:* $${subtotal.toFixed(2)}
-*DELIVERY CHARGE:* $${deliveryCharge.toFixed(2)}
+*DELIVERY CHARGE:* $${deliveryCharge.toFixed(2)}${deliveryCharge === 0 ? ' (Free delivery on orders above $90!)' : ''}
 *TOTAL:* $${total.toFixed(2)}
 
 *PAYMENT:* Cash on Delivery
@@ -359,11 +367,14 @@ ORDER NUMBER: ${orderData.orderNumber || 'N/A'}
 ORDER DETAILS:
 ${albumsText}
 DELIVERY ADDRESS:
-${orderData.customer.deliveryAddress}
+${orderData.customer.deliveryTown ? `${orderData.customer.deliveryTown}, ` : ''}${orderData.customer.deliveryAddress}
 
-${orderData.notes ? `DELIVERY NOTES:\n${orderData.notes}\n\n` : ''}${orderData.notesForUs ? `NOTES FOR US:\n${orderData.notesForUs}\n\n` : ''}SUBTOTAL: $${(orderData.total - 4).toFixed(2)}
-DELIVERY CHARGE: $4.00
-TOTAL: $${orderData.total.toFixed(2)}
+${orderData.notes ? `DELIVERY NOTES:\n${orderData.notes}\n\n` : ''}${orderData.notesForUs ? `NOTES FOR US:\n${orderData.notesForUs}\n\n` : ''}${(() => {
+  const subtotal = orderData.albums.reduce((sum, album) => sum + album.album.price, 0);
+  const deliveryCharge = subtotal >= 90 ? 0 : 4;
+  const total = subtotal + deliveryCharge;
+  return `SUBTOTAL: $${subtotal.toFixed(2)}\nDELIVERY CHARGE: $${deliveryCharge.toFixed(2)}${deliveryCharge === 0 ? ' (Free delivery on orders above $90!)' : ''}\nTOTAL: $${total.toFixed(2)}`;
+})()}
 
 PAYMENT: Cash on Delivery
 

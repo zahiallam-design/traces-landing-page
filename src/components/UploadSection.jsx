@@ -9,11 +9,11 @@ import './UploadSection.css';
 function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplete, hasError }) {
   const breakpoint = useBreakpoint();
   const [selectedFiles, setSelectedFiles] = useState([]);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadProgress, setUploadProgress] = useState(0); // Number of files uploaded
   const [uploadStatus, setUploadStatus] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isCompressing, setIsCompressing] = useState(false);
-  const [compressionProgress, setCompressionProgress] = useState(0);
+  const [compressionProgress, setCompressionProgress] = useState(0); // Number of files compressed
   const [draggedIndex, setDraggedIndex] = useState(null);
   const fileInputRef = useRef(null);
   const dropzoneRef = useRef(null);
@@ -32,8 +32,8 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
     
     console.log(`Compressing ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)...`);
     
-    // Target just below 4MB (3.8MB) to preserve quality
-    const TARGET_SIZE_MB = 3.8;
+    // Target between 2-3MB to reduce upload time while preserving quality
+    const TARGET_SIZE_MB = 2.5;
     const TARGET_SIZE = TARGET_SIZE_MB * 1024 * 1024;
     
     // For very large files (>20MB), disable web worker (can cause memory issues)
@@ -41,7 +41,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
     
     let currentFile = file; // Use current file (original or previously compressed) for next attempt
     let quality = 0.9; // Start with high quality (90%)
-    let maxSizeMB = TARGET_SIZE_MB; // Target 3.8MB
+    let maxSizeMB = TARGET_SIZE_MB; // Target 2.5MB
     const maxAttempts = 5;
     
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -87,14 +87,14 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
         if (attempt < maxAttempts) {
           // Reduce quality more gradually (by 5-10% per attempt)
           quality = Math.max(0.5, quality - (attempt === 1 ? 0.05 : 0.1)); // Small reduction first, then more
-          maxSizeMB = Math.max(3.0, maxSizeMB - 0.1); // Reduce target size gradually, minimum 3MB
+          maxSizeMB = Math.max(2.0, maxSizeMB - 0.1); // Reduce target size gradually, minimum 2MB
           console.log(`File still too large (${(compressedFile.size / 1024 / 1024).toFixed(2)} MB), trying slightly more compression (quality: ${quality}, maxSizeMB: ${maxSizeMB})...`);
         } else {
           // Last attempt - allow more aggressive compression if needed
           if (compressedFile.size > MAX_FILE_SIZE) {
             // Try one more time with more aggressive settings
             const finalOptions = {
-              maxSizeMB: 3.5,
+              maxSizeMB: 2.8,
               maxWidthOrHeight: 4000,
               useWebWorker: !isVeryLarge,
               fileType: (currentFile.type === 'image/avif' || currentFile.name.toLowerCase().endsWith('.avif')) ? 'image/jpeg' : currentFile.type, // Convert AVIF to JPEG
@@ -117,7 +117,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
         }
         // Try again with more aggressive settings
         quality = Math.max(0.3, quality - 0.2);
-        maxSizeMB = Math.max(2.0, maxSizeMB - 0.4);
+        maxSizeMB = Math.max(1.5, maxSizeMB - 0.3);
       }
     }
     
@@ -146,10 +146,10 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
     const signal = abortControllerRef.current.signal;
 
     setIsUploading(true);
-    setUploadProgress(0);
+    setUploadProgress(0); // Reset to 0 files uploaded
     setUploadStatus(null);
     setIsCompressing(false);
-    setCompressionProgress(0);
+    setCompressionProgress(0); // Reset to 0 files compressed
 
     // Declare progressInterval outside try block so it's accessible in catch/finally
     let progressInterval = null;
@@ -214,10 +214,9 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
               console.log(`File ${file.name} is already under 4MB (${fileSizeMB} MB), skipping compression`);
             }
             
-            // Update progress
-            const progress = Math.floor(((i + 1) / selectedFiles.length) * 100);
-            setCompressionProgress(progress);
-            console.log(`Compression progress: ${progress}%`);
+            // Update progress (store as number of files compressed)
+            setCompressionProgress(i + 1);
+            console.log(`Compression progress: ${i + 1}/${selectedFiles.length} images`);
           }
           
           console.log('All files processed. Compression complete.');
@@ -391,9 +390,9 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
           formData.append('transferId', transferId);
         }
 
-        // Update progress before upload - more granular for better feedback
-        const progress = Math.floor(((batchIndex + 1) / batches.length) * 95);
-        setUploadProgress(Math.min(progress, 95)); // Cap at 95% until all batches complete
+        // Update progress - track number of files uploaded
+        const filesUploadedSoFar = batches.slice(0, batchIndex + 1).reduce((sum, batch) => sum + batch.length, 0);
+        setUploadProgress(filesUploadedSoFar);
 
         console.log(`Uploading batch ${batchIndex + 1}/${batches.length} (${batch.length} files)...`);
         
@@ -455,8 +454,8 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
         throw new Error('Upload completed but no transfer URL received');
       }
 
-      // Set to 100% when complete and stop
-      setUploadProgress(100);
+      // Set to total files when complete
+      setUploadProgress(totalFiles);
       setIsUploading(false);
       
       setUploadStatus({ 
@@ -847,18 +846,18 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
               {isCompressing && (
                 <div className="upload-progress">
                   <div className="progress-bar">
-                    <div className="progress-fill" style={{ width: `${compressionProgress}%` }}></div>
+                    <div className="progress-fill" style={{ width: `${(compressionProgress / selectedFiles.length) * 100}%` }}></div>
                   </div>
-                  <p className="progress-text" style={{ marginTop: '0.5rem' }}>Compressing images... {compressionProgress}%</p>
+                  <p className="progress-text" style={{ marginTop: '0.5rem' }}>Compressing images... {compressionProgress} of {selectedFiles.length} images</p>
                 </div>
               )}
               {isUploading && (
                 <div className="upload-progress">
                   <div className="progress-bar">
-                    <div className="progress-fill" style={{ width: `${uploadProgress}%` }}></div>
+                    <div className="progress-fill" style={{ width: `${(uploadProgress / selectedFiles.length) * 100}%` }}></div>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    <p className="progress-text">Uploading... {uploadProgress}% ({selectedFiles.length} files)</p>
+                    <p className="progress-text">Uploading... {uploadProgress} of {selectedFiles.length} images</p>
                     <button 
                       onClick={cancelUpload}
                       className="btn btn-secondary"

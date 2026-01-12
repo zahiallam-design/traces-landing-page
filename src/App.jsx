@@ -171,7 +171,7 @@ ALBUM ${index + 1}:
     });
 
     const subtotal = orderData.albums.reduce((sum, album) => sum + album.album.price, 0);
-    const deliveryCharge = 4;
+    const deliveryCharge = subtotal >= 90 ? 0 : 4; // Free delivery on orders above $90
     const total = subtotal + deliveryCharge;
 
     return `
@@ -186,6 +186,7 @@ ${albumsText}
 CUSTOMER DETAILS:
 - Name: ${orderData.customer.fullName}
 - Email: ${orderData.customer.email || 'Not provided'}
+- Town/City: ${orderData.customer.deliveryTown || 'Not provided'}
 - Address: ${orderData.customer.deliveryAddress}
 - Mobile: ${orderData.customer.mobileNumber}
 
@@ -232,9 +233,9 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
     let emailStatusHtml = '';
     
     if (ownerEmailSent && customerEmailSent) {
-      emailStatusHtml = '<p style="color: var(--pastel-green-dark); margin-bottom: 1rem;">✓ Order confirmation email sent to your inbox!</p>';
+      emailStatusHtml = '<p style="color: var(--pastel-green-dark); margin-bottom: 1rem;">✓ Order confirmation email sent to your inbox!<br/><small style="color: var(--text-light); font-size: 0.85rem;">Please check your junk/spam folder if you don\'t see it.</small></p>';
     } else if (ownerEmailSent && orderData.customer.email) {
-      emailStatusHtml = '<p style="color: var(--pastel-green-dark); margin-bottom: 1rem;">✓ Order received! Check your email for confirmation.</p>';
+      emailStatusHtml = '<p style="color: var(--pastel-green-dark); margin-bottom: 1rem;">✓ Order received! Check your email for confirmation.<br/><small style="color: var(--text-light); font-size: 0.85rem;">Please check your junk/spam folder if you don\'t see it.</small></p>';
     } else if (ownerEmailSent && !orderData.customer.email) {
       emailStatusHtml = '<p style="color: var(--pastel-green-dark); margin-bottom: 1rem;">✓ Order received! You will receive a WhatsApp message for confirmation.</p>';
     } else if (emailError) {
@@ -329,6 +330,7 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
       addText('CUSTOMER DETAILS:', 12, true);
       addText(`Name: ${orderData.customer.fullName}`, 10);
       addText(`Email: ${orderData.customer.email || 'Not provided'}`, 10);
+      addText(`Town/City: ${orderData.customer.deliveryTown || 'Not provided'}`, 10);
       addText(`Address: ${orderData.customer.deliveryAddress}`, 10);
       addText(`Mobile: ${orderData.customer.mobileNumber}`, 10);
       
@@ -346,7 +348,7 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
       
       yPosition += 5;
       const subtotal = orderData.albums.reduce((sum, album) => sum + album.album.price, 0);
-      const deliveryCharge = 4;
+      const deliveryCharge = subtotal >= 90 ? 0 : 4; // Free delivery on orders above $90
       const total = subtotal + deliveryCharge;
       addText(`SUBTOTAL: $${subtotal.toFixed(2)}`, 10);
       addText(`DELIVERY CHARGE: $${deliveryCharge.toFixed(2)}`, 10);

@@ -30,8 +30,8 @@ const steps = [
   },
   {
     number: 6,
-    title: 'We print, assemble, and deliver',
-    description: 'We print your photos, assemble your albums, and deliver them to your door — cash on delivery'
+    title: 'We print, fill, and deliver',
+    description: 'We print your photos, fill your albums with your images, and deliver them to your door — cash on delivery. Free delivery on orders above $90!'
   }
 ];
 
