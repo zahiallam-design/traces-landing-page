@@ -15,7 +15,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
   const [isCompressing, setIsCompressing] = useState(false);
   const [compressionProgress, setCompressionProgress] = useState(0); // Percentage of compression progress (0-100)
   const [draggedIndex, setDraggedIndex] = useState(null);
-  const [rejectedRawFiles, setRejectedRawFiles] = useState([]); // Track rejected RAW files
+  const [rejectedRawFiles, setRejectedRawFiles] = useState([]); // Track rejected RAW files (File objects)
   const fileInputRef = useRef(null);
   const dropzoneRef = useRef(null);
   const abortControllerRef = useRef(null);
@@ -610,9 +610,9 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
       return (hasSupportedType || hasSupportedExtension) && !isGif && !isBmp && !isTiff && !isSvg;
     });
     
-    // Track rejected RAW files for display
+    // Track rejected RAW files for display (store File objects for preview)
     if (rawFiles.length > 0) {
-      setRejectedRawFiles(prev => [...prev, ...rawFiles.map(f => f.name)]);
+      setRejectedRawFiles(prev => [...prev, ...rawFiles]);
     }
     
     // If no valid files after filtering, show error
@@ -845,6 +845,9 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                       {selectedFiles.length} of {maxFiles} selected
                     </p>
                   </div>
+                  <p style={{ marginTop: '0.5rem', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--pastel-green-dark)', fontWeight: '500' }}>
+                    ✓ The below images you selected have been added successfully, waiting for you to upload them.
+                  </p>
                   {selectedFiles.length > maxFiles && (
                     <div style={{ 
                       marginBottom: '1rem', 
@@ -872,15 +875,19 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                       fontSize: '0.9rem'
                     }}>
                       <p style={{ margin: 0, marginBottom: '0.5rem', color: '#856404', fontWeight: '500' }}>
-                        ⚠️ The following RAW image files cannot be uploaded:
+                        ⚠️ The following RAW image files cannot be added/uploaded:
                       </p>
-                      <ul style={{ margin: 0, paddingLeft: '1.5rem', color: '#856404' }}>
-                        {rejectedRawFiles.map((fileName, idx) => (
-                          <li key={idx} style={{ marginBottom: '0.25rem' }}>{fileName}</li>
+                      <div style={{ 
+                        maxHeight: rejectedRawFiles.length > 5 ? '200px' : 'none',
+                        overflowY: rejectedRawFiles.length > 5 ? 'auto' : 'visible',
+                        marginTop: '0.5rem'
+                      }}>
+                        {rejectedRawFiles.map((file, idx) => (
+                          <RawFileItem key={idx} file={file} formatFileSize={formatFileSize} />
                         ))}
-                      </ul>
+                      </div>
                       <p style={{ margin: '0.5rem 0 0 0', color: '#856404', fontSize: '0.85rem' }}>
-                        RAW files need to be converted to JPEG first. The other images you selected have been added successfully.
+                        RAW files need to be converted to JPEG first.
                       </p>
                     </div>
                   )}
@@ -945,6 +952,9 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
               )}
               {isUploading && (
                 <div className="upload-progress">
+                  <p style={{ marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--text-light)', fontStyle: 'italic' }}>
+                    ⏱️ This may take a few minutes depending on your internet connection speed and image sizes.
+                  </p>
                   <div className="progress-bar">
                     <div className="progress-fill" style={{ width: `${(uploadProgress / selectedFiles.length) * 100}%` }}></div>
                   </div>
@@ -1098,6 +1108,72 @@ function FileItem({ file, index, onRemove, formatFileSize, isUploadComplete, onD
         >
           ×
         </button>
+      </div>
+    </div>
+  );
+}
+
+function RawFileItem({ file, formatFileSize }) {
+  const [preview, setPreview] = useState(null);
+
+  useEffect(() => {
+    // Try to create preview - RAW files may not display, but try anyway
+    try {
+      const reader = new FileReader();
+      reader.onload = (e) => setPreview(e.target.result);
+      reader.onerror = () => setPreview(null);
+      reader.readAsDataURL(file);
+    } catch (error) {
+      setPreview(null);
+    }
+  }, [file]);
+
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.75rem',
+      padding: '0.5rem',
+      marginBottom: '0.5rem',
+      backgroundColor: '#fff',
+      borderRadius: '4px',
+      border: '1px solid #ffc107'
+    }}>
+      {preview ? (
+        <img 
+          src={preview} 
+          alt="Preview" 
+          style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '4px',
+            objectFit: 'cover',
+            flexShrink: 0
+          }}
+        />
+      ) : (
+        <div style={{
+          width: '40px',
+          height: '40px',
+          borderRadius: '4px',
+          backgroundColor: '#f0f0f0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+          fontSize: '0.75rem',
+          color: '#999'
+        }}>
+          RAW
+        </div>
+      )}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: '0.9rem', color: '#856404', fontWeight: '500', wordBreak: 'break-word' }}>
+          {file.name}
+        </div>
+        <div style={{ fontSize: '0.8rem', color: '#999', marginTop: '0.25rem' }}>
+          {formatFileSize(file.size)}
+        </div>
       </div>
     </div>
   );

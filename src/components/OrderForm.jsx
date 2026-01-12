@@ -94,44 +94,46 @@ function OrderForm({
       <div className="container">
         <h2 className="section-title">Complete Your Order</h2>
         <div className={`order-content ${isMobile ? 'order-content-mobile' : ''}`}>
-          <div className="order-summary">
-            <h3>Order Summary</h3>
-            <div className="summary-item">
-              <span>Number of Albums:</span>
-              <span>{albums.length}</span>
-            </div>
-            {albums.map((album, index) => (
-              <div key={index} className="album-summary-item">
-                <div className="summary-item">
-                  <span>Album {index + 1}:</span>
-                  <span>{album.selectedAlbum ? `${album.selectedAlbum.size} Photos` : 'Not selected'}</span>
-                </div>
-                <div className="summary-item">
-                  <span>Color:</span>
-                  <span>{album.selectedAlbum && album.selectedColor ? album.selectedColor.charAt(0).toUpperCase() + album.selectedColor.slice(1) : '-'}</span>
-                </div>
-                <div className="summary-item">
-                  <span>Price:</span>
-                  <span>${album.selectedAlbum?.price.toFixed(2) || '0.00'}</span>
-                </div>
+          {!isMobile && (
+            <div className="order-summary">
+              <h3>Order Summary</h3>
+              <div className="summary-item">
+                <span>Number of Albums:</span>
+                <span>{albums.length}</span>
               </div>
-            ))}
-            <div className="summary-item">
-              <span>Subtotal:</span>
-              <span>${subtotal.toFixed(2)}</span>
+              {albums.map((album, index) => (
+                <div key={index} className="album-summary-item">
+                  <div className="summary-item">
+                    <span>Album {index + 1}:</span>
+                    <span>{album.selectedAlbum ? `${album.selectedAlbum.size} Photos` : 'Not selected'}</span>
+                  </div>
+                  <div className="summary-item">
+                    <span>Color:</span>
+                    <span>{album.selectedAlbum && album.selectedColor ? album.selectedColor.charAt(0).toUpperCase() + album.selectedColor.slice(1) : '-'}</span>
+                  </div>
+                  <div className="summary-item">
+                    <span>Price:</span>
+                    <span>${album.selectedAlbum?.price.toFixed(2) || '0.00'}</span>
+                  </div>
+                </div>
+              ))}
+              <div className="summary-item">
+                <span>Subtotal:</span>
+                <span>${subtotal.toFixed(2)}</span>
+              </div>
+              <div className="summary-item">
+                <span>Delivery Charge:</span>
+                <span>${deliveryCharge.toFixed(2)}</span>
+              </div>
+              <div className="summary-total">
+                <span>Total:</span>
+                <span>${total.toFixed(2)}</span>
+              </div>
+              <div className="summary-delivery-info" style={{ marginTop: '1rem', padding: '1rem', backgroundColor: 'var(--pastel-green-light)', borderRadius: '8px', fontSize: '0.9rem', color: 'var(--text-dark)' }}>
+                <strong>Delivery Time:</strong> Your order will be delivered to your doorstep within 3 to 5 business days.
+              </div>
             </div>
-            <div className="summary-item">
-              <span>Delivery Charge:</span>
-              <span>${deliveryCharge.toFixed(2)}</span>
-            </div>
-            <div className="summary-total">
-              <span>Total:</span>
-              <span>${total.toFixed(2)}</span>
-            </div>
-            <div className="summary-delivery-info" style={{ marginTop: '1rem', padding: '1rem', backgroundColor: 'var(--pastel-green-light)', borderRadius: '8px', fontSize: '0.9rem', color: 'var(--text-dark)' }}>
-              <strong>Delivery Time:</strong> Your order will be delivered to your doorstep within 3 to 5 business days.
-            </div>
-          </div>
+          )}
           <form className="order-form-form" onSubmit={handleSubmit}>
             <div className="form-group">
               <label htmlFor="full-name">Full Name *</label>
@@ -215,6 +217,46 @@ function OrderForm({
                 onChange={(e) => setFormData({ ...formData, mobileNumber: e.target.value })}
               />
             </div>
+            {isMobile && (
+              <div className="order-summary" style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+                <h3>Order Summary</h3>
+                <div className="summary-item">
+                  <span>Number of Albums:</span>
+                  <span>{albums.length}</span>
+                </div>
+                {albums.map((album, index) => (
+                  <div key={index} className="album-summary-item">
+                    <div className="summary-item">
+                      <span>Album {index + 1}:</span>
+                      <span>{album.selectedAlbum ? `${album.selectedAlbum.size} Photos` : 'Not selected'}</span>
+                    </div>
+                    <div className="summary-item">
+                      <span>Color:</span>
+                      <span>{album.selectedAlbum && album.selectedColor ? album.selectedColor.charAt(0).toUpperCase() + album.selectedColor.slice(1) : '-'}</span>
+                    </div>
+                    <div className="summary-item">
+                      <span>Price:</span>
+                      <span>${album.selectedAlbum?.price.toFixed(2) || '0.00'}</span>
+                    </div>
+                  </div>
+                ))}
+                <div className="summary-item">
+                  <span>Subtotal:</span>
+                  <span>${subtotal.toFixed(2)}</span>
+                </div>
+                <div className="summary-item">
+                  <span>Delivery Charge:</span>
+                  <span>${deliveryCharge.toFixed(2)}</span>
+                </div>
+                <div className="summary-total">
+                  <span>Total:</span>
+                  <span>${total.toFixed(2)}</span>
+                </div>
+                <div className="summary-delivery-info" style={{ marginTop: '1rem', padding: '1rem', backgroundColor: 'var(--pastel-green-light)', borderRadius: '8px', fontSize: '0.9rem', color: 'var(--text-dark)' }}>
+                  <strong>Delivery Time:</strong> Your order will be delivered to your doorstep within 3 to 5 business days.
+                </div>
+              </div>
+            )}
             <div className="form-disclaimer">
               <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.9rem', color: 'var(--text-light)' }}>
                 <li>Your personal photos will be permanently deleted once your album is printed and delivered.</li>
