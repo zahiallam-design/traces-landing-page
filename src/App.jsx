@@ -31,6 +31,11 @@ function App() {
 
   // Initialize albums array when count is selected
   const handleAlbumCountSelect = (count) => {
+    // Only allow adding albums, not removing (to prevent issues during upload)
+    if (count < albums.length) {
+      return; // Don't allow reducing count
+    }
+    
     setAlbumCount(count);
     
     // Generate order number when album count is selected (for file naming)
@@ -39,7 +44,7 @@ function App() {
       setOrderNumber(newOrderNumber);
     }
     
-    // Preserve existing albums if increasing count, remove extras if decreasing
+    // Only add new albums if count is greater than current
     if (count > albums.length) {
       // Adding more albums - keep existing ones and add new empty ones
       const newAlbums = Array.from({ length: count - albums.length }, (_, index) => ({
@@ -51,11 +56,71 @@ function App() {
         cover: null
       }));
       setAlbums([...albums, ...newAlbums]);
-    } else if (count < albums.length) {
-      // Reducing count - keep only the first N albums
-      setAlbums(albums.slice(0, count));
     }
     // If count is same, do nothing (preserve existing data)
+  };
+
+  // Remove a specific album
+  const handleRemoveAlbum = (albumIndex) => {
+    // Check if this album is currently uploading
+    if (albumUploadStates[albumIndex]) {
+      return; // Don't allow removal during upload
+    }
+    
+    // Remove the album and update indices
+    const updatedAlbums = albums.filter((_, index) => index !== albumIndex);
+    setAlbums(updatedAlbums);
+    
+    // Update album count
+    setAlbumCount(updatedAlbums.length);
+    
+    // Clean up upload states for removed album and reindex remaining ones
+    const updatedUploadStates = {};
+    const updatedFilesSelected = {};
+    updatedAlbums.forEach((_, newIndex) => {
+      // Find the old index for this album
+      if (newIndex < albumIndex) {
+        // Albums before removed one keep their state
+        if (albumUploadStates[newIndex] !== undefined) {
+          updatedUploadStates[newIndex] = albumUploadStates[newIndex];
+        }
+        if (albumFilesSelected[newIndex] !== undefined) {
+          updatedFilesSelected[newIndex] = albumFilesSelected[newIndex];
+        }
+      } else {
+        // Albums after removed one shift their state
+        const oldIndex = newIndex + 1;
+        if (albumUploadStates[oldIndex] !== undefined) {
+          updatedUploadStates[newIndex] = albumUploadStates[oldIndex];
+        }
+        if (albumFilesSelected[oldIndex] !== undefined) {
+          updatedFilesSelected[newIndex] = albumFilesSelected[oldIndex];
+        }
+      }
+    });
+    setAlbumUploadStates(updatedUploadStates);
+    setAlbumFilesSelected(updatedFilesSelected);
+    
+    // Clean up validation errors for removed album and reindex
+    const updatedErrors = {};
+    Object.keys(validationErrors).forEach(key => {
+      const match = key.match(/album-(\d+)-(.+)/);
+      if (match) {
+        const oldIndex = parseInt(match[1]);
+        if (oldIndex < albumIndex) {
+          // Keep errors for albums before removed one
+          updatedErrors[key] = validationErrors[key];
+        } else if (oldIndex > albumIndex) {
+          // Shift errors for albums after removed one
+          updatedErrors[`album-${oldIndex - 1}-${match[2]}`] = validationErrors[key];
+        }
+        // Skip errors for the removed album
+      } else {
+        // Keep non-album errors
+        updatedErrors[key] = validationErrors[key];
+      }
+    });
+    setValidationErrors(updatedErrors);
   };
 
   const handleAlbumSelect = (albumIndex, album) => {
@@ -410,12 +475,39 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
       <Hero />
       <HowItWorks />
       
-      <AlbumCountSelector onCountSelect={handleAlbumCountSelect} currentCount={albumCount} />
+      <AlbumCountSelector 
+        onCountSelect={handleAlbumCountSelect} 
+        currentCount={albumCount}
+        allowDecrease={false}
+      />
       {albumCount && (
         <>
           <div id="album-sections" style={{ marginTop: '2rem' }}>
             {albums.map((album, index) => (
-              <div key={album.id} className="album-section-wrapper" style={{ marginBottom: '4rem', paddingBottom: '2rem', borderBottom: index < albums.length - 1 ? '2px solid var(--border-light)' : 'none' }}>
+              <div key={album.id} className="album-section-wrapper" style={{ marginBottom: '4rem', paddingBottom: '2rem', borderBottom: index < albums.length - 1 ? '2px solid var(--border-light)' : 'none', position: 'relative' }}>
+                <button
+                  onClick={() => handleRemoveAlbum(index)}
+                  disabled={albumUploadStates[index] || albums.length === 1}
+                  className="btn-remove-album"
+                  style={{
+                    position: 'absolute',
+                    top: '0',
+                    right: '0',
+                    padding: '0.5rem 1rem',
+                    fontSize: '0.875rem',
+                    backgroundColor: '#e74c3c',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: (albumUploadStates[index] || albums.length === 1) ? 'not-allowed' : 'pointer',
+                    opacity: (albumUploadStates[index] || albums.length === 1) ? 0.5 : 1,
+                    zIndex: 10,
+                    fontWeight: '500'
+                  }}
+                  title={albumUploadStates[index] ? 'Cannot remove album while uploading' : albums.length === 1 ? 'At least one album is required' : 'Remove this album'}
+                >
+                  Cancel Album
+                </button>
                 <AlbumOptions
                   albumIndex={index}
                   selectedAlbum={album.selectedAlbum}
