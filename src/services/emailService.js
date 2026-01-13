@@ -168,7 +168,7 @@ function formatAlbumsDetails(albums) {
     const coverInfo = albumData.cover?.type === 'image' 
       ? (albumData.cover.imageUrl ? `Image cover - URL: ${albumData.cover.imageUrl}` : 'Image cover')
       : albumData.cover?.type === 'text' 
-        ? `Text: "${albumData.cover.title}"`
+        ? `Text: "${albumData.cover.title}" (${albumData.cover.color === 'grey' ? 'Grey' : albumData.cover.color === 'red' ? 'Red' : 'Unknown'})`
         : 'Not selected';
     
     return `• Album ${index + 1}: ${albumData.album.size} Photos, ${albumData.album.color.charAt(0).toUpperCase() + albumData.album.color.slice(1)} Color - $${albumData.album.price.toFixed(2)} (${albumData.fileCount} photos, Cover: ${coverInfo})`;
@@ -184,7 +184,7 @@ function formatOrderSummary(orderData) {
     const coverInfo = albumData.cover?.type === 'image' 
       ? (albumData.cover.imageUrl ? `Image cover - URL: ${albumData.cover.imageUrl}` : 'Image cover')
       : albumData.cover?.type === 'text' 
-        ? `Text: "${albumData.cover.title}"`
+        ? `Text: "${albumData.cover.title}" (${albumData.cover.color === 'grey' ? 'Grey' : albumData.cover.color === 'red' ? 'Red' : 'Unknown'})`
         : 'Not selected';
     
     albumsText += `
@@ -243,7 +243,7 @@ function formatWhatsAppMessageForBusiness(orderData) {
     const coverInfo = albumData.cover?.type === 'image' 
       ? 'Image cover'
       : albumData.cover?.type === 'text' 
-        ? `Text: "${albumData.cover.title}"`
+        ? `Text: "${albumData.cover.title}" (${albumData.cover.color === 'grey' ? 'Grey' : albumData.cover.color === 'red' ? 'Red' : 'Unknown'})`
         : 'Not selected';
     
     albumsText += `\n*Album ${index + 1}:*\n`;
@@ -337,7 +337,7 @@ function formatCustomerOrderSummary(orderData) {
     const coverInfo = albumData.cover?.type === 'image' 
       ? (albumData.cover.imageUrl ? `Image cover` : 'Image cover')
       : albumData.cover?.type === 'text' 
-        ? `Text: "${albumData.cover.title}"`
+        ? `Text: "${albumData.cover.title}" (${albumData.cover.color === 'grey' ? 'Grey' : albumData.cover.color === 'red' ? 'Red' : 'Unknown'})`
         : 'Not selected';
     
     albumsText += `
