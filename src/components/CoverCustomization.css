@@ -280,6 +280,12 @@
   background: #000;
 }
 
+.crop-container > div {
+  position: relative !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
 .crop-controls {
   margin: 1rem 0;
   display: flex;

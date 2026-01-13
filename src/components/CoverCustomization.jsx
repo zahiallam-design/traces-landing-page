@@ -17,6 +17,7 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
   const [uploadError, setUploadError] = useState(null);
   const [showCropModal, setShowCropModal] = useState(false);
   const [imageToCrop, setImageToCrop] = useState(null);
+  const [imageToCropUrl, setImageToCropUrl] = useState(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
@@ -203,6 +204,8 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
     const isSquare = await isImageSquare(file);
     if (!isSquare) {
       setImageToCrop(file);
+      const imageUrl = URL.createObjectURL(file);
+      setImageToCropUrl(imageUrl);
       setShowCropModal(true);
       return;
     }
@@ -345,7 +348,11 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
       const a6File = await placeOnA6Paper(croppedFile);
       
       setShowCropModal(false);
+      if (imageToCropUrl) {
+        URL.revokeObjectURL(imageToCropUrl);
+      }
       setImageToCrop(null);
+      setImageToCropUrl(null);
       setCrop({ x: 0, y: 0 });
       setZoom(1);
       setCroppedAreaPixels(null);
@@ -631,22 +638,24 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
       </div>
 
       {/* Crop Modal */}
-      {showCropModal && imageToCrop && (
+      {showCropModal && imageToCropUrl && (
         <div className="crop-modal-overlay">
           <div className="crop-modal-content">
             <h3>Crop Your Cover Image</h3>
             <p style={{ marginBottom: '1rem', color: 'var(--text-light)' }}>
               Your cover image must be square (9×9 cm). Please select the square area you want to use.
             </p>
-            <div className="crop-container" style={{ width: '100%', height: '400px', position: 'relative', background: '#000' }}>
+            <div className="crop-container">
               <Cropper
-                image={URL.createObjectURL(imageToCrop)}
+                image={imageToCropUrl}
                 crop={crop}
                 zoom={zoom}
                 aspect={1}
                 onCropChange={setCrop}
                 onZoomChange={setZoom}
                 onCropComplete={onCropComplete}
+                cropShape="rect"
+                showGrid={true}
               />
             </div>
             <div className="crop-controls">
@@ -674,7 +683,11 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
                 className="btn btn-secondary"
                 onClick={() => {
                   setShowCropModal(false);
+                  if (imageToCropUrl) {
+                    URL.revokeObjectURL(imageToCropUrl);
+                  }
                   setImageToCrop(null);
+                  setImageToCropUrl(null);
                   setCrop({ x: 0, y: 0 });
                   setZoom(1);
                   setCroppedAreaPixels(null);
