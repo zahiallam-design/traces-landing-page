@@ -638,7 +638,7 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
             <p style={{ marginBottom: '1rem', color: 'var(--text-light)' }}>
               Your cover image must be square (9×9 cm). Please select the square area you want to use.
             </p>
-            <div className="crop-container">
+            <div className="crop-container" style={{ width: '100%', height: '400px', position: 'relative', background: '#000' }}>
               <Cropper
                 image={URL.createObjectURL(imageToCrop)}
                 crop={crop}
@@ -647,14 +647,6 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
                 onCropChange={setCrop}
                 onZoomChange={setZoom}
                 onCropComplete={onCropComplete}
-                style={{
-                  containerStyle: {
-                    width: '100%',
-                    height: '400px',
-                    position: 'relative',
-                    background: '#000'
-                  }
-                }}
               />
             </div>
             <div className="crop-controls">

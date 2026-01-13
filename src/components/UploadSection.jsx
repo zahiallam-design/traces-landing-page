@@ -1065,9 +1065,11 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                       Cancel Upload
                     </button>
                   </div>
-                  <p style={{ marginTop: '1rem', fontSize: '0.9rem', color: 'var(--pastel-green-dark)', fontStyle: 'italic', textAlign: 'center' }}>
-                    💡 You can continue the process and scroll down to customize your cover while upload is in progress.
-                  </p>
+                  {!isCompressing && (
+                    <p style={{ marginTop: '1rem', fontSize: '0.9rem', color: 'var(--pastel-green-dark)', fontStyle: 'italic', textAlign: 'center' }}>
+                      💡 You can continue the process and scroll down to customize your cover while upload is in progress.
+                    </p>
+                  )}
                 </div>
               )}
               {uploadStatus && !isUploading && !isCompressing && (
