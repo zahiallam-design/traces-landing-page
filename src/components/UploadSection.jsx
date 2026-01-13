@@ -6,7 +6,7 @@ import './UploadSection.css';
 // Smash API key is now handled server-side via Vercel Serverless Functions
 // No API key needed in frontend - more secure!
 
-function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplete, hasError }) {
+function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplete, hasError, onUploadStateChange }) {
   const breakpoint = useBreakpoint();
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploadProgress, setUploadProgress] = useState(0); // Number of files uploaded
@@ -21,6 +21,13 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
   const abortControllerRef = useRef(null);
 
   const maxFiles = selectedAlbum?.size || 52;
+
+  // Notify parent of upload/compression state changes
+  useEffect(() => {
+    if (onUploadStateChange) {
+      onUploadStateChange(isUploading || isCompressing);
+    }
+  }, [isUploading, isCompressing, onUploadStateChange]);
 
   // Compress images that are larger than 4MB
   const compressImageIfNeeded = async (file) => {
@@ -873,7 +880,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
               />
               {selectedFiles.length === 0 && (
                 <p style={{ marginBottom: '1rem', fontSize: '0.95rem', color: 'var(--text-dark)', textAlign: 'center', lineHeight: '1.5' }}>
-                  📸 <strong>Tip:</strong> The order you select your photos is how they'll be printed and filled in your album. Don't worry—you can drag and reorder them after selection if needed!
+                  📸 <strong>Tip:</strong> The order you select your photos is how they'll be printed and filled in your album. Don't worry—you can use the up/down arrows to reorder them after selection if needed!
                 </p>
               )}
               <div
@@ -959,7 +966,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                       ✓ The below images you selected have been added successfully, waiting for you to upload them.
                     </p>
                     <p style={{ marginTop: '0.5rem', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text-light)', fontStyle: 'italic' }}>
-                      💡 Images are listed in your selection order. Want to change it? Drag the handle (☰) on the right.
+                      💡 Images are listed in your selection order. Want to change it? Use the up/down arrows (↑↓) on the right to reorder.
                     </p>
                     <div className="file-list" style={{ marginTop: '0.5rem' }}>
                       {selectedFiles.map((file, index) => (
@@ -1023,6 +1030,9 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                     <div className="progress-fill" style={{ width: `${compressionProgress}%` }}></div>
                   </div>
                   <p className="progress-text" style={{ marginTop: '0.5rem' }}>Compressing images...</p>
+                  <p style={{ marginTop: '1rem', fontSize: '0.9rem', color: 'var(--pastel-green-dark)', fontStyle: 'italic', textAlign: 'center' }}>
+                    💡 You can continue the process and scroll down to customize your cover while compression is in progress.
+                  </p>
                 </div>
               )}
               {isUploading && (
@@ -1043,6 +1053,9 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                       Cancel Upload
                     </button>
                   </div>
+                  <p style={{ marginTop: '1rem', fontSize: '0.9rem', color: 'var(--pastel-green-dark)', fontStyle: 'italic', textAlign: 'center' }}>
+                    💡 You can continue the process and scroll down to customize your cover while upload is in progress.
+                  </p>
                 </div>
               )}
               {uploadStatus && !isUploading && !isCompressing && (

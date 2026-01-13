@@ -205,8 +205,14 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
       return;
     }
     
-    // If square, proceed with upload
-    await uploadCoverImage(file);
+    // If square, place it on A6 background before uploading
+    try {
+      const a6File = await placeOnA6Paper(file);
+      await uploadCoverImage(a6File);
+    } catch (error) {
+      console.error('A6 processing error:', error);
+      setUploadError('Failed to process cover image. Please try again.');
+    }
   };
 
   const onCropComplete = useCallback((croppedArea, croppedAreaPixels) => {
@@ -254,6 +260,63 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
     });
   };
 
+  // Place cropped square image on A6 white background at corner (9x9 cm)
+  const placeOnA6Paper = async (croppedSquareFile) => {
+    // A6 dimensions: 105mm × 148mm (10.5cm × 14.8cm)
+    // At 300 DPI (print quality): 1240 × 1748 pixels
+    // 9x9 cm at 300 DPI = 1063 × 1063 pixels
+    const DPI = 300;
+    const A6_WIDTH_MM = 105;
+    const A6_HEIGHT_MM = 148;
+    const COVER_SIZE_CM = 9;
+    
+    // Convert mm/cm to pixels at 300 DPI
+    const mmToPixels = (mm) => (mm / 25.4) * DPI;
+    const cmToPixels = (cm) => (cm / 2.54) * DPI;
+    
+    const a6WidthPx = mmToPixels(A6_WIDTH_MM);
+    const a6HeightPx = mmToPixels(A6_HEIGHT_MM);
+    const coverSizePx = cmToPixels(COVER_SIZE_CM);
+    
+    // Create A6 canvas with white background
+    const a6Canvas = document.createElement('canvas');
+    a6Canvas.width = a6WidthPx;
+    a6Canvas.height = a6HeightPx;
+    const a6Ctx = a6Canvas.getContext('2d');
+    
+    // Fill with white background
+    a6Ctx.fillStyle = '#FFFFFF';
+    a6Ctx.fillRect(0, 0, a6WidthPx, a6HeightPx);
+    
+    // Load the cropped square image
+    const imageUrl = URL.createObjectURL(croppedSquareFile);
+    const squareImage = await createImage(imageUrl);
+    
+    // Place the square image at top-left corner (0, 0) with 9x9 cm size
+    a6Ctx.drawImage(
+      squareImage,
+      0,
+      0,
+      coverSizePx,
+      coverSizePx
+    );
+    
+    // Clean up
+    URL.revokeObjectURL(imageUrl);
+    
+    // Convert to blob/file
+    return new Promise((resolve, reject) => {
+      a6Canvas.toBlob((blob) => {
+        if (!blob) {
+          reject(new Error('Failed to create A6 canvas'));
+          return;
+        }
+        const file = new File([blob], 'cover-a6.jpg', { type: 'image/jpeg' });
+        resolve(file);
+      }, 'image/jpeg', 0.95);
+    });
+  };
+
   const handleCropComplete = async () => {
     if (!imageToCrop || !croppedAreaPixels) return;
 
@@ -262,13 +325,16 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
       const croppedFile = await getCroppedImg(imageUrl, croppedAreaPixels);
       URL.revokeObjectURL(imageUrl);
       
+      // Place cropped square on A6 white background
+      const a6File = await placeOnA6Paper(croppedFile);
+      
       setShowCropModal(false);
       setImageToCrop(null);
       setCrop({ x: 0, y: 0 });
       setZoom(1);
       setCroppedAreaPixels(null);
       
-      await uploadCoverImage(croppedFile);
+      await uploadCoverImage(a6File);
     } catch (error) {
       console.error('Crop error:', error);
       setUploadError('Failed to crop image. Please try again.');
@@ -523,7 +589,7 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
                       style={{
                         fontFamily: '"Holiday", cursive',
                         fontSize: 'clamp(1.5rem, 4vw, 3rem)',
-                        fontWeight: '600',
+                        fontWeight: '400',
                         color: coverTextColor === 'grey' ? '#5d5575' : coverTextColor === 'red' ? '#ff3131' : '#333',
                         margin: 0,
                         wordWrap: 'break-word',

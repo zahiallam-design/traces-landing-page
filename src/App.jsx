@@ -26,6 +26,7 @@ function App() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderNumber, setOrderNumber] = useState(null); // Generate order number early for file naming
   const [validationErrors, setValidationErrors] = useState({}); // Track validation errors per album
+  const [albumUploadStates, setAlbumUploadStates] = useState({}); // Track upload state per album
 
   // Initialize albums array when count is selected
   const handleAlbumCountSelect = (count) => {
@@ -459,6 +460,13 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
                       }
                     }}
                     hasError={validationErrors[`album-${index}-photos`]}
+                    onUploadStateChange={(isInProgress) => {
+                      // Track upload state per album
+                      setAlbumUploadStates(prev => ({
+                        ...prev,
+                        [index]: isInProgress
+                      }));
+                    }}
                   />
                 )}
                 {album.smashTransferUrl && (
@@ -491,6 +499,7 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
             onSubmit={handleOrderSubmit}
             isSubmitting={isSubmitting}
             onValidationError={setValidationErrors}
+            isUploadInProgress={Object.values(albumUploadStates).some(state => state === true)}
           />
         </>
       )}

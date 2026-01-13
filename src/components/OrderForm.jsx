@@ -10,7 +10,8 @@ function OrderForm({
   onNotesForUsChange,
   onSubmit,
   isSubmitting = false,
-  onValidationError
+  onValidationError,
+  isUploadInProgress = false
 }) {
   const breakpoint = useBreakpoint();
   const isMobile = ['xs', 'ss', 'sm'].includes(breakpoint);
@@ -266,10 +267,15 @@ function OrderForm({
             <button 
               type="submit" 
               className="btn btn-primary btn-large"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isUploadInProgress}
             >
               {isSubmitting ? 'Submitting Order...' : 'Place Order – Pay on Delivery'}
             </button>
+            {isUploadInProgress && (
+              <p style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: 'var(--text-light)', fontStyle: 'italic', textAlign: 'center' }}>
+                ⏳ Upload in progress... Please wait for upload to complete before submitting your order.
+              </p>
+            )}
           </form>
         </div>
       </div>
