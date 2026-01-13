@@ -484,41 +484,7 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
         <>
           <div id="album-sections" style={{ marginTop: '2rem' }}>
             {albums.map((album, index) => (
-              <div key={album.id} className="album-section-wrapper" style={{ marginBottom: '4rem', paddingBottom: '2rem', borderBottom: index < albums.length - 1 ? '2px solid var(--border-light)' : 'none', position: 'relative' }}>
-                <button
-                  onClick={() => handleRemoveAlbum(index)}
-                  disabled={albumUploadStates[index] || albums.length === 1}
-                  className="btn-remove-album"
-                  style={{
-                    position: 'absolute',
-                    top: '0',
-                    right: '0',
-                    padding: '0.5rem 1rem',
-                    fontSize: '0.875rem',
-                    backgroundColor: '#929191',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: (albumUploadStates[index] || albums.length === 1) ? 'not-allowed' : 'pointer',
-                    opacity: (albumUploadStates[index] || albums.length === 1) ? 0.5 : 1,
-                    zIndex: 10,
-                    fontWeight: '500',
-                    transition: 'background-color 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!albumUploadStates[index] && albums.length > 1) {
-                      e.target.style.backgroundColor = '#7a7a7a';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!albumUploadStates[index] && albums.length > 1) {
-                      e.target.style.backgroundColor = '#929191';
-                    }
-                  }}
-                  title={albumUploadStates[index] ? 'Cannot remove album while uploading' : albums.length === 1 ? 'At least one album is required' : 'Remove this album'}
-                >
-                  Cancel Album
-                </button>
+              <div key={album.id} className="album-section-wrapper" style={{ marginBottom: '4rem', paddingBottom: '2rem', borderBottom: index < albums.length - 1 ? '2px solid var(--border-light)' : 'none' }}>
                 <AlbumOptions
                   albumIndex={index}
                   selectedAlbum={album.selectedAlbum}
@@ -546,6 +512,9 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
                     }
                   }}
                   hasError={validationErrors[`album-${index}-size`] || validationErrors[`album-${index}-color`]}
+                  onRemoveAlbum={handleRemoveAlbum}
+                  canRemoveAlbum={albums.length > 1}
+                  isUploading={albumUploadStates[index]}
                 />
                 {album.selectedAlbum && album.selectedColor && (
                   <UploadSection

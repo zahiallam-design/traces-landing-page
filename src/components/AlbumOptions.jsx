@@ -7,7 +7,7 @@ const albums = [
   { size: 100, price: 47 }
 ];
 
-function AlbumOptions({ albumIndex, selectedAlbum, onAlbumSelect, selectedColor, onColorChange, hasError }) {
+function AlbumOptions({ albumIndex, selectedAlbum, onAlbumSelect, selectedColor, onColorChange, hasError, onRemoveAlbum, canRemoveAlbum, isUploading }) {
   const breakpoint = useBreakpoint();
   const isMobile = ['xs', 'ss', 'sm'].includes(breakpoint);
 
@@ -40,6 +40,41 @@ function AlbumOptions({ albumIndex, selectedAlbum, onAlbumSelect, selectedColor,
           Album {albumIndex + 1} - Choose Your Album
           {hasError && <span className="error-badge" title="This step needs to be completed">⚠</span>}
         </h2>
+        
+        {onRemoveAlbum && (
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
+            <button
+              onClick={() => onRemoveAlbum(albumIndex)}
+              disabled={!canRemoveAlbum || isUploading}
+              className="btn-remove-album"
+              style={{
+                padding: '0.5rem 1rem',
+                fontSize: '0.875rem',
+                backgroundColor: '#929191',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: (!canRemoveAlbum || isUploading) ? 'not-allowed' : 'pointer',
+                opacity: (!canRemoveAlbum || isUploading) ? 0.5 : 1,
+                fontWeight: '500',
+                transition: 'background-color 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                if (canRemoveAlbum && !isUploading) {
+                  e.target.style.backgroundColor = '#7a7a7a';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (canRemoveAlbum && !isUploading) {
+                  e.target.style.backgroundColor = '#929191';
+                }
+              }}
+              title={isUploading ? 'Cannot remove album while uploading' : !canRemoveAlbum ? 'At least one album is required' : 'Remove this album'}
+            >
+              Cancel Album
+            </button>
+          </div>
+        )}
         
         {/* Step 1: Size Selection */}
         <div className="album-selection-step">
