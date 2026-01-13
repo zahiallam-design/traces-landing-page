@@ -57,8 +57,8 @@ function OrderForm({
       } else if (album.cover?.type === 'image' && (!album.cover.imageUrl && !album.cover.image)) {
         errors[`album-${i}-cover`] = `Please upload a cover image for Album ${i + 1}`;
         if (!firstErrorSection) firstErrorSection = `cover-customization-${i}`;
-      } else if (album.cover?.type === 'text' && (!album.cover.title || album.cover.title.trim() === '')) {
-        errors[`album-${i}-cover`] = `Please enter a cover title for Album ${i + 1}`;
+      } else if (album.cover?.type === 'text' && (!album.cover.title || album.cover.title.trim() === '' || !album.cover.color)) {
+        errors[`album-${i}-cover`] = `Please enter a cover title and select a color for Album ${i + 1}`;
         if (!firstErrorSection) firstErrorSection = `cover-customization-${i}`;
       }
     }

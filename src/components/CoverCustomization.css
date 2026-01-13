@@ -199,6 +199,47 @@
   font-size: 0.85rem;
 }
 
+.cover-color-selection {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.cover-color-btn {
+  flex: 1;
+  transition: all 0.3s ease;
+}
+
+.cover-color-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.cover-text-preview {
+  margin-top: 1.5rem;
+}
+
+.cover-text-preview label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: var(--text-dark);
+}
+
+.cover-preview-box {
+  font-family: "Holiday", cursive;
+}
+
+@media (max-width: 600px) {
+  .cover-color-selection {
+    flex-direction: column;
+  }
+  
+  .cover-color-btn {
+    width: 100%;
+  }
+}
+
 /* Crop Modal */
 .crop-modal-overlay {
   position: fixed;

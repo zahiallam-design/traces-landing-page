@@ -786,6 +786,20 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
     setDraggedIndex(index);
   };
 
+  const moveFileUp = (index) => {
+    if (index === 0 || uploadStatus?.type === 'success') return;
+    const newFiles = [...selectedFiles];
+    [newFiles[index - 1], newFiles[index]] = [newFiles[index], newFiles[index - 1]];
+    setSelectedFiles(newFiles);
+  };
+
+  const moveFileDown = (index) => {
+    if (index === selectedFiles.length - 1 || uploadStatus?.type === 'success') return;
+    const newFiles = [...selectedFiles];
+    [newFiles[index], newFiles[index + 1]] = [newFiles[index + 1], newFiles[index]];
+    setSelectedFiles(newFiles);
+  };
+
   const handleFileDragOver = (e, index) => {
     e.preventDefault();
     if (draggedIndex === null || draggedIndex === index) return;
@@ -953,13 +967,17 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                           key={`${file.name}-${index}`}
                           file={file}
                           index={index}
-                          onRemove={removeFile}
-                          formatFileSize={formatFileSize}
-                          isUploadComplete={uploadStatus?.type === 'success'}
-                          onDragStart={handleDragStart}
-                          onDragOver={handleFileDragOver}
-                          onDragEnd={handleDragEnd}
-                          isDragging={draggedIndex === index}
+                        onRemove={removeFile}
+                        formatFileSize={formatFileSize}
+                        isUploadComplete={uploadStatus?.type === 'success'}
+                        onDragStart={handleDragStart}
+                        onDragOver={handleFileDragOver}
+                        onDragEnd={handleDragEnd}
+                        isDragging={draggedIndex === index}
+                        onMoveUp={moveFileUp}
+                        onMoveDown={moveFileDown}
+                        canMoveUp={index > 0}
+                        canMoveDown={index < selectedFiles.length - 1}
                         />
                       ))}
                     </div>
@@ -1040,7 +1058,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
   );
 }
 
-function FileItem({ file, index, onRemove, formatFileSize, isUploadComplete, onDragStart, onDragOver, onDragEnd, isDragging }) {
+function FileItem({ file, index, onRemove, formatFileSize, isUploadComplete, onDragStart, onDragOver, onDragEnd, isDragging, onMoveUp, onMoveDown, canMoveUp, canMoveDown }) {
   const [preview, setPreview] = useState(null);
 
   useEffect(() => {
@@ -1132,23 +1150,51 @@ function FileItem({ file, index, onRemove, formatFileSize, isUploadComplete, onD
       </div>
       <div className="file-actions">
         {!isUploadComplete && (
-          <div 
-            className="drag-handle"
-            draggable={true}
-            onDragStart={handleDragStartLocal}
-            onDragOver={handleDragOverLocal}
-            onDragEnd={handleDragEndLocal}
-            aria-label="Drag to reorder"
-            title="Drag to reorder"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="9" cy="12" r="1"></circle>
-              <circle cx="9" cy="5" r="1"></circle>
-              <circle cx="9" cy="19" r="1"></circle>
-              <circle cx="15" cy="12" r="1"></circle>
-              <circle cx="15" cy="5" r="1"></circle>
-              <circle cx="15" cy="19" r="1"></circle>
-            </svg>
+          <div className="reorder-buttons" style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+            <button
+              type="button"
+              onClick={() => onMoveUp(index)}
+              disabled={!canMoveUp}
+              className="reorder-btn"
+              aria-label="Move up"
+              title="Move up"
+              style={{
+                padding: '0.25rem',
+                border: 'none',
+                background: 'transparent',
+                cursor: canMoveUp ? 'pointer' : 'not-allowed',
+                opacity: canMoveUp ? 1 : 0.3,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="18 15 12 9 6 15"></polyline>
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => onMoveDown(index)}
+              disabled={!canMoveDown}
+              className="reorder-btn"
+              aria-label="Move down"
+              title="Move down"
+              style={{
+                padding: '0.25rem',
+                border: 'none',
+                background: 'transparent',
+                cursor: canMoveDown ? 'pointer' : 'not-allowed',
+                opacity: canMoveDown ? 1 : 0.3,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
           </div>
         )}
         <button 

@@ -10,6 +10,7 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
   const [coverImage, setCoverImage] = useState(null);
   const [coverImageUrl, setCoverImageUrl] = useState(null);
   const [coverTitle, setCoverTitle] = useState('');
+  const [coverTextColor, setCoverTextColor] = useState(null); // 'grey' or 'red'
   const [isUploadingCover, setIsUploadingCover] = useState(false);
   const [isCompressingCover, setIsCompressingCover] = useState(false);
   const [uploadError, setUploadError] = useState(null);
@@ -41,15 +42,16 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
         });
       }
     } else {
-      // For text type, don't notify parent until title is filled
-      // Only notify if title already exists
-      if (coverTitle && coverTitle.trim() !== '') {
+      // For text type, don't notify parent until title and color are filled
+      // Only notify if both already exist
+      if (coverTitle && coverTitle.trim() !== '' && coverTextColor) {
         onCoverChange({
           type: 'text',
-          title: coverTitle.trim()
+          title: coverTitle.trim(),
+          color: coverTextColor
         });
       } else {
-        // Clear cover if switching to text but no title yet
+        // Clear cover if switching to text but no title/color yet
         onCoverChange(null);
       }
     }
@@ -332,14 +334,32 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
     const title = e.target.value;
     setCoverTitle(title);
     if (coverType === 'text') {
-      // Only notify parent if title is filled (not empty)
-      if (title && title.trim() !== '') {
+      // Only notify parent if title and color are both filled
+      if (title && title.trim() !== '' && coverTextColor) {
         onCoverChange({
           type: 'text',
-          title: title.trim()
+          title: title.trim(),
+          color: coverTextColor
         });
       } else {
-        // Clear cover if title is empty
+        // Clear cover if title or color is missing
+        onCoverChange(null);
+      }
+    }
+  };
+
+  const handleColorSelect = (color) => {
+    setCoverTextColor(color);
+    if (coverType === 'text') {
+      // Only notify parent if title and color are both filled
+      if (coverTitle && coverTitle.trim() !== '' && color) {
+        onCoverChange({
+          type: 'text',
+          title: coverTitle.trim(),
+          color: color
+        });
+      } else {
+        // Clear cover if title is missing
         onCoverChange(null);
       }
     }
@@ -436,6 +456,85 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
                   </small>
                 )}
               </div>
+              
+              <div className="form-group">
+                <label>Text Color *</label>
+                <div className="cover-color-selection">
+                  <button
+                    type="button"
+                    className={`cover-color-btn ${coverTextColor === 'grey' ? 'selected' : ''}`}
+                    onClick={() => handleColorSelect('grey')}
+                    style={{
+                      backgroundColor: coverTextColor === 'grey' ? '#5d5575' : '#f5f5f5',
+                      color: coverTextColor === 'grey' ? 'white' : '#5d5575',
+                      border: `2px solid ${coverTextColor === 'grey' ? '#5d5575' : '#dee2e6'}`,
+                      padding: '0.75rem 1.5rem',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: '600',
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    Grey
+                  </button>
+                  <button
+                    type="button"
+                    className={`cover-color-btn ${coverTextColor === 'red' ? 'selected' : ''}`}
+                    onClick={() => handleColorSelect('red')}
+                    style={{
+                      backgroundColor: coverTextColor === 'red' ? '#ff3131' : '#f5f5f5',
+                      color: coverTextColor === 'red' ? 'white' : '#ff3131',
+                      border: `2px solid ${coverTextColor === 'red' ? '#ff3131' : '#dee2e6'}`,
+                      padding: '0.75rem 1.5rem',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: '600',
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    Red
+                  </button>
+                </div>
+                {hasError && !coverTextColor && (
+                  <small style={{ color: '#e74c3c', display: 'block', marginTop: '0.25rem' }}>
+                    Please select a text color to proceed
+                  </small>
+                )}
+              </div>
+
+              {coverTitle && coverTitle.trim() !== '' && (
+                <div className="cover-text-preview">
+                  <label>Preview:</label>
+                  <div 
+                    className="cover-preview-box"
+                    style={{
+                      backgroundColor: '#f8f9fa',
+                      border: '2px solid #dee2e6',
+                      borderRadius: '8px',
+                      padding: '2rem',
+                      textAlign: 'center',
+                      minHeight: '150px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <p 
+                      style={{
+                        fontFamily: '"Holiday", cursive',
+                        fontSize: 'clamp(1.5rem, 4vw, 3rem)',
+                        fontWeight: '600',
+                        color: coverTextColor === 'grey' ? '#5d5575' : coverTextColor === 'red' ? '#ff3131' : '#333',
+                        margin: 0,
+                        wordWrap: 'break-word',
+                        maxWidth: '100%'
+                      }}
+                    >
+                      {coverTitle}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

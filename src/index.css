@@ -5,6 +5,15 @@
   box-sizing: border-box;
 }
 
+@font-face {
+  font-family: 'Holiday';
+  src: url('/fonts/Holiday.woff2') format('woff2'),
+       url('/fonts/Holiday.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --pastel-green: #8DB7A5;
   --pastel-green-dark: #6B9A87;

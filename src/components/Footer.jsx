@@ -199,8 +199,7 @@ function Footer() {
               <h3>7. Returns and Refunds</h3>
               <p>Due to the custom nature of our products:</p>
               <ul>
-                <li>Returns are only accepted for defective or damaged products</li>
-                <li>Refunds will be processed within 14 business days</li>
+                <li>Returns and refunds are only accepted for defective or damaged products. In case of a refund, the process will be done within 14 business days.</li>
                 <li>Customized items cannot be returned unless defective</li>
                 <li>Contact us immediately if you receive a damaged product</li>
               </ul>
