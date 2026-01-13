@@ -495,14 +495,25 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
                     right: '0',
                     padding: '0.5rem 1rem',
                     fontSize: '0.875rem',
-                    backgroundColor: '#e74c3c',
+                    backgroundColor: '#929191',
                     color: 'white',
                     border: 'none',
                     borderRadius: '6px',
                     cursor: (albumUploadStates[index] || albums.length === 1) ? 'not-allowed' : 'pointer',
                     opacity: (albumUploadStates[index] || albums.length === 1) ? 0.5 : 1,
                     zIndex: 10,
-                    fontWeight: '500'
+                    fontWeight: '500',
+                    transition: 'background-color 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!albumUploadStates[index] && albums.length > 1) {
+                      e.target.style.backgroundColor = '#7a7a7a';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!albumUploadStates[index] && albums.length > 1) {
+                      e.target.style.backgroundColor = '#929191';
+                    }
                   }}
                   title={albumUploadStates[index] ? 'Cannot remove album while uploading' : albums.length === 1 ? 'At least one album is required' : 'Remove this album'}
                 >

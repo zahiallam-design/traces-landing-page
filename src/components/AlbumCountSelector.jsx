@@ -1,10 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 import './AlbumCountSelector.css';
 
 function AlbumCountSelector({ onCountSelect, currentCount, allowDecrease = true }) {
   const breakpoint = useBreakpoint();
   const [selectedCount, setSelectedCount] = useState(currentCount || null);
+  
+  // Update selectedCount when currentCount changes (e.g., when album is canceled)
+  useEffect(() => {
+    if (currentCount !== null && currentCount !== undefined) {
+      setSelectedCount(currentCount);
+    }
+  }, [currentCount]);
 
   const handleSelect = (count) => {
     // If decrease is not allowed and trying to select a lower count, don't do anything
