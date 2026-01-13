@@ -9,6 +9,7 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
   const [coverType, setCoverType] = useState(null); // 'image' or 'text'
   const [coverImage, setCoverImage] = useState(null);
   const [coverImageUrl, setCoverImageUrl] = useState(null);
+  const [croppedSquarePreview, setCroppedSquarePreview] = useState(null); // Preview of cropped square (not A6)
   const [coverTitle, setCoverTitle] = useState('');
   const [coverTextColor, setCoverTextColor] = useState(null); // 'grey' or 'red'
   const [isUploadingCover, setIsUploadingCover] = useState(false);
@@ -33,6 +34,7 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
       // Clear cover if switching to image but no image uploaded yet
       if (!coverImage && !coverImageUrl) {
         onCoverChange(null);
+        setCroppedSquarePreview(null);
       } else {
         // Only set cover if image already exists
         onCoverChange({
@@ -205,13 +207,18 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
       return;
     }
     
-    // If square, place it on A6 background before uploading
+    // If square, store for preview and place it on A6 background before uploading
     try {
+      // Store original square for preview (user sees this)
+      setCroppedSquarePreview(file);
+      
+      // Place square on A6 background (upload this, but user doesn't see it)
       const a6File = await placeOnA6Paper(file);
       await uploadCoverImage(a6File);
     } catch (error) {
       console.error('A6 processing error:', error);
       setUploadError('Failed to process cover image. Please try again.');
+      setCroppedSquarePreview(null);
     }
   };
 
@@ -232,17 +239,22 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
 
-    // For square crop, use the crop width (should equal height for square)
-    const cropSize = pixelCrop.width; // This should be square, so width = height
+    // For square crop, use the minimum to ensure perfect square (handles any rounding issues)
+    const cropSize = Math.min(pixelCrop.width, pixelCrop.height);
     canvas.width = cropSize;
     canvas.height = cropSize;
 
+    // Calculate the source crop area to ensure we get a square from the center of the selected area
+    const sourceSize = Math.min(pixelCrop.width, pixelCrop.height);
+    const sourceX = pixelCrop.x + (pixelCrop.width - sourceSize) / 2;
+    const sourceY = pixelCrop.y + (pixelCrop.height - sourceSize) / 2;
+
     ctx.drawImage(
       image,
-      pixelCrop.x,
-      pixelCrop.y,
-      pixelCrop.width,
-      pixelCrop.height,
+      sourceX,
+      sourceY,
+      sourceSize,
+      sourceSize,
       0,
       0,
       cropSize,
@@ -326,7 +338,10 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
       const croppedFile = await getCroppedImg(imageUrl, croppedAreaPixels);
       URL.revokeObjectURL(imageUrl);
       
-      // Place cropped square on A6 white background
+      // Store cropped square for preview (user sees this)
+      setCroppedSquarePreview(croppedFile);
+      
+      // Place cropped square on A6 white background (upload this, but user doesn't see it)
       const a6File = await placeOnA6Paper(croppedFile);
       
       setShowCropModal(false);
@@ -340,6 +355,7 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
       console.error('Crop error:', error);
       setUploadError('Failed to crop image. Please try again.');
       setShowCropModal(false);
+      setCroppedSquarePreview(null);
     }
   };
 
@@ -389,6 +405,7 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
       setUploadError(error.message || 'Failed to upload cover image. Please try again.');
       setCoverImage(null);
       setCoverImageUrl(null);
+      setCroppedSquarePreview(null);
       // Clear cover when upload fails
       onCoverChange(null);
     } finally {
@@ -488,12 +505,18 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
                   <p style={{ color: '#e74c3c', fontSize: '0.9rem', marginTop: '0.5rem' }}>{uploadError}</p>
                 </div>
               )}
-              {coverImage && !isUploadingCover && !uploadError && (
+              {(croppedSquarePreview || coverImage) && !isUploadingCover && !uploadError && (
                 <div style={{ marginTop: '0.5rem' }}>
                   <p style={{ color: 'var(--pastel-green-dark)', fontSize: '0.9rem', fontWeight: '500' }}>✓ Cover image uploaded successfully! You can now proceed.</p>
                 </div>
               )}
-              {coverImage && (
+              {croppedSquarePreview && (
+                <div className="cover-image-preview">
+                  <img src={URL.createObjectURL(croppedSquarePreview)} alt="Cover preview" />
+                  <p className="preview-label">{croppedSquarePreview.name}</p>
+                </div>
+              )}
+              {!croppedSquarePreview && coverImage && (
                 <div className="cover-image-preview">
                   <img src={URL.createObjectURL(coverImage)} alt="Cover preview" />
                   <p className="preview-label">{coverImage.name}</p>
