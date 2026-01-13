@@ -2,11 +2,16 @@ import React, { useState } from 'react';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 import './AlbumCountSelector.css';
 
-function AlbumCountSelector({ onCountSelect, currentCount }) {
+function AlbumCountSelector({ onCountSelect, currentCount, allowDecrease = true }) {
   const breakpoint = useBreakpoint();
   const [selectedCount, setSelectedCount] = useState(currentCount || null);
 
   const handleSelect = (count) => {
+    // If decrease is not allowed and trying to select a lower count, don't do anything
+    if (!allowDecrease && currentCount && count < currentCount) {
+      return;
+    }
+    
     setSelectedCount(count);
     onCountSelect(count);
     // Scroll to album sections after a brief delay
