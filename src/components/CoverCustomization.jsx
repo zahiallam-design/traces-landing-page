@@ -232,9 +232,10 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
 
-    const maxSize = Math.max(image.width, image.height);
-    canvas.width = maxSize;
-    canvas.height = maxSize;
+    // For square crop, use the crop width (should equal height for square)
+    const cropSize = pixelCrop.width; // This should be square, so width = height
+    canvas.width = cropSize;
+    canvas.height = cropSize;
 
     ctx.drawImage(
       image,
@@ -244,8 +245,8 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
       pixelCrop.height,
       0,
       0,
-      maxSize,
-      maxSize
+      cropSize,
+      cropSize
     );
 
     return new Promise((resolve, reject) => {

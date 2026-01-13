@@ -6,7 +6,7 @@ import './UploadSection.css';
 // Smash API key is now handled server-side via Vercel Serverless Functions
 // No API key needed in frontend - more secure!
 
-function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplete, hasError, onUploadStateChange }) {
+function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplete, hasError, onUploadStateChange, onFilesSelected }) {
   const breakpoint = useBreakpoint();
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploadProgress, setUploadProgress] = useState(0); // Number of files uploaded
@@ -723,7 +723,14 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
       onUploadComplete(null, 0);
     }
 
-    setSelectedFiles(prev => [...prev, ...newFiles]);
+    setSelectedFiles(prev => {
+      const updated = [...prev, ...newFiles];
+      // Notify parent that files are selected
+      if (onFilesSelected && updated.length > 0) {
+        onFilesSelected(true);
+      }
+      return updated;
+    });
   };
 
   const handleDrop = (e) => {
@@ -747,14 +754,9 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
   };
 
   const removeFile = (index) => {
-    // Don't allow removing files after upload is complete
-    if (uploadStatus?.type === 'success') {
+    // Don't allow removing files after upload is complete or during upload/compression
+    if (uploadStatus?.type === 'success' || isUploading || isCompressing) {
       return;
-    }
-    
-    if (isUploading) {
-      // If uploading, cancel the upload first
-      cancelUpload();
     }
     
     const newFiles = selectedFiles.filter((_, i) => i !== index);
@@ -766,6 +768,10 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
       setUploadProgress(0);
       // Clear the transfer URL in parent component
       onUploadComplete(null, 0);
+      // Notify parent that files are cleared
+      if (onFilesSelected) {
+        onFilesSelected(false);
+      }
     }
   };
   
@@ -779,6 +785,11 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
     setUploadProgress(0);
     setRejectedRawFiles([]); // Clear rejected RAW files list
     onUploadComplete(null, 0);
+    
+    // Notify parent that files are cleared
+    if (onFilesSelected) {
+      onFilesSelected(false);
+    }
   };
 
   const formatFileSize = (bytes) => {
@@ -794,14 +805,14 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
   };
 
   const moveFileUp = (index) => {
-    if (index === 0 || uploadStatus?.type === 'success') return;
+    if (index === 0 || uploadStatus?.type === 'success' || isUploading || isCompressing) return;
     const newFiles = [...selectedFiles];
     [newFiles[index - 1], newFiles[index]] = [newFiles[index], newFiles[index - 1]];
     setSelectedFiles(newFiles);
   };
 
   const moveFileDown = (index) => {
-    if (index === selectedFiles.length - 1 || uploadStatus?.type === 'success') return;
+    if (index === selectedFiles.length - 1 || uploadStatus?.type === 'success' || isUploading || isCompressing) return;
     const newFiles = [...selectedFiles];
     [newFiles[index], newFiles[index + 1]] = [newFiles[index + 1], newFiles[index]];
     setSelectedFiles(newFiles);
@@ -976,7 +987,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                           index={index}
                         onRemove={removeFile}
                         formatFileSize={formatFileSize}
-                        isUploadComplete={uploadStatus?.type === 'success'}
+                        isUploadComplete={uploadStatus?.type === 'success' || isUploading || isCompressing}
                         onDragStart={handleDragStart}
                         onDragOver={handleFileDragOver}
                         onDragEnd={handleDragEnd}
@@ -985,6 +996,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                         onMoveDown={moveFileDown}
                         canMoveUp={index > 0}
                         canMoveDown={index < selectedFiles.length - 1}
+                        isUploading={isUploading || isCompressing}
                         />
                       ))}
                     </div>
@@ -1167,16 +1179,16 @@ function FileItem({ file, index, onRemove, formatFileSize, isUploadComplete, onD
             <button
               type="button"
               onClick={() => onMoveUp(index)}
-              disabled={!canMoveUp}
+              disabled={!canMoveUp || isUploadComplete || isUploading}
               className="reorder-btn"
               aria-label="Move up"
-              title="Move up"
+              title={isUploadComplete || isUploading ? 'Files are locked during upload' : 'Move up'}
               style={{
                 padding: '0.25rem',
                 border: 'none',
                 background: 'transparent',
-                cursor: canMoveUp ? 'pointer' : 'not-allowed',
-                opacity: canMoveUp ? 1 : 0.3,
+                cursor: (canMoveUp && !isUploadComplete && !isUploading) ? 'pointer' : 'not-allowed',
+                opacity: (canMoveUp && !isUploadComplete && !isUploading) ? 1 : 0.3,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
@@ -1189,16 +1201,16 @@ function FileItem({ file, index, onRemove, formatFileSize, isUploadComplete, onD
             <button
               type="button"
               onClick={() => onMoveDown(index)}
-              disabled={!canMoveDown}
+              disabled={!canMoveDown || isUploadComplete || isUploading}
               className="reorder-btn"
               aria-label="Move down"
-              title="Move down"
+              title={isUploadComplete || isUploading ? 'Files are locked during upload' : 'Move down'}
               style={{
                 padding: '0.25rem',
                 border: 'none',
                 background: 'transparent',
-                cursor: canMoveDown ? 'pointer' : 'not-allowed',
-                opacity: canMoveDown ? 1 : 0.3,
+                cursor: (canMoveDown && !isUploadComplete && !isUploading) ? 'pointer' : 'not-allowed',
+                opacity: (canMoveDown && !isUploadComplete && !isUploading) ? 1 : 0.3,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
@@ -1214,13 +1226,13 @@ function FileItem({ file, index, onRemove, formatFileSize, isUploadComplete, onD
           className="file-remove" 
           onClick={() => onRemove(index)} 
           aria-label="Remove file"
-          disabled={isUploadComplete}
+          disabled={isUploadComplete || isUploading}
           style={{ 
-            opacity: isUploadComplete ? 0.5 : 1,
-            cursor: isUploadComplete ? 'not-allowed' : 'pointer',
-            pointerEvents: isUploadComplete ? 'none' : 'auto'
+            opacity: (isUploadComplete || isUploading) ? 0.5 : 1,
+            cursor: (isUploadComplete || isUploading) ? 'not-allowed' : 'pointer',
+            pointerEvents: (isUploadComplete || isUploading) ? 'none' : 'auto'
           }}
-          title={isUploadComplete ? 'Files are locked after upload. Use "Clear All" to start over.' : 'Remove file'}
+          title={(isUploadComplete || isUploading) ? 'Files are locked during upload. Use "Clear All" to start over.' : 'Remove file'}
         >
           ×
         </button>

@@ -27,6 +27,7 @@ function App() {
   const [orderNumber, setOrderNumber] = useState(null); // Generate order number early for file naming
   const [validationErrors, setValidationErrors] = useState({}); // Track validation errors per album
   const [albumUploadStates, setAlbumUploadStates] = useState({}); // Track upload state per album
+  const [albumFilesSelected, setAlbumFilesSelected] = useState({}); // Track if files are selected per album
 
   // Initialize albums array when count is selected
   const handleAlbumCountSelect = (count) => {
@@ -467,9 +468,16 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
                         [index]: isInProgress
                       }));
                     }}
+                    onFilesSelected={(hasFiles) => {
+                      // Track if files are selected per album
+                      setAlbumFilesSelected(prev => ({
+                        ...prev,
+                        [index]: hasFiles
+                      }));
+                    }}
                   />
                 )}
-                {album.smashTransferUrl && (
+                {(album.smashTransferUrl || albumFilesSelected[index] || albumUploadStates[index]) && (
                   <CoverCustomization
                     albumIndex={index}
                     onCoverChange={(coverData) => {
