@@ -477,7 +477,7 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
                     }}
                   />
                 )}
-                {(album.smashTransferUrl || albumFilesSelected[index] || albumUploadStates[index]) && (
+                {(album.smashTransferUrl || albumUploadStates[index]) && (
                   <CoverCustomization
                     albumIndex={index}
                     onCoverChange={(coverData) => {

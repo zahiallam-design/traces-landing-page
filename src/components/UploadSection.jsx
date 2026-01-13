@@ -1083,7 +1083,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
   );
 }
 
-function FileItem({ file, index, onRemove, formatFileSize, isUploadComplete, onDragStart, onDragOver, onDragEnd, isDragging, onMoveUp, onMoveDown, canMoveUp, canMoveDown }) {
+function FileItem({ file, index, onRemove, formatFileSize, isUploadComplete, onDragStart, onDragOver, onDragEnd, isDragging, onMoveUp, onMoveDown, canMoveUp, canMoveDown, isUploading }) {
   const [preview, setPreview] = useState(null);
 
   useEffect(() => {
