@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useBreakpoint } from '../hooks/useBreakpoint';
-import TicTacToe from './TicTacToe';
 import './OrderForm.css';
 
 function OrderForm({ 
@@ -290,7 +289,6 @@ function OrderForm({
                     })}
                   </div>
                 )}
-                <TicTacToe />
               </div>
             )}
           </form>
