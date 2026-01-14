@@ -70,7 +70,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
         
         const options = {
           maxSizeMB: maxSizeMB,
-          maxWidthOrHeight: 4000, // Keep high resolution
+          maxWidthOrHeight: 2500, // Optimized for A6 printing (300 DPI needs ~1063px, 2500px provides good quality with faster compression)
           useWebWorker: !isVeryLarge, // Disable web worker for very large files (can cause memory issues)
           fileType: outputType, // Convert DNG/AVIF to JPEG for compression
           initialQuality: quality,
@@ -110,7 +110,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
             // Try one more time with more aggressive settings
             const finalOptions = {
               maxSizeMB: 2.0, // Target upper limit of range
-              maxWidthOrHeight: 4000,
+              maxWidthOrHeight: 2500, // Optimized for A6 printing
               useWebWorker: !isVeryLarge,
               fileType: (currentFile.type === 'image/avif' || currentFile.name.toLowerCase().endsWith('.avif')) ? 'image/jpeg' : currentFile.type, // Convert AVIF to JPEG
               initialQuality: 0.6,
