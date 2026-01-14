@@ -21,8 +21,8 @@ function Hero() {
             Turn Your Favorite Photos Into Beautiful Albums
           </h1>
           <div className={`hero-subtitle ${isMobile ? 'hero-subtitle-mobile' : ''}`}>
-            <p style={{ marginBottom: '0.5rem' }}>You select, upload and submit</p>
-            <p>We print, fill and send you the album</p>
+            <p style={{ marginBottom: '0.5rem' }}>You select, upload and submit...</p>
+            <p>We print, fill and send you the albums!</p>
           </div>
           <p style={{ marginTop: '1rem', marginBottom: '1.5rem', color: 'var(--pastel-green-dark)', fontWeight: '500', fontSize: '1rem' }}>
             🎉 Free delivery on orders above $90!
