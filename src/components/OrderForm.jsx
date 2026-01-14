@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { useBreakpoint } from '../hooks/useBreakpoint';
-import TicTacToe from './TicTacToe';
 import './OrderForm.css';
+
+const TicTacToe = lazy(() => import('./TicTacToe'));
 
 function OrderForm({ 
   albums,
@@ -290,7 +291,9 @@ function OrderForm({
                     })}
                   </div>
                 )}
-                <TicTacToe />
+                <Suspense fallback={<div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-light)' }}>Loading game...</div>}>
+                  <TicTacToe />
+                </Suspense>
               </div>
             )}
           </form>
