@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useBreakpoint } from '../hooks/useBreakpoint';
+import TicTacToe from './TicTacToe';
 import './OrderForm.css';
 
 function OrderForm({ 
@@ -278,7 +279,7 @@ function OrderForm({
                   ⏳ Upload in progress... Please wait for upload to complete before submitting your order.
                 </p>
                 {Object.keys(albumUploadProgress).length > 0 && (
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-dark)', display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'center' }}>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-dark)', display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'center', marginBottom: '1.5rem' }}>
                     {Object.entries(albumUploadProgress).map(([albumIndex, progress]) => {
                       const albumNum = parseInt(albumIndex) + 1;
                       return (
@@ -289,6 +290,7 @@ function OrderForm({
                     })}
                   </div>
                 )}
+                <TicTacToe />
               </div>
             )}
           </form>
