@@ -20,6 +20,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
   const [uploadStatus, setUploadStatus] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isCompressing, setIsCompressing] = useState(false);
+  const [isQueued, setIsQueued] = useState(false); // Track if upload is queued
   const [compressionProgress, setCompressionProgress] = useState(0); // Percentage of compression progress (0-100)
   const [draggedIndex, setDraggedIndex] = useState(null);
   const [rejectedRawFiles, setRejectedRawFiles] = useState([]); // Track rejected RAW files (File objects)
@@ -73,6 +74,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
         // This album is next in queue, start upload
         if (!isUploading && !isCompressing && selectedFiles.length > 0) {
           console.log(`[UploadSection] Starting queued upload for album ${albumIndex}`);
+          setIsQueued(false); // Clear queued state when starting
           try {
             if (uploadToSmashRef.current) {
               uploadToSmashRef.current();
@@ -269,6 +271,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
       abortControllerRef.current = null;
     }
     setIsUploading(false);
+    setIsQueued(false); // Clear queued state on cancel
     setUploadProgress(0);
     setUploadStatus({ 
       type: 'error', 
@@ -661,6 +664,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
         type: 'success', 
         message: 'Upload complete! Photos uploaded successfully. You can now proceed with your order.' 
       });
+      setIsQueued(false); // Clear queued state on completion
       onUploadComplete(transferUrl, totalFiles);
       
       // Notify that this album finished (for queue processing)
@@ -736,10 +740,11 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
     if (requestUploadStart) {
       const canStart = await requestUploadStart(albumIndex);
       if (!canStart) {
-        // Added to queue, show message
+        // Added to queue, show message and update button state
+        setIsQueued(true);
         setUploadStatus({
           type: 'info',
-          message: 'Upload queued. Will start automatically when the current upload finishes.'
+          message: 'Your upload is queued and will start automatically once the current upload finishes. Please wait...'
         });
         return;
       }
@@ -750,6 +755,8 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
       onUploadStart(albumIndex);
     }
     
+    // Clear queued state when starting upload
+    setIsQueued(false);
     uploadToSmash();
   };
 
@@ -1167,15 +1174,16 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                         <button 
                           onClick={handleUploadClick}
                           className="btn btn-primary"
-                          disabled={selectedFiles.length > maxFiles}
+                          disabled={selectedFiles.length > maxFiles || isQueued || isUploading || isCompressing}
                           style={{ 
                             padding: '0.75rem 2rem', 
                             fontSize: '1rem',
-                            opacity: selectedFiles.length > maxFiles ? 0.5 : 1,
-                            cursor: selectedFiles.length > maxFiles ? 'not-allowed' : 'pointer'
+                            opacity: (selectedFiles.length > maxFiles || isQueued || isUploading || isCompressing) ? 0.5 : 1,
+                            cursor: (selectedFiles.length > maxFiles || isQueued || isUploading || isCompressing) ? 'not-allowed' : 'pointer',
+                            backgroundColor: isQueued ? '#95a5a6' : undefined
                           }}
                         >
-                          Upload Photos
+                          {isQueued ? '⏳ Upload Queued' : isUploading || isCompressing ? 'Uploading...' : 'Upload Photos'}
                         </button>
                       </div>
                     )}
@@ -1230,8 +1238,23 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                 </div>
               )}
               {uploadStatus && !isUploading && !isCompressing && (
-                <div className={`upload-status ${uploadStatus.type}`}>
-                  {uploadStatus.type === 'success' ? '✓' : uploadStatus.type === 'info' ? 'ℹ' : '✗'} {uploadStatus.message}
+                <div className={`upload-status ${uploadStatus.type}`} style={{
+                  ...(uploadStatus.type === 'info' && isQueued ? {
+                    background: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
+                    border: '2px solid #2196f3',
+                    borderRadius: '12px',
+                    padding: '1rem 1.5rem',
+                    marginTop: '1rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    fontSize: '0.95rem',
+                    fontWeight: '500',
+                    color: '#1565c0',
+                    boxShadow: '0 2px 8px rgba(33, 150, 243, 0.15)'
+                  } : {})
+                }}>
+                  {uploadStatus.type === 'success' ? '✓' : uploadStatus.type === 'info' ? (isQueued ? '⏳' : 'ℹ') : '✗'} {uploadStatus.message}
                 </div>
               )}
             </div>
