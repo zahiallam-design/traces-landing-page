@@ -920,7 +920,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
     setDraggedIndex(null);
   };
 
-  // Rename files with sequential numbers and order number before upload
+  // Rename files with sequential numbers and order number before upload 
   const renameFilesWithOrder = (files) => {
     if (!orderNumber) {
       console.warn('Order number not available, using timestamp as fallback');
