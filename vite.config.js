@@ -3,7 +3,10 @@ import react from '@vitejs/plugin-react'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react({
+    // Disable React DevTools in production to avoid bundling issues
+    jsxRuntime: 'automatic',
+  })],
   build: {
     // Production optimizations
     minify: 'esbuild',
@@ -15,6 +18,10 @@ export default defineConfig({
         },
       },
     },
+  },
+  optimizeDeps: {
+    // Force pre-bundling to avoid initialization issues
+    include: ['react', 'react-dom'],
   },
 })
 
