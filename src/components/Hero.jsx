@@ -29,7 +29,7 @@ function Hero() {
           </p>
           <button 
             className="btn btn-primary"
-            onClick={() => scrollToSection('album-count-selector')}
+            onClick={() => scrollToSection('album-sections')}
           >
             Start Your Order
           </button>

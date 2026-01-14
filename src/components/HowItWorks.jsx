@@ -5,23 +5,23 @@ import './HowItWorks.css';
 const steps = [
   {
     number: 1,
-    title: 'Select number of albums',
-    description: 'Choose how many albums you want to order (1 to 5 albums)'
-  },
-  {
-    number: 2,
     title: 'Choose your album size and color',
     description: 'Select 52 or 100 photos and pick your preferred color (green or grey)'
   },
   {
-    number: 3,
+    number: 2,
     title: 'Upload your photos',
     description: 'Send us your favorite moments easily and securely'
   },
   {
-    number: 4,
+    number: 3,
     title: 'Customize your album cover',
     description: 'Choose an image cover or add a text title'
+  },
+  {
+    number: 4,
+    title: 'Add more albums (optional)',
+    description: 'Want more than one album? You can add up to 3 albums per order'
   },
   {
     number: 5,

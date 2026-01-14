@@ -342,21 +342,24 @@ The message includes:
 function formatWhatsAppMessageForPrinting(orderData) {
   let albumsText = '';
   orderData.albums.forEach((albumData, index) => {
-    const coverInfo = albumData.cover?.type === 'image' 
-      ? 'Image cover'
-      : albumData.cover?.type === 'text' 
-        ? `Text: "${albumData.cover.title}" (${albumData.cover.color === 'grey' ? 'Grey' : albumData.cover.color === 'red' ? 'Red' : 'Unknown'})`
-        : 'Not selected';
-    
     albumsText += `\n*Album ${index + 1}:*\n`;
-    albumsText += `• Size: ${albumData.album.size} Photos\n`;
-    albumsText += `• Color: ${albumData.album.color.charAt(0).toUpperCase() + albumData.album.color.slice(1)}\n`;
     albumsText += `• Photos Link: ${albumData.smashTransferUrl || 'N/A'}\n`;
-    albumsText += `• Cover: ${coverInfo}\n`;
+    
+    // Only add cover image link if it's an image cover with a URL (skip text covers)
+    if (albumData.cover?.type === 'image' && albumData.cover.imageUrl) {
+      albumsText += `• Cover Image Link: ${albumData.cover.imageUrl}\n`;
+    }
+    // Text covers are dismissed (not included)
   });
+
+  // Format date and time
+  const orderDate = orderData.timestamp 
+    ? new Date(orderData.timestamp).toLocaleString()
+    : new Date().toLocaleString();
 
   // Format WhatsApp message for printing shop
   const whatsappMessage = `*ORDER #${orderData.orderNumber || 'N/A'}*
+${orderDate}
 
 ${albumsText}`.trim();
 
@@ -378,8 +381,9 @@ ${whatsappLink}
 
 The message includes:
 • Order number: ${orderData.orderNumber || 'N/A'}
+• Date and time sent
 • Album links (Smash transfer URLs)
-• Cover customization details
+• Cover image links (if image cover selected)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`.trim();
 }

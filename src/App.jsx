@@ -54,8 +54,9 @@ function App() {
       return; // Don't allow more than MAX_ALBUMS
     }
     
+    const newAlbumIndex = albums.length;
     const newAlbum = {
-      id: albums.length,
+      id: newAlbumIndex,
       selectedAlbum: null,
       selectedColor: null,
       smashTransferUrl: null,
@@ -67,9 +68,9 @@ function App() {
     
     // Scroll to the new album section
     setTimeout(() => {
-      const albumSections = document.getElementById('album-sections');
-      if (albumSections) {
-        albumSections.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const newAlbumElement = document.getElementById(`album-section-${newAlbumIndex}`);
+      if (newAlbumElement) {
+        newAlbumElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }, 100);
   };
@@ -495,7 +496,7 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
         <>
           <div id="album-sections" style={{ marginTop: '2rem' }}>
             {albums.map((album, index) => (
-              <div key={album.id} className="album-section-wrapper" style={{ marginBottom: '4rem', paddingBottom: '2rem', borderBottom: index < albums.length - 1 ? '2px solid var(--border-light)' : 'none' }}>
+              <div key={album.id} id={`album-section-${index}`} className="album-section-wrapper" style={{ marginBottom: '4rem', paddingBottom: '2rem', borderBottom: index < albums.length - 1 ? '2px solid var(--border-light)' : 'none' }}>
                 <AlbumOptions
                   albumIndex={index}
                   selectedAlbum={album.selectedAlbum}
@@ -643,7 +644,7 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
                           Please contact us directly through WhatsApp
                         </p>
                         <a
-                          href="https://api.whatsapp.com/send?phone=96170770267"
+                          href="https://api.whatsapp.com/send?phone=96171532156"
                           target="_blank"
                           rel="noopener noreferrer"
                           style={{

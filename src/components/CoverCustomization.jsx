@@ -317,6 +317,18 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
       coverSizePx
     );
     
+    // Draw a light border around the square image to indicate where to cut
+    // Border width: ~1mm at 300 DPI = ~12 pixels
+    const borderWidthPx = mmToPixels(1);
+    a6Ctx.strokeStyle = '#CCCCCC'; // Light gray color
+    a6Ctx.lineWidth = borderWidthPx;
+    a6Ctx.strokeRect(
+      borderWidthPx / 2,
+      borderWidthPx / 2,
+      coverSizePx - borderWidthPx,
+      coverSizePx - borderWidthPx
+    );
+    
     // Clean up
     URL.revokeObjectURL(imageUrl);
     
