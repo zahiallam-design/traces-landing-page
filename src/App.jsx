@@ -184,58 +184,97 @@ function App() {
   };
 
   const handleColorChange = (albumIndex, color) => {
-    setAlbums(prevAlbums => {
-      const updatedAlbums = [...prevAlbums];
-      if (updatedAlbums[albumIndex]) {
-        updatedAlbums[albumIndex] = { ...updatedAlbums[albumIndex], selectedColor: color };
-      }
-      return updatedAlbums;
-    });
+    console.log(`[App] handleColorChange called for album ${albumIndex} with color:`, color);
+    try {
+      setAlbums(prevAlbums => {
+        console.log(`[App] Updating albums state, prevAlbums length:`, prevAlbums.length);
+        const updatedAlbums = [...prevAlbums];
+        if (updatedAlbums[albumIndex]) {
+          console.log(`[App] Updating album ${albumIndex} color to:`, color);
+          updatedAlbums[albumIndex] = { ...updatedAlbums[albumIndex], selectedColor: color };
+        } else {
+          console.warn(`[App] Album ${albumIndex} not found in albums array`);
+        }
+        return updatedAlbums;
+      });
+    } catch (error) {
+      console.error(`[App] Error in handleColorChange for album ${albumIndex}:`, error);
+      throw error;
+    }
   };
 
   // Queue management for album uploads/compression
   const processNextInQueue = useCallback(() => {
-    setUploadQueue(prevQueue => {
-      if (prevQueue.length === 0) {
-        setCurrentlyProcessingAlbum(null);
-        return [];
-      }
-      const nextAlbumIndex = prevQueue[0];
-      setCurrentlyProcessingAlbum(nextAlbumIndex);
-      // Trigger upload start for the next album
-      setTimeout(() => {
-        const event = new CustomEvent('startQueuedUpload', { detail: { albumIndex: nextAlbumIndex } });
-        window.dispatchEvent(event);
-      }, 100);
-      return prevQueue.slice(1);
-    });
+    console.log('[App] processNextInQueue called');
+    try {
+      setUploadQueue(prevQueue => {
+        console.log('[App] Processing queue, current queue:', prevQueue);
+        if (prevQueue.length === 0) {
+          console.log('[App] Queue is empty, clearing processing album');
+          setCurrentlyProcessingAlbum(null);
+          return [];
+        }
+        const nextAlbumIndex = prevQueue[0];
+        console.log('[App] Processing next album in queue:', nextAlbumIndex);
+        setCurrentlyProcessingAlbum(nextAlbumIndex);
+        // Trigger upload start for the next album
+        setTimeout(() => {
+          try {
+            console.log('[App] Dispatching startQueuedUpload event for album:', nextAlbumIndex);
+            const event = new CustomEvent('startQueuedUpload', { detail: { albumIndex: nextAlbumIndex } });
+            window.dispatchEvent(event);
+          } catch (error) {
+            console.error('[App] Error dispatching startQueuedUpload event:', error);
+          }
+        }, 100);
+        return prevQueue.slice(1);
+      });
+    } catch (error) {
+      console.error('[App] Error in processNextInQueue:', error);
+    }
   }, []);
 
   const requestUploadStart = useCallback((albumIndex) => {
+    console.log('[App] requestUploadStart called for album:', albumIndex);
     return new Promise((resolve) => {
-      setCurrentlyProcessingAlbum(prevProcessing => {
-        if (prevProcessing === null) {
-          // No album currently processing, start immediately
-          resolve(true);
-          return albumIndex;
-        } else {
-          // Another album is processing, add to queue
-          setUploadQueue(prevQueue => {
-            if (prevQueue.includes(albumIndex)) {
+      try {
+        setCurrentlyProcessingAlbum(prevProcessing => {
+          console.log('[App] Checking processing state, prevProcessing:', prevProcessing);
+          if (prevProcessing === null) {
+            // No album currently processing, start immediately
+            console.log('[App] No album processing, starting immediately for album:', albumIndex);
+            resolve(true);
+            return albumIndex;
+          } else {
+            // Another album is processing, add to queue
+            console.log('[App] Album', prevProcessing, 'is processing, adding', albumIndex, 'to queue');
+            setUploadQueue(prevQueue => {
+              if (prevQueue.includes(albumIndex)) {
+                console.log('[App] Album', albumIndex, 'already in queue');
+                resolve(false);
+                return prevQueue;
+              }
+              console.log('[App] Adding album', albumIndex, 'to queue. New queue:', [...prevQueue, albumIndex]);
               resolve(false);
-              return prevQueue;
-            }
-            resolve(false);
-            return [...prevQueue, albumIndex];
-          });
-          return prevProcessing;
-        }
-      });
+              return [...prevQueue, albumIndex];
+            });
+            return prevProcessing;
+          }
+        });
+      } catch (error) {
+        console.error('[App] Error in requestUploadStart:', error);
+        resolve(false);
+      }
     });
   }, []);
 
   const handleUploadStart = useCallback((albumIndex) => {
-    setCurrentlyProcessingAlbum(albumIndex);
+    console.log('[App] handleUploadStart called for album:', albumIndex);
+    try {
+      setCurrentlyProcessingAlbum(albumIndex);
+    } catch (error) {
+      console.error('[App] Error in handleUploadStart:', error);
+    }
   }, []);
 
   const handleUploadComplete = (albumIndex, transferUrl, count) => {
@@ -632,48 +671,77 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
                   canRemoveAlbum={albums.length > 1}
                   isUploading={albumUploadStates[index]}
                 />
-                {album.selectedAlbum && album.selectedColor && (
-                  <UploadSection
-                    albumIndex={index}
-                    selectedAlbum={album.selectedAlbum}
-                    orderNumber={orderNumber}
-                    onUploadComplete={(transferUrl, count) => {
-                      handleUploadComplete(index, transferUrl, count);
-                      // Clear validation error when photos are uploaded
-                      if (validationErrors[`album-${index}-photos`]) {
-                        setValidationErrors(prev => {
-                          const newErrors = { ...prev };
-                          delete newErrors[`album-${index}-photos`];
-                          return newErrors;
-                        });
-                      }
-                    }}
-                    hasError={validationErrors[`album-${index}-photos`]}
-                    onUploadStateChange={(isInProgress) => {
-                      // Track upload state per album
-                      setAlbumUploadStates(prev => ({
-                        ...prev,
-                        [index]: isInProgress
-                      }));
-                    }}
-                    onFilesSelected={(hasFiles) => {
-                      // Track if files are selected per album
-                      setAlbumFilesSelected(prev => ({
-                        ...prev,
-                        [index]: hasFiles
-                      }));
-                    }}
-                    onUploadProgress={(albumIdx, current, total) => {
-                      // Track upload progress per album
-                      setAlbumUploadProgress(prev => ({
-                        ...prev,
-                        [albumIdx]: { current, total }
-                      }));
-                    }}
-                    requestUploadStart={requestUploadStart}
-                    currentlyProcessingAlbum={currentlyProcessingAlbum}
-                    onUploadStart={handleUploadStart}
-                  />
+                {album.selectedAlbum && album.selectedColor && (() => {
+                  console.log(`[App] Rendering UploadSection for album ${index}`, {
+                    selectedAlbum: album.selectedAlbum,
+                    selectedColor: album.selectedColor,
+                    hasRequestUploadStart: !!requestUploadStart,
+                    currentlyProcessingAlbum
+                  });
+                  return (
+                    <UploadSection
+                        albumIndex={index}
+                        selectedAlbum={album.selectedAlbum}
+                        orderNumber={orderNumber}
+                        onUploadComplete={(transferUrl, count) => {
+                          console.log(`[App] Upload complete for album ${index}:`, { transferUrl, count });
+                          try {
+                            handleUploadComplete(index, transferUrl, count);
+                            // Clear validation error when photos are uploaded
+                            if (validationErrors[`album-${index}-photos`]) {
+                              setValidationErrors(prev => {
+                                const newErrors = { ...prev };
+                                delete newErrors[`album-${index}-photos`];
+                                return newErrors;
+                              });
+                            }
+                          } catch (error) {
+                            console.error(`[App] Error handling upload complete for album ${index}:`, error);
+                          }
+                        }}
+                        hasError={validationErrors[`album-${index}-photos`]}
+                        onUploadStateChange={(isInProgress) => {
+                          console.log(`[App] Upload state change for album ${index}:`, isInProgress);
+                          try {
+                            // Track upload state per album
+                            setAlbumUploadStates(prev => ({
+                              ...prev,
+                              [index]: isInProgress
+                            }));
+                          } catch (error) {
+                            console.error(`[App] Error updating upload state for album ${index}:`, error);
+                          }
+                        }}
+                        onFilesSelected={(hasFiles) => {
+                          console.log(`[App] Files selected for album ${index}:`, hasFiles);
+                          try {
+                            // Track if files are selected per album
+                            setAlbumFilesSelected(prev => ({
+                              ...prev,
+                              [index]: hasFiles
+                            }));
+                          } catch (error) {
+                            console.error(`[App] Error updating files selected for album ${index}:`, error);
+                          }
+                        }}
+                        onUploadProgress={(albumIdx, current, total) => {
+                          console.log(`[App] Upload progress for album ${albumIdx}:`, { current, total });
+                          try {
+                            // Track upload progress per album
+                            setAlbumUploadProgress(prev => ({
+                              ...prev,
+                              [albumIdx]: { current, total }
+                            }));
+                          } catch (error) {
+                            console.error(`[App] Error updating upload progress for album ${albumIdx}:`, error);
+                          }
+                        }}
+                        requestUploadStart={requestUploadStart}
+                        currentlyProcessingAlbum={currentlyProcessingAlbum}
+                        onUploadStart={handleUploadStart}
+                      />
+                    );
+                  })()
                 )}
                 {(album.smashTransferUrl || albumUploadStates[index]) && (
                   <>

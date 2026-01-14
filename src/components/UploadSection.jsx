@@ -7,6 +7,13 @@ import './UploadSection.css';
 // No API key needed in frontend - more secure!
 
 function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplete, hasError, onUploadStateChange, onFilesSelected, onUploadProgress, requestUploadStart, currentlyProcessingAlbum, onUploadStart }) {
+  console.log(`[UploadSection] Component mounting/rendering for album ${albumIndex}`, {
+    selectedAlbum,
+    hasRequestUploadStart: !!requestUploadStart,
+    currentlyProcessingAlbum,
+    hasOnUploadStart: !!onUploadStart
+  });
+
   const breakpoint = useBreakpoint();
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploadProgress, setUploadProgress] = useState(0); // Number of files uploaded
@@ -24,10 +31,19 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
 
   // Notify parent of upload/compression state changes
   useEffect(() => {
+    console.log(`[UploadSection] Upload state effect triggered for album ${albumIndex}`, {
+      isUploading,
+      isCompressing,
+      hasCallback: !!onUploadStateChange
+    });
     if (onUploadStateChange) {
-      onUploadStateChange(isUploading || isCompressing);
+      try {
+        onUploadStateChange(isUploading || isCompressing);
+      } catch (error) {
+        console.error(`[UploadSection] Error in onUploadStateChange for album ${albumIndex}:`, error);
+      }
     }
-  }, [isUploading, isCompressing, onUploadStateChange]);
+  }, [isUploading, isCompressing, onUploadStateChange, albumIndex]);
 
   // Notify parent of upload progress
   useEffect(() => {
@@ -38,40 +54,85 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
 
   // Listen for queued upload start event
   useEffect(() => {
+    console.log(`[UploadSection] Queue listener effect setting up for album ${albumIndex}`, {
+      currentlyProcessingAlbum,
+      hasUploadToSmash: typeof uploadToSmash === 'function'
+    });
+    
     const handleQueuedUpload = (event) => {
+      console.log(`[UploadSection] Queue event received for album ${albumIndex}`, {
+        eventAlbumIndex: event.detail?.albumIndex,
+        currentlyProcessingAlbum,
+        isUploading,
+        isCompressing,
+        selectedFilesCount: selectedFiles.length
+      });
+      
       if (event.detail.albumIndex === albumIndex && currentlyProcessingAlbum === albumIndex) {
         // This album is next in queue, start upload
         if (!isUploading && !isCompressing && selectedFiles.length > 0) {
-          uploadToSmash();
+          console.log(`[UploadSection] Starting queued upload for album ${albumIndex}`);
+          try {
+            uploadToSmash();
+          } catch (error) {
+            console.error(`[UploadSection] Error starting queued upload for album ${albumIndex}:`, error);
+          }
         }
       }
     };
     
-    window.addEventListener('startQueuedUpload', handleQueuedUpload);
+    try {
+      window.addEventListener('startQueuedUpload', handleQueuedUpload);
+      console.log(`[UploadSection] Queue listener added for album ${albumIndex}`);
+    } catch (error) {
+      console.error(`[UploadSection] Error adding queue listener for album ${albumIndex}:`, error);
+    }
+    
     return () => {
-      window.removeEventListener('startQueuedUpload', handleQueuedUpload);
+      try {
+        window.removeEventListener('startQueuedUpload', handleQueuedUpload);
+        console.log(`[UploadSection] Queue listener removed for album ${albumIndex}`);
+      } catch (error) {
+        console.error(`[UploadSection] Error removing queue listener for album ${albumIndex}:`, error);
+      }
     };
   }, [albumIndex, currentlyProcessingAlbum, isUploading, isCompressing, selectedFiles.length, uploadToSmash]);
 
   // Check WebP browser support (cache the result)
   const supportsWebP = useCallback(() => {
+    console.log(`[UploadSection] Checking WebP support for album ${albumIndex}`);
     try {
       const canvas = document.createElement('canvas');
       canvas.width = 1;
       canvas.height = 1;
-      return canvas.toDataURL('image/webp').indexOf('data:image/webp') === 0;
-    } catch {
+      const result = canvas.toDataURL('image/webp').indexOf('data:image/webp') === 0;
+      console.log(`[UploadSection] WebP support check result for album ${albumIndex}:`, result);
+      return result;
+    } catch (error) {
+      console.error(`[UploadSection] Error checking WebP support for album ${albumIndex}:`, error);
       return false;
     }
-  }, []);
+  }, [albumIndex]);
   
   const [webPSupported, setWebPSupported] = useState(null);
   
   useEffect(() => {
+    console.log(`[UploadSection] WebP effect triggered for album ${albumIndex}`, {
+      webPSupported,
+      hasSupportsWebP: typeof supportsWebP === 'function'
+    });
+    
     if (webPSupported === null) {
-      setWebPSupported(supportsWebP());
+      try {
+        const result = supportsWebP();
+        console.log(`[UploadSection] Setting WebP support for album ${albumIndex}:`, result);
+        setWebPSupported(result);
+      } catch (error) {
+        console.error(`[UploadSection] Error in WebP effect for album ${albumIndex}:`, error);
+        setWebPSupported(false);
+      }
     }
-  }, [supportsWebP, webPSupported]);
+  }, [supportsWebP, webPSupported, albumIndex]);
 
   // Compress images that are larger than 2MB
   const compressImageIfNeeded = async (file) => {
