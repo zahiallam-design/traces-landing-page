@@ -58,119 +58,161 @@ function App() {
 
   // Add a new album
   const handleAddAlbum = () => {
-    if (albums.length >= MAX_ALBUMS) {
-      return; // Don't allow more than MAX_ALBUMS
-    }
-    
-    const newAlbumIndex = albums.length;
-    const newAlbum = {
-      id: generateAlbumId(),
-      selectedAlbum: null,
-      selectedColor: null,
-      smashTransferUrl: null,
-      fileCount: 0,
-      cover: null
-    };
-    
-    setAlbums([...albums, newAlbum]);
-    
-    // Scroll to the new album section
-    setTimeout(() => {
-      const newAlbumElement = document.getElementById(`album-section-${newAlbumIndex}`);
-      if (newAlbumElement) {
-        newAlbumElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setAlbums(prevAlbums => {
+      if (prevAlbums.length >= MAX_ALBUMS) {
+        return prevAlbums; // Don't allow more than MAX_ALBUMS
       }
-    }, 100);
+      
+      const newAlbum = {
+        id: generateAlbumId(),
+        selectedAlbum: null,
+        selectedColor: null,
+        smashTransferUrl: null,
+        fileCount: 0,
+        cover: null
+      };
+      
+      const newAlbums = [...prevAlbums, newAlbum];
+      
+      // Scroll to the new album section after state update
+      setTimeout(() => {
+        const newAlbumIndex = newAlbums.length - 1;
+        const newAlbumElement = document.getElementById(`album-section-${newAlbumIndex}`);
+        if (newAlbumElement) {
+          newAlbumElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+      
+      return newAlbums;
+    });
   };
 
   // Remove a specific album
   const handleRemoveAlbum = (albumIndex) => {
-    // Don't allow removing if only 1 album remains
-    if (albums.length <= 1) {
-      return;
-    }
-    
     // Check if this album is currently uploading
     if (albumUploadStates[albumIndex]) {
       return; // Don't allow removal during upload
     }
     
-    // Remove the album and update indices
-    const updatedAlbums = albums.filter((_, index) => index !== albumIndex);
-    setAlbums(updatedAlbums);
-    
-    // Clean up upload states for removed album and reindex remaining ones
-    const updatedUploadStates = {};
-    const updatedFilesSelected = {};
-    updatedAlbums.forEach((_, newIndex) => {
-      // Find the old index for this album
-      if (newIndex < albumIndex) {
-        // Albums before removed one keep their state
-        if (albumUploadStates[newIndex] !== undefined) {
-          updatedUploadStates[newIndex] = albumUploadStates[newIndex];
-        }
-        if (albumFilesSelected[newIndex] !== undefined) {
-          updatedFilesSelected[newIndex] = albumFilesSelected[newIndex];
-        }
-      } else {
-        // Albums after removed one shift their state
-        const oldIndex = newIndex + 1;
-        if (albumUploadStates[oldIndex] !== undefined) {
-          updatedUploadStates[newIndex] = albumUploadStates[oldIndex];
-        }
-        if (albumFilesSelected[oldIndex] !== undefined) {
-          updatedFilesSelected[newIndex] = albumFilesSelected[oldIndex];
-        }
+    setAlbums(prevAlbums => {
+      // Don't allow removing if only 1 album remains
+      if (prevAlbums.length <= 1) {
+        return prevAlbums;
       }
+      
+      // Remove the album and update indices
+      const updatedAlbums = prevAlbums.filter((_, index) => index !== albumIndex);
+      
+      // Clean up upload states for removed album and reindex remaining ones
+      setAlbumUploadStates(prevStates => {
+        const updatedUploadStates = {};
+        updatedAlbums.forEach((_, newIndex) => {
+          // Find the old index for this album
+          if (newIndex < albumIndex) {
+            // Albums before removed one keep their state
+            if (prevStates[newIndex] !== undefined) {
+              updatedUploadStates[newIndex] = prevStates[newIndex];
+            }
+          } else {
+            // Albums after removed one shift their state
+            const oldIndex = newIndex + 1;
+            if (prevStates[oldIndex] !== undefined) {
+              updatedUploadStates[newIndex] = prevStates[oldIndex];
+            }
+          }
+        });
+        return updatedUploadStates;
+      });
+      
+      setAlbumFilesSelected(prevSelected => {
+        const updatedFilesSelected = {};
+        updatedAlbums.forEach((_, newIndex) => {
+          // Find the old index for this album
+          if (newIndex < albumIndex) {
+            // Albums before removed one keep their state
+            if (prevSelected[newIndex] !== undefined) {
+              updatedFilesSelected[newIndex] = prevSelected[newIndex];
+            }
+          } else {
+            // Albums after removed one shift their state
+            const oldIndex = newIndex + 1;
+            if (prevSelected[oldIndex] !== undefined) {
+              updatedFilesSelected[newIndex] = prevSelected[oldIndex];
+            }
+          }
+        });
+        return updatedFilesSelected;
+      });
+      
+      // Clean up validation errors for removed album and reindex
+      setValidationErrors(prevErrors => {
+        const updatedErrors = {};
+        Object.keys(prevErrors).forEach(key => {
+          const match = key.match(/album-(\d+)-(.+)/);
+          if (match) {
+            const oldIndex = parseInt(match[1]);
+            if (oldIndex < albumIndex) {
+              // Keep errors for albums before removed one
+              updatedErrors[key] = prevErrors[key];
+            } else if (oldIndex > albumIndex) {
+              // Shift errors for albums after removed one
+              updatedErrors[`album-${oldIndex - 1}-${match[2]}`] = prevErrors[key];
+            }
+            // Skip errors for the removed album
+          } else {
+            // Keep non-album errors
+            updatedErrors[key] = prevErrors[key];
+          }
+        });
+        return updatedErrors;
+      });
+      
+      return updatedAlbums;
     });
-    setAlbumUploadStates(updatedUploadStates);
-    setAlbumFilesSelected(updatedFilesSelected);
-    
-    // Clean up validation errors for removed album and reindex
-    const updatedErrors = {};
-    Object.keys(validationErrors).forEach(key => {
-      const match = key.match(/album-(\d+)-(.+)/);
-      if (match) {
-        const oldIndex = parseInt(match[1]);
-        if (oldIndex < albumIndex) {
-          // Keep errors for albums before removed one
-          updatedErrors[key] = validationErrors[key];
-        } else if (oldIndex > albumIndex) {
-          // Shift errors for albums after removed one
-          updatedErrors[`album-${oldIndex - 1}-${match[2]}`] = validationErrors[key];
-        }
-        // Skip errors for the removed album
-      } else {
-        // Keep non-album errors
-        updatedErrors[key] = validationErrors[key];
-      }
-    });
-    setValidationErrors(updatedErrors);
   };
 
   const handleAlbumSelect = (albumIndex, album) => {
-    const updatedAlbums = [...albums];
-    updatedAlbums[albumIndex].selectedAlbum = album;
-    setAlbums(updatedAlbums);
+    setAlbums(prevAlbums => {
+      const updatedAlbums = [...prevAlbums];
+      if (updatedAlbums[albumIndex]) {
+        updatedAlbums[albumIndex] = { ...updatedAlbums[albumIndex], selectedAlbum: album };
+      }
+      return updatedAlbums;
+    });
   };
 
   const handleColorChange = (albumIndex, color) => {
-    const updatedAlbums = [...albums];
-    updatedAlbums[albumIndex].selectedColor = color;
-    setAlbums(updatedAlbums);
+    setAlbums(prevAlbums => {
+      const updatedAlbums = [...prevAlbums];
+      if (updatedAlbums[albumIndex]) {
+        updatedAlbums[albumIndex] = { ...updatedAlbums[albumIndex], selectedColor: color };
+      }
+      return updatedAlbums;
+    });
   };
 
   const handleUploadComplete = (albumIndex, transferUrl, count) => {
-    const updatedAlbums = [...albums];
-    updatedAlbums[albumIndex].smashTransferUrl = transferUrl;
-    updatedAlbums[albumIndex].fileCount = count;
-    setAlbums(updatedAlbums);
+    setAlbums(prevAlbums => {
+      const updatedAlbums = [...prevAlbums];
+      if (updatedAlbums[albumIndex]) {
+        updatedAlbums[albumIndex] = { 
+          ...updatedAlbums[albumIndex], 
+          smashTransferUrl: transferUrl,
+          fileCount: count
+        };
+      }
+      return updatedAlbums;
+    });
   };
 
   const handleCoverChange = (albumIndex, coverData) => {
-    const updatedAlbums = [...albums];
-    updatedAlbums[albumIndex].cover = coverData;
-    setAlbums(updatedAlbums);
+    setAlbums(prevAlbums => {
+      const updatedAlbums = [...prevAlbums];
+      if (updatedAlbums[albumIndex]) {
+        updatedAlbums[albumIndex] = { ...updatedAlbums[albumIndex], cover: coverData };
+      }
+      return updatedAlbums;
+    });
   };
 
   const handleOrderSubmit = async (orderData) => {
