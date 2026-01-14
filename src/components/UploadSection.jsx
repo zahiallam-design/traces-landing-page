@@ -26,6 +26,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
   const fileInputRef = useRef(null);
   const dropzoneRef = useRef(null);
   const abortControllerRef = useRef(null);
+  const uploadToSmashRef = useRef(null); // Ref to store uploadToSmash function
 
   const maxFiles = selectedAlbum?.size || 52;
 
@@ -73,7 +74,11 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
         if (!isUploading && !isCompressing && selectedFiles.length > 0) {
           console.log(`[UploadSection] Starting queued upload for album ${albumIndex}`);
           try {
-            uploadToSmash();
+            if (uploadToSmashRef.current) {
+              uploadToSmashRef.current();
+            } else {
+              console.warn(`[UploadSection] uploadToSmash not available yet for album ${albumIndex}`);
+            }
           } catch (error) {
             console.error(`[UploadSection] Error starting queued upload for album ${albumIndex}:`, error);
           }
@@ -96,7 +101,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
         console.error(`[UploadSection] Error removing queue listener for album ${albumIndex}:`, error);
       }
     };
-  }, [albumIndex, currentlyProcessingAlbum, isUploading, isCompressing, selectedFiles.length, uploadToSmash]);
+  }, [albumIndex, currentlyProcessingAlbum, isUploading, isCompressing, selectedFiles.length]);
 
   // Check WebP browser support (cache the result)
   const supportsWebP = useCallback(() => {
@@ -707,6 +712,11 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
       abortControllerRef.current = null;
     }
   }, [selectedFiles, isUploading, onUploadComplete, webPSupported]);
+
+  // Update ref whenever uploadToSmash changes
+  useEffect(() => {
+    uploadToSmashRef.current = uploadToSmash;
+  }, [uploadToSmash]);
 
   // Manual upload - no automatic trigger
   const handleUploadClick = async () => {
