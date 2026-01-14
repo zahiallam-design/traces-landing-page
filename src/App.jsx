@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import HowItWorks from './components/HowItWorks';
-import AlbumCountSelector from './components/AlbumCountSelector';
 import AlbumOptions from './components/AlbumOptions';
 import UploadSection from './components/UploadSection';
 import CoverCustomization from './components/CoverCustomization';
@@ -19,7 +18,6 @@ const generateOrderNumber = () => {
 };
 
 function App() {
-  const [albumCount, setAlbumCount] = useState(null);
   const [albums, setAlbums] = useState([]); // Array of album objects
   const [notes, setNotes] = useState('');
   const [notesForUs, setNotesForUs] = useState('');
@@ -29,39 +27,60 @@ function App() {
   const [albumUploadStates, setAlbumUploadStates] = useState({}); // Track upload state per album
   const [albumFilesSelected, setAlbumFilesSelected] = useState({}); // Track if files are selected per album
 
-  // Initialize albums array when count is selected
-  const handleAlbumCountSelect = (count) => {
-    // Only allow adding albums, not removing (to prevent issues during upload)
-    if (count < albums.length) {
-      return; // Don't allow reducing count
-    }
-    
-    setAlbumCount(count);
-    
-    // Generate order number when album count is selected (for file naming)
-    if (!orderNumber) {
+  const MAX_ALBUMS = 3;
+
+  // Initialize with 1 album on mount
+  useEffect(() => {
+    if (albums.length === 0) {
+      // Generate order number on mount
       const newOrderNumber = generateOrderNumber();
       setOrderNumber(newOrderNumber);
-    }
-    
-    // Only add new albums if count is greater than current
-    if (count > albums.length) {
-      // Adding more albums - keep existing ones and add new empty ones
-      const newAlbums = Array.from({ length: count - albums.length }, (_, index) => ({
-        id: albums.length + index,
+      
+      // Initialize with 1 album
+      setAlbums([{
+        id: 0,
         selectedAlbum: null,
         selectedColor: null,
         smashTransferUrl: null,
         fileCount: 0,
         cover: null
-      }));
-      setAlbums([...albums, ...newAlbums]);
+      }]);
     }
-    // If count is same, do nothing (preserve existing data)
+  }, []);
+
+  // Add a new album
+  const handleAddAlbum = () => {
+    if (albums.length >= MAX_ALBUMS) {
+      return; // Don't allow more than MAX_ALBUMS
+    }
+    
+    const newAlbum = {
+      id: albums.length,
+      selectedAlbum: null,
+      selectedColor: null,
+      smashTransferUrl: null,
+      fileCount: 0,
+      cover: null
+    };
+    
+    setAlbums([...albums, newAlbum]);
+    
+    // Scroll to the new album section
+    setTimeout(() => {
+      const albumSections = document.getElementById('album-sections');
+      if (albumSections) {
+        albumSections.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
   };
 
   // Remove a specific album
   const handleRemoveAlbum = (albumIndex) => {
+    // Don't allow removing if only 1 album remains
+    if (albums.length <= 1) {
+      return;
+    }
+    
     // Check if this album is currently uploading
     if (albumUploadStates[albumIndex]) {
       return; // Don't allow removal during upload
@@ -70,9 +89,6 @@ function App() {
     // Remove the album and update indices
     const updatedAlbums = albums.filter((_, index) => index !== albumIndex);
     setAlbums(updatedAlbums);
-    
-    // Update album count
-    setAlbumCount(updatedAlbums.length);
     
     // Clean up upload states for removed album and reindex remaining ones
     const updatedUploadStates = {};
@@ -475,12 +491,7 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
       <Hero />
       <HowItWorks />
       
-      <AlbumCountSelector 
-        onCountSelect={handleAlbumCountSelect} 
-        currentCount={albumCount}
-        allowDecrease={false}
-      />
-      {albumCount && (
+      {albums.length > 0 && (
         <>
           <div id="album-sections" style={{ marginTop: '2rem' }}>
             {albums.map((album, index) => (
@@ -550,21 +561,114 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
                   />
                 )}
                 {(album.smashTransferUrl || albumUploadStates[index]) && (
-                  <CoverCustomization
-                    albumIndex={index}
-                    onCoverChange={(coverData) => {
-                      handleCoverChange(index, coverData);
-                      // Clear validation error when cover is set
-                      if (validationErrors[`album-${index}-cover`]) {
-                        setValidationErrors(prev => {
-                          const newErrors = { ...prev };
-                          delete newErrors[`album-${index}-cover`];
-                          return newErrors;
-                        });
-                      }
-                    }}
-                    hasError={validationErrors[`album-${index}-cover`]}
-                  />
+                  <>
+                    <CoverCustomization
+                      albumIndex={index}
+                      onCoverChange={(coverData) => {
+                        handleCoverChange(index, coverData);
+                        // Clear validation error when cover is set
+                        if (validationErrors[`album-${index}-cover`]) {
+                          setValidationErrors(prev => {
+                            const newErrors = { ...prev };
+                            delete newErrors[`album-${index}-cover`];
+                            return newErrors;
+                          });
+                        }
+                      }}
+                      hasError={validationErrors[`album-${index}-cover`]}
+                    />
+                    {/* Add Album button after cover customization */}
+                    {index === albums.length - 1 && albums.length < MAX_ALBUMS && (
+                      <div style={{ 
+                        textAlign: 'center', 
+                        marginTop: '3rem', 
+                        marginBottom: '2rem',
+                        padding: '2rem',
+                        backgroundColor: 'var(--bg-light)',
+                        borderRadius: '12px'
+                      }}>
+                        <button
+                          onClick={handleAddAlbum}
+                          style={{
+                            backgroundColor: 'var(--pastel-green-dark)',
+                            color: 'white',
+                            border: 'none',
+                            padding: '1rem 2.5rem',
+                            borderRadius: '8px',
+                            fontSize: '1.1rem',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s ease',
+                            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.target.style.backgroundColor = 'var(--pastel-green)';
+                            e.target.style.transform = 'translateY(-2px)';
+                            e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.target.style.backgroundColor = 'var(--pastel-green-dark)';
+                            e.target.style.transform = 'translateY(0)';
+                            e.target.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+                          }}
+                        >
+                          + Add Another Album
+                        </button>
+                      </div>
+                    )}
+                    {/* WhatsApp contact message after 3rd album */}
+                    {index === albums.length - 1 && albums.length >= MAX_ALBUMS && (
+                      <div style={{ 
+                        textAlign: 'center', 
+                        marginTop: '3rem', 
+                        marginBottom: '2rem',
+                        padding: '2rem',
+                        backgroundColor: 'var(--pastel-green-light)',
+                        borderRadius: '12px',
+                        border: '2px solid var(--pastel-green-dark)'
+                      }}>
+                        <p style={{ 
+                          fontSize: '1.1rem', 
+                          color: 'var(--text-dark)',
+                          margin: '0 0 1rem 0',
+                          fontWeight: '500'
+                        }}>
+                          Want to order more than {MAX_ALBUMS} albums?
+                        </p>
+                        <p style={{ 
+                          fontSize: '1rem', 
+                          color: 'var(--text-light)',
+                          margin: '0'
+                        }}>
+                          Please contact us directly through WhatsApp
+                        </p>
+                        <a
+                          href="https://api.whatsapp.com/send?phone=96170770267"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            display: 'inline-block',
+                            marginTop: '1rem',
+                            padding: '0.75rem 1.5rem',
+                            backgroundColor: 'var(--pastel-green-dark)',
+                            color: 'white',
+                            textDecoration: 'none',
+                            borderRadius: '8px',
+                            fontWeight: '600',
+                            transition: 'all 0.3s ease'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.target.style.backgroundColor = 'var(--pastel-green)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.target.style.backgroundColor = 'var(--pastel-green-dark)';
+                          }}
+                        >
+                          Contact Us on WhatsApp
+                        </a>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             ))}

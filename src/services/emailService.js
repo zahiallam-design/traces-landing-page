@@ -46,6 +46,9 @@ export const sendOrderEmail = async (orderData) => {
     
     // WhatsApp message for copy-paste
     whatsapp_message: formatWhatsAppMessageForBusiness(orderData),
+    
+    // WhatsApp message for printing shop (70770267)
+    whatsapp_message_printing: formatWhatsAppMessageForPrinting(orderData),
   };
 
   try {
@@ -231,6 +234,10 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ${formatWhatsAppMessageForBusiness(orderData)}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${formatWhatsAppMessageForPrinting(orderData)}
   `.trim();
 }
 
@@ -324,6 +331,55 @@ The message includes:
 • Subtotal, delivery charge, and total
 • Delivery time information
 • Contact information
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`.trim();
+}
+
+/**
+ * Format WhatsApp message for printing shop (70770267)
+ * Contains album links and cover customization only
+ */
+function formatWhatsAppMessageForPrinting(orderData) {
+  let albumsText = '';
+  orderData.albums.forEach((albumData, index) => {
+    const coverInfo = albumData.cover?.type === 'image' 
+      ? 'Image cover'
+      : albumData.cover?.type === 'text' 
+        ? `Text: "${albumData.cover.title}" (${albumData.cover.color === 'grey' ? 'Grey' : albumData.cover.color === 'red' ? 'Red' : 'Unknown'})`
+        : 'Not selected';
+    
+    albumsText += `\n*Album ${index + 1}:*\n`;
+    albumsText += `• Size: ${albumData.album.size} Photos\n`;
+    albumsText += `• Color: ${albumData.album.color.charAt(0).toUpperCase() + albumData.album.color.slice(1)}\n`;
+    albumsText += `• Photos Link: ${albumData.smashTransferUrl || 'N/A'}\n`;
+    albumsText += `• Cover: ${coverInfo}\n`;
+  });
+
+  // Format WhatsApp message for printing shop
+  const whatsappMessage = `*ORDER #${orderData.orderNumber || 'N/A'}*
+
+${albumsText}`.trim();
+
+  // Create WhatsApp link for printing shop (70770267)
+  const printingShopNumber = '96170770267';
+  const encodedMessage = encodeURIComponent(whatsappMessage);
+  const whatsappLink = `https://api.whatsapp.com/send?phone=${printingShopNumber}&text=${encodedMessage}`;
+
+  return `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📱 SEND WHATSAPP MESSAGE TO PRINTING SHOP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Click the link below to open WhatsApp with a pre-filled message ready to send to the printing shop (70770267):
+
+${whatsappLink}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The message includes:
+• Order number: ${orderData.orderNumber || 'N/A'}
+• Album links (Smash transfer URLs)
+• Cover customization details
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`.trim();
 }
