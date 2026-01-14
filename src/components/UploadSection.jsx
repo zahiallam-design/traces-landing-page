@@ -919,7 +919,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
   const handleDragEnd = () => {
     setDraggedIndex(null);
   };
-
+// hello
   // Rename files with sequential numbers and order number before upload 
   const renameFilesWithOrder = (files) => {
     if (!orderNumber) {
