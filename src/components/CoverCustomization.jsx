@@ -317,17 +317,24 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
       coverSizePx
     );
     
-    // Draw a light border around the square image to indicate where to cut
-    // Border width: ~1mm at 300 DPI = ~12 pixels
-    const borderWidthPx = mmToPixels(1);
-    a6Ctx.strokeStyle = '#CCCCCC'; // Light gray color
+    // Draw a fine black border outside the square image (right and bottom only) to indicate where to cut
+    // Border width: ~0.5mm at 300 DPI = ~6 pixels (finer line)
+    const borderWidthPx = mmToPixels(0.5);
+    a6Ctx.strokeStyle = '#000000'; // Black color
     a6Ctx.lineWidth = borderWidthPx;
-    a6Ctx.strokeRect(
-      borderWidthPx / 2,
-      borderWidthPx / 2,
-      coverSizePx - borderWidthPx,
-      coverSizePx - borderWidthPx
-    );
+    a6Ctx.lineCap = 'square';
+    
+    // Draw right edge (vertical line outside the image)
+    a6Ctx.beginPath();
+    a6Ctx.moveTo(coverSizePx, 0);
+    a6Ctx.lineTo(coverSizePx, coverSizePx);
+    a6Ctx.stroke();
+    
+    // Draw bottom edge (horizontal line outside the image)
+    a6Ctx.beginPath();
+    a6Ctx.moveTo(0, coverSizePx);
+    a6Ctx.lineTo(coverSizePx, coverSizePx);
+    a6Ctx.stroke();
     
     // Clean up
     URL.revokeObjectURL(imageUrl);
