@@ -11,7 +11,8 @@ function OrderForm({
   onSubmit,
   isSubmitting = false,
   onValidationError,
-  isUploadInProgress = false
+  isUploadInProgress = false,
+  albumUploadProgress = {}
 }) {
   const breakpoint = useBreakpoint();
   const isMobile = ['xs', 'ss', 'sm'].includes(breakpoint);
@@ -272,9 +273,23 @@ function OrderForm({
               {isSubmitting ? 'Submitting Order...' : 'Place Order – Pay on Delivery'}
             </button>
             {isUploadInProgress && (
-              <p style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: 'var(--text-light)', fontStyle: 'italic', textAlign: 'center' }}>
-                ⏳ Upload in progress... Please wait for upload to complete before submitting your order.
-              </p>
+              <div style={{ marginTop: '0.5rem', textAlign: 'center' }}>
+                <p style={{ fontSize: '0.9rem', color: 'var(--text-light)', fontStyle: 'italic', marginBottom: '0.5rem' }}>
+                  ⏳ Upload in progress... Please wait for upload to complete before submitting your order.
+                </p>
+                {Object.keys(albumUploadProgress).length > 0 && (
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-dark)', display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'center' }}>
+                    {Object.entries(albumUploadProgress).map(([albumIndex, progress]) => {
+                      const albumNum = parseInt(albumIndex) + 1;
+                      return (
+                        <span key={albumIndex}>
+                          Album {albumNum} ({progress.current}/{progress.total})
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             )}
           </form>
         </div>

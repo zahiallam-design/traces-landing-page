@@ -26,8 +26,14 @@ function App() {
   const [validationErrors, setValidationErrors] = useState({}); // Track validation errors per album
   const [albumUploadStates, setAlbumUploadStates] = useState({}); // Track upload state per album
   const [albumFilesSelected, setAlbumFilesSelected] = useState({}); // Track if files are selected per album
+  const [albumUploadProgress, setAlbumUploadProgress] = useState({}); // Track upload progress per album: { albumIndex: { current, total } }
 
   const MAX_ALBUMS = 3;
+
+  // Generate unique album ID
+  const generateAlbumId = () => {
+    return `album-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  };
 
   // Initialize with 1 album on mount
   useEffect(() => {
@@ -38,7 +44,7 @@ function App() {
       
       // Initialize with 1 album
       setAlbums([{
-        id: 0,
+        id: generateAlbumId(),
         selectedAlbum: null,
         selectedColor: null,
         smashTransferUrl: null,
@@ -46,6 +52,8 @@ function App() {
         cover: null
       }]);
     }
+    // Only run on mount - don't re-run if albums array changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Add a new album
@@ -56,7 +64,7 @@ function App() {
     
     const newAlbumIndex = albums.length;
     const newAlbum = {
-      id: newAlbumIndex,
+      id: generateAlbumId(),
       selectedAlbum: null,
       selectedColor: null,
       smashTransferUrl: null,
@@ -166,11 +174,12 @@ function App() {
   };
 
   const handleOrderSubmit = async (orderData) => {
-    // Use existing order number (generated when album count was selected)
+    // Use existing order number (generated on mount)
     // If for some reason it doesn't exist, generate a new one
     const finalOrderNumber = orderNumber || generateOrderNumber();
     
     // Combine albums data with customer info
+    // IMPORTANT: Include ALL albums in the order - don't filter
     const completeOrderData = {
       ...orderData,
       orderNumber: finalOrderNumber,
@@ -559,6 +568,13 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
                         [index]: hasFiles
                       }));
                     }}
+                    onUploadProgress={(albumIdx, current, total) => {
+                      // Track upload progress per album
+                      setAlbumUploadProgress(prev => ({
+                        ...prev,
+                        [albumIdx]: { current, total }
+                      }));
+                    }}
                   />
                 )}
                 {(album.smashTransferUrl || albumUploadStates[index]) && (
@@ -685,6 +701,7 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
             isSubmitting={isSubmitting}
             onValidationError={setValidationErrors}
             isUploadInProgress={Object.values(albumUploadStates).some(state => state === true)}
+            albumUploadProgress={albumUploadProgress}
           />
         </>
       )}

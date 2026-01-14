@@ -6,7 +6,7 @@ import './UploadSection.css';
 // Smash API key is now handled server-side via Vercel Serverless Functions
 // No API key needed in frontend - more secure!
 
-function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplete, hasError, onUploadStateChange, onFilesSelected }) {
+function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplete, hasError, onUploadStateChange, onFilesSelected, onUploadProgress }) {
   const breakpoint = useBreakpoint();
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploadProgress, setUploadProgress] = useState(0); // Number of files uploaded
@@ -28,6 +28,13 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
       onUploadStateChange(isUploading || isCompressing);
     }
   }, [isUploading, isCompressing, onUploadStateChange]);
+
+  // Notify parent of upload progress
+  useEffect(() => {
+    if (onUploadProgress && isUploading && selectedFiles.length > 0) {
+      onUploadProgress(albumIndex, uploadProgress, selectedFiles.length);
+    }
+  }, [uploadProgress, selectedFiles.length, isUploading, albumIndex, onUploadProgress]);
 
   // Compress images that are larger than 4MB
   const compressImageIfNeeded = async (file) => {
