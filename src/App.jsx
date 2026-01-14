@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import jsPDF from 'jspdf';
 import Header from './components/Header';
 import Hero from './components/Hero';
@@ -27,6 +27,8 @@ function App() {
   const [albumUploadStates, setAlbumUploadStates] = useState({}); // Track upload state per album
   const [albumFilesSelected, setAlbumFilesSelected] = useState({}); // Track if files are selected per album
   const [albumUploadProgress, setAlbumUploadProgress] = useState({}); // Track upload progress per album: { albumIndex: { current, total } }
+  const [uploadQueue, setUploadQueue] = useState([]); // Queue for album uploads/compression
+  const [currentlyProcessingAlbum, setCurrentlyProcessingAlbum] = useState(null); // Currently processing album index
 
   const MAX_ALBUMS = 3;
 
@@ -191,6 +193,51 @@ function App() {
     });
   };
 
+  // Queue management for album uploads/compression
+  const processNextInQueue = useCallback(() => {
+    setUploadQueue(prevQueue => {
+      if (prevQueue.length === 0) {
+        setCurrentlyProcessingAlbum(null);
+        return [];
+      }
+      const nextAlbumIndex = prevQueue[0];
+      setCurrentlyProcessingAlbum(nextAlbumIndex);
+      // Trigger upload start for the next album
+      setTimeout(() => {
+        const event = new CustomEvent('startQueuedUpload', { detail: { albumIndex: nextAlbumIndex } });
+        window.dispatchEvent(event);
+      }, 100);
+      return prevQueue.slice(1);
+    });
+  }, []);
+
+  const requestUploadStart = useCallback((albumIndex) => {
+    return new Promise((resolve) => {
+      setCurrentlyProcessingAlbum(prevProcessing => {
+        if (prevProcessing === null) {
+          // No album currently processing, start immediately
+          resolve(true);
+          return albumIndex;
+        } else {
+          // Another album is processing, add to queue
+          setUploadQueue(prevQueue => {
+            if (prevQueue.includes(albumIndex)) {
+              resolve(false);
+              return prevQueue;
+            }
+            resolve(false);
+            return [...prevQueue, albumIndex];
+          });
+          return prevProcessing;
+        }
+      });
+    });
+  }, []);
+
+  const handleUploadStart = useCallback((albumIndex) => {
+    setCurrentlyProcessingAlbum(albumIndex);
+  }, []);
+
   const handleUploadComplete = (albumIndex, transferUrl, count) => {
     setAlbums(prevAlbums => {
       const updatedAlbums = [...prevAlbums];
@@ -203,6 +250,12 @@ function App() {
       }
       return updatedAlbums;
     });
+    
+    // Clear current processing and process next album in queue
+    setCurrentlyProcessingAlbum(null);
+    setTimeout(() => {
+      processNextInQueue();
+    }, 100);
   };
 
   const handleCoverChange = (albumIndex, coverData) => {
@@ -617,6 +670,9 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
                         [albumIdx]: { current, total }
                       }));
                     }}
+                    requestUploadStart={requestUploadStart}
+                    currentlyProcessingAlbum={currentlyProcessingAlbum}
+                    onUploadStart={handleUploadStart}
                   />
                 )}
                 {(album.smashTransferUrl || albumUploadStates[index]) && (

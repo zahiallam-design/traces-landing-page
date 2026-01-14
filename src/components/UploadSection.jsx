@@ -6,7 +6,7 @@ import './UploadSection.css';
 // Smash API key is now handled server-side via Vercel Serverless Functions
 // No API key needed in frontend - more secure!
 
-function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplete, hasError, onUploadStateChange, onFilesSelected, onUploadProgress }) {
+function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplete, hasError, onUploadStateChange, onFilesSelected, onUploadProgress, requestUploadStart, currentlyProcessingAlbum, onUploadStart }) {
   const breakpoint = useBreakpoint();
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploadProgress, setUploadProgress] = useState(0); // Number of files uploaded
@@ -36,6 +36,43 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
     }
   }, [uploadProgress, selectedFiles.length, isUploading, albumIndex, onUploadProgress]);
 
+  // Listen for queued upload start event
+  useEffect(() => {
+    const handleQueuedUpload = (event) => {
+      if (event.detail.albumIndex === albumIndex && currentlyProcessingAlbum === albumIndex) {
+        // This album is next in queue, start upload
+        if (!isUploading && !isCompressing && selectedFiles.length > 0) {
+          uploadToSmash();
+        }
+      }
+    };
+    
+    window.addEventListener('startQueuedUpload', handleQueuedUpload);
+    return () => {
+      window.removeEventListener('startQueuedUpload', handleQueuedUpload);
+    };
+  }, [albumIndex, currentlyProcessingAlbum, isUploading, isCompressing, selectedFiles.length, uploadToSmash]);
+
+  // Check WebP browser support (cache the result)
+  const supportsWebP = useCallback(() => {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1;
+      canvas.height = 1;
+      return canvas.toDataURL('image/webp').indexOf('data:image/webp') === 0;
+    } catch {
+      return false;
+    }
+  }, []);
+  
+  const [webPSupported, setWebPSupported] = useState(null);
+  
+  useEffect(() => {
+    if (webPSupported === null) {
+      setWebPSupported(supportsWebP());
+    }
+  }, [supportsWebP, webPSupported]);
+
   // Compress images that are larger than 2MB
   const compressImageIfNeeded = async (file) => {
     const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
@@ -59,12 +96,21 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
     let maxSizeMB = TARGET_SIZE_MB; // Target 1.75MB (middle of 1.5-2MB range)
     const maxAttempts = 5;
     
+    // Use cached WebP support check
+    const useWebP = webPSupported === true;
+    
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        // For AVIF, convert to JPEG for better compression support
+        // Determine output type: prefer WebP if supported, otherwise JPEG
         let outputType = currentFile.type;
         if (currentFile.type === 'image/avif' || currentFile.name.toLowerCase().endsWith('.avif')) {
-          // Convert AVIF to JPEG for better compression support
+          // Convert AVIF to WebP or JPEG
+          outputType = useWebP ? 'image/webp' : 'image/jpeg';
+        } else if (useWebP && (currentFile.type === 'image/jpeg' || currentFile.type === 'image/png')) {
+          // Use WebP for better compression if browser supports it
+          outputType = 'image/webp';
+        } else {
+          // Fallback to JPEG
           outputType = 'image/jpeg';
         }
         
@@ -72,7 +118,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
           maxSizeMB: maxSizeMB,
           maxWidthOrHeight: 2500, // Optimized for A6 printing (300 DPI needs ~1063px, 2500px provides good quality with faster compression)
           useWebWorker: !isVeryLarge, // Disable web worker for very large files (can cause memory issues)
-          fileType: outputType, // Convert DNG/AVIF to JPEG for compression
+          fileType: outputType, // Use WebP if supported, otherwise JPEG
           initialQuality: quality,
           alwaysKeepResolution: true, // Try to keep resolution, only compress quality
         };
@@ -108,11 +154,22 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
           // Last attempt - allow more aggressive compression if needed
           if (compressedFile.size > MAX_FILE_SIZE) {
             // Try one more time with more aggressive settings
+            // Use cached WebP support for final attempt
+            const useWebPFinal = webPSupported === true;
+            let finalOutputType = currentFile.type;
+            if (currentFile.type === 'image/avif' || currentFile.name.toLowerCase().endsWith('.avif')) {
+              finalOutputType = useWebPFinal ? 'image/webp' : 'image/jpeg';
+            } else if (useWebPFinal && (currentFile.type === 'image/jpeg' || currentFile.type === 'image/png')) {
+              finalOutputType = 'image/webp';
+            } else {
+              finalOutputType = 'image/jpeg';
+            }
+            
             const finalOptions = {
               maxSizeMB: 2.0, // Target upper limit of range
               maxWidthOrHeight: 2500, // Optimized for A6 printing
               useWebWorker: !isVeryLarge,
-              fileType: (currentFile.type === 'image/avif' || currentFile.name.toLowerCase().endsWith('.avif')) ? 'image/jpeg' : currentFile.type, // Convert AVIF to JPEG
+              fileType: finalOutputType, // Use WebP if supported, otherwise JPEG
               initialQuality: 0.6,
               alwaysKeepResolution: false, // Allow resizing as last resort
             };
@@ -539,6 +596,9 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
         message: 'Upload complete! Photos uploaded successfully. You can now proceed with your order.' 
       });
       onUploadComplete(transferUrl, totalFiles);
+      
+      // Notify that this album finished (for queue processing)
+      window.dispatchEvent(new CustomEvent('albumUploadFinished', { detail: { albumIndex } }));
 
     } catch (error) {
       console.error('Upload error:', error);
@@ -585,10 +645,10 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
       setCompressionProgress(0);
       abortControllerRef.current = null;
     }
-  }, [selectedFiles, isUploading, onUploadComplete]);
+  }, [selectedFiles, isUploading, onUploadComplete, webPSupported]);
 
   // Manual upload - no automatic trigger
-  const handleUploadClick = () => {
+  const handleUploadClick = async () => {
     if (selectedFiles.length === 0) {
       alert('Please select at least one photo to upload.');
       return;
@@ -597,9 +657,28 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
       alert(`You have selected ${selectedFiles.length} photos, but this album only allows ${maxFiles} photos. Please remove ${selectedFiles.length - maxFiles} photo${selectedFiles.length - maxFiles > 1 ? 's' : ''} to proceed.`);
       return;
     }
-    if (isUploading) {
+    if (isUploading || isCompressing) {
       return;
     }
+    
+    // Request to start upload (will queue if another album is processing)
+    if (requestUploadStart) {
+      const canStart = await requestUploadStart(albumIndex);
+      if (!canStart) {
+        // Added to queue, show message
+        setUploadStatus({
+          type: 'info',
+          message: 'Upload queued. Will start automatically when the current upload finishes.'
+        });
+        return;
+      }
+    }
+    
+    // Notify parent that upload started
+    if (onUploadStart) {
+      onUploadStart(albumIndex);
+    }
+    
     uploadToSmash();
   };
 
