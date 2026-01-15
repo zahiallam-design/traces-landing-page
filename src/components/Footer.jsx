@@ -57,6 +57,12 @@ function Footer() {
                 >
                   Chat with us on WhatsApp
                 </a>
+                <a
+                  href="/feedback"
+                  className="feedback-link"
+                >
+                  Leave Feedback
+                </a>
               </div>
             </div>
           </div>
