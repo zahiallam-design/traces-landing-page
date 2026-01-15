@@ -168,45 +168,6 @@ export const sendCustomerConfirmationEmail = async (orderData) => {
  * @param {Object} feedbackData - Feedback data object
  * @returns {Promise} Promise that resolves when email is sent
  */
-export const sendFeedbackEmail = async (feedbackData) => {
-  const templateParams = {
-    feedback_name: feedbackData.name,
-    feedback_phone: feedbackData.phone,
-    feedback_email: feedbackData.email || 'Not provided',
-    feedback_message: feedbackData.message,
-    feedback_date: new Date().toLocaleString(),
-  };
-
-  try {
-    const response = await fetch('/api/send-email', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        templateType: 'feedback',
-        templateParams: templateParams,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || errorData.message || 'Failed to send feedback');
-    }
-
-    const result = await response.json();
-
-    return {
-      success: true,
-      status: 200,
-      text: result.message || 'Feedback sent successfully',
-    };
-  } catch (error) {
-    console.error('Feedback email error:', error);
-    throw new Error(`Failed to send feedback: ${error.message}`);
-  }
-};
-
 /**
  * Format albums details as text for email templates
  */

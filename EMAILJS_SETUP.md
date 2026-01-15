@@ -118,6 +118,7 @@ Thank you for choosing Traces!
 7. Click **Save**
 8. **Copy the Template ID** - this is your `EMAILJS_CUSTOMER_TEMPLATE_ID` (for customer confirmation)
 
+
 ## Step 4: Get Your Public Key
 
 1. Go to **Account** → **General** in the left sidebar

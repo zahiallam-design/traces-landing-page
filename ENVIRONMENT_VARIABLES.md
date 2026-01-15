@@ -59,6 +59,7 @@ Complete list of all environment variables used in the project.
 - **Required**: Yes (for customer emails to work)
 - **Environments**: Production, Preview, Development
 
+
 ### Frontend Variables (Browser) - WITH `VITE_` prefix
 
 #### 4. WhatsApp
