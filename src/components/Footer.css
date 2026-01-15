@@ -61,6 +61,24 @@
   text-decoration: underline;
 }
 
+.feedback-link {
+  display: inline-block;
+  margin-top: 0.6rem;
+  padding: 0.55rem 1.4rem;
+  border-radius: 10px;
+  border: 1px solid var(--pastel-green);
+  color: var(--pastel-green);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.feedback-link:hover {
+  background-color: var(--pastel-green);
+  color: var(--text-dark);
+}
+
 .footer-legal {
   margin-top: 2rem;
   padding-top: 2rem;

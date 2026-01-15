@@ -57,6 +57,14 @@ function Footer() {
                 >
                   Chat with us on WhatsApp
                 </a>
+                <a
+                  href="https://forms.gle/6pEvyNu7fpYS97TY6"
+                  className="feedback-link"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Leave Feedback
+                </a>
               </div>
             </div>
           </div>
