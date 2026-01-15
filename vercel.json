@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/feedback",
+      "destination": "/"
+    },
+    {
+      "source": "/feedback/:path*",
+      "destination": "/"
+    }
+  ]
+}
