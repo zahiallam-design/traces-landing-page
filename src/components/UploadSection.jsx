@@ -6,7 +6,7 @@ import './UploadSection.css';
 // Smash API key is now handled server-side via Vercel Serverless Functions
 // No API key needed in frontend - more secure!
 
-function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplete, hasError, onUploadStateChange, onFilesSelected, onUploadProgress, requestUploadStart, currentlyProcessingAlbum, onUploadStart }) {
+function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplete, hasError, onUploadStateChange, onFilesSelected, onUploadProgress, requestUploadStart, currentlyProcessingAlbum, onUploadStart, onUploadCancel }) {
   console.log(`[UploadSection] Component mounting/rendering for album ${albumIndex}`, {
     selectedAlbum,
     hasRequestUploadStart: !!requestUploadStart,
@@ -277,7 +277,12 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
       type: 'error', 
       message: 'Upload cancelled by user.' 
     });
-  }, []);
+    
+    // Notify parent that upload was cancelled so queue can process next item
+    if (onUploadCancel) {
+      onUploadCancel(albumIndex);
+    }
+  }, [albumIndex, onUploadCancel]);
 
   const uploadToSmash = useCallback(async () => {
     if (selectedFiles.length === 0 || isUploading) return;

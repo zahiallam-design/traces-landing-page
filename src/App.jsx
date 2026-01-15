@@ -297,6 +297,30 @@ function App() {
     }, 100);
   };
 
+  const handleUploadCancel = useCallback((albumIndex) => {
+    console.log('[App] Upload cancelled for album:', albumIndex);
+    
+    // Clear current processing if this was the active album
+    setCurrentlyProcessingAlbum(prevProcessing => {
+      if (prevProcessing === albumIndex) {
+        console.log('[App] Cancelled album was processing, clearing and processing queue');
+        // Clear processing state and process next in queue
+        setTimeout(() => {
+          processNextInQueue();
+        }, 100);
+        return null;
+      }
+      return prevProcessing;
+    });
+    
+    // Clear upload state for this album
+    setAlbumUploadStates(prev => {
+      const updated = { ...prev };
+      delete updated[albumIndex];
+      return updated;
+    });
+  }, []);
+
   const handleCoverChange = (albumIndex, coverData) => {
     setAlbums(prevAlbums => {
       const updatedAlbums = [...prevAlbums];
@@ -732,6 +756,7 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
                     requestUploadStart={requestUploadStart}
                     currentlyProcessingAlbum={currentlyProcessingAlbum}
                     onUploadStart={handleUploadStart}
+                    onUploadCancel={handleUploadCancel}
                   />
                 )}
                 {(album.smashTransferUrl || albumUploadStates[index] || (album.selectedAlbum && album.selectedColor)) && (
