@@ -734,7 +734,7 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
                     onUploadStart={handleUploadStart}
                   />
                 )}
-                {(album.smashTransferUrl || albumUploadStates[index]) && (
+                {(album.smashTransferUrl || albumUploadStates[index] || (album.selectedAlbum && album.selectedColor)) && (
                   <>
                     <CoverCustomization
                       albumIndex={index}

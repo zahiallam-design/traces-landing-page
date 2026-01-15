@@ -1151,7 +1151,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                           index={index}
                         onRemove={removeFile}
                         formatFileSize={formatFileSize}
-                        isUploadComplete={uploadStatus?.type === 'success' || isUploading || isCompressing}
+                        isUploadComplete={uploadStatus?.type === 'success' || isUploading || isCompressing || isQueued}
                         onDragStart={handleDragStart}
                         onDragOver={handleFileDragOver}
                         onDragEnd={handleDragEnd}
@@ -1160,7 +1160,8 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                         onMoveDown={moveFileDown}
                         canMoveUp={index > 0}
                         canMoveDown={index < selectedFiles.length - 1}
-                        isUploading={isUploading || isCompressing}
+                        isUploading={isUploading || isCompressing || isQueued}
+                        isQueued={isQueued}
                         />
                       ))}
                     </div>
@@ -1265,17 +1266,137 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
   );
 }
 
-function FileItem({ file, index, onRemove, formatFileSize, isUploadComplete, onDragStart, onDragOver, onDragEnd, isDragging, onMoveUp, onMoveDown, canMoveUp, canMoveDown, isUploading }) {
+function FileItem({ file, index, onRemove, formatFileSize, isUploadComplete, onDragStart, onDragOver, onDragEnd, isDragging, onMoveUp, onMoveDown, canMoveUp, canMoveDown, isUploading, isQueued = false }) {
   const [preview, setPreview] = useState(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const itemRef = useRef(null);
 
+  // Generate thumbnail (small preview) instead of full-size image
+  const generateThumbnail = useCallback((file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          // Create canvas for thumbnail
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          // Calculate thumbnail size (max 200x200px, maintain aspect ratio)
+          const maxSize = 200;
+          let width = img.width;
+          let height = img.height;
+          
+          if (width > height) {
+            if (width > maxSize) {
+              height = (height * maxSize) / width;
+              width = maxSize;
+            }
+          } else {
+            if (height > maxSize) {
+              width = (width * maxSize) / height;
+              height = maxSize;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          // Draw resized image
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Convert to blob URL (more memory efficient than base64)
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const url = URL.createObjectURL(blob);
+              resolve(url);
+            } else {
+              reject(new Error('Failed to create thumbnail'));
+            }
+          }, 'image/jpeg', 0.85); // Use JPEG with 85% quality for smaller size
+        };
+        img.onerror = reject;
+        img.src = e.target.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }, []);
+
+  // Intersection Observer for lazy loading
   useEffect(() => {
-    const reader = new FileReader();
-    reader.onload = (e) => setPreview(e.target.result);
-    reader.readAsDataURL(file);
-  }, [file]);
+    if (!itemRef.current || preview) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setIsVisible(true);
+            observer.disconnect();
+          }
+        });
+      },
+      {
+        rootMargin: '50px', // Start loading 50px before item is visible
+        threshold: 0.1
+      }
+    );
+
+    observer.observe(itemRef.current);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [preview]);
+
+  // Generate thumbnail when item becomes visible
+  useEffect(() => {
+    if (!isVisible || preview) return;
+
+    let thumbnailUrl = null;
+    let cancelled = false;
+
+    // Generate thumbnail with small delay to batch process
+    const timeoutId = setTimeout(() => {
+      generateThumbnail(file)
+        .then((url) => {
+          if (!cancelled) {
+            thumbnailUrl = url;
+            setPreview(url);
+          }
+        })
+        .catch((error) => {
+          console.error('Failed to generate thumbnail:', error);
+          // Fallback: use object URL directly (less memory efficient but works)
+          if (!cancelled) {
+            const fallbackUrl = URL.createObjectURL(file);
+            thumbnailUrl = fallbackUrl;
+            setPreview(fallbackUrl);
+          }
+        });
+    }, index * 50); // Stagger by 50ms per item to avoid overwhelming browser
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+      // Clean up object URL
+      if (thumbnailUrl) {
+        URL.revokeObjectURL(thumbnailUrl);
+      }
+    };
+  }, [isVisible, file, index, generateThumbnail, preview]);
+
+  // Cleanup preview URL on unmount
+  useEffect(() => {
+    return () => {
+      if (preview && preview.startsWith('blob:')) {
+        URL.revokeObjectURL(preview);
+      }
+    };
+  }, [preview]);
 
   const handleDragStartLocal = (e) => {
-    if (isUploadComplete) return;
+    if (isUploadComplete || isQueued) return;
     // Don't call preventDefault here as it prevents dragging
     onDragStart(index);
     e.dataTransfer.effectAllowed = 'move';
@@ -1315,7 +1436,7 @@ function FileItem({ file, index, onRemove, formatFileSize, isUploadComplete, onD
   };
 
   const handleDragOverLocal = (e) => {
-    if (isUploadComplete) return;
+    if (isUploadComplete || isQueued) return;
     e.preventDefault();
     e.stopPropagation(); // Prevent event bubbling that might cause navigation
     e.dataTransfer.dropEffect = 'move';
@@ -1324,7 +1445,7 @@ function FileItem({ file, index, onRemove, formatFileSize, isUploadComplete, onD
 
   // Handle drag over on the file item (for receiving drops)
   const handleFileItemDragOver = (e) => {
-    if (isUploadComplete) return;
+    if (isUploadComplete || isQueued) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     // Only call onDragOver if this item is not the one being dragged
@@ -1334,20 +1455,47 @@ function FileItem({ file, index, onRemove, formatFileSize, isUploadComplete, onD
   };
 
   const handleDragEndLocal = () => {
-    if (isUploadComplete) return;
+    if (isUploadComplete || isQueued) return;
     onDragEnd();
   };
 
   return (
     <div 
+      ref={itemRef}
       className={`file-item ${isDragging ? 'dragging' : ''}`}
       onDragOver={handleFileItemDragOver}
       style={{
-        opacity: isDragging ? 0.5 : 1
+        opacity: isDragging ? 0.5 : 1,
+        minHeight: preview ? 'auto' : '60px' // Reserve space while loading
       }}
     >
       <div className="file-info">
-        {preview && <img className="file-icon" src={preview} alt="Preview" />}
+        {preview ? (
+          <img 
+            className="file-icon" 
+            src={preview} 
+            alt="Preview" 
+            loading="lazy"
+            style={{ objectFit: 'cover', width: '60px', height: '60px' }}
+          />
+        ) : (
+          <div 
+            className="file-icon" 
+            style={{ 
+              width: '60px', 
+              height: '60px', 
+              backgroundColor: '#f0f0f0', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              borderRadius: '4px',
+              color: '#999',
+              fontSize: '0.75rem'
+            }}
+          >
+            Loading...
+          </div>
+        )}
         <div className="file-details">
           <div className="file-name">
             {file.name}
@@ -1361,16 +1509,16 @@ function FileItem({ file, index, onRemove, formatFileSize, isUploadComplete, onD
             <button
               type="button"
               onClick={() => onMoveUp(index)}
-              disabled={!canMoveUp || isUploadComplete || isUploading}
+              disabled={!canMoveUp || isUploadComplete || isUploading || isQueued}
               className="reorder-btn"
               aria-label="Move up"
-              title={isUploadComplete || isUploading ? 'Files are locked during upload' : 'Move up'}
+              title={isUploadComplete || isUploading || isQueued ? 'Files are locked during upload' : 'Move up'}
               style={{
                 padding: '0.25rem',
                 border: 'none',
                 background: 'transparent',
-                cursor: (canMoveUp && !isUploadComplete && !isUploading) ? 'pointer' : 'not-allowed',
-                opacity: (canMoveUp && !isUploadComplete && !isUploading) ? 1 : 0.3,
+                cursor: (canMoveUp && !isUploadComplete && !isUploading && !isQueued) ? 'pointer' : 'not-allowed',
+                opacity: (canMoveUp && !isUploadComplete && !isUploading && !isQueued) ? 1 : 0.3,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
@@ -1383,16 +1531,16 @@ function FileItem({ file, index, onRemove, formatFileSize, isUploadComplete, onD
             <button
               type="button"
               onClick={() => onMoveDown(index)}
-              disabled={!canMoveDown || isUploadComplete || isUploading}
+              disabled={!canMoveDown || isUploadComplete || isUploading || isQueued}
               className="reorder-btn"
               aria-label="Move down"
-              title={isUploadComplete || isUploading ? 'Files are locked during upload' : 'Move down'}
+              title={isUploadComplete || isUploading || isQueued ? 'Files are locked during upload' : 'Move down'}
               style={{
                 padding: '0.25rem',
                 border: 'none',
                 background: 'transparent',
-                cursor: (canMoveDown && !isUploadComplete && !isUploading) ? 'pointer' : 'not-allowed',
-                opacity: (canMoveDown && !isUploadComplete && !isUploading) ? 1 : 0.3,
+                cursor: (canMoveDown && !isUploadComplete && !isUploading && !isQueued) ? 'pointer' : 'not-allowed',
+                opacity: (canMoveDown && !isUploadComplete && !isUploading && !isQueued) ? 1 : 0.3,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
@@ -1408,13 +1556,13 @@ function FileItem({ file, index, onRemove, formatFileSize, isUploadComplete, onD
           className="file-remove" 
           onClick={() => onRemove(index)} 
           aria-label="Remove file"
-          disabled={isUploadComplete || isUploading}
+          disabled={isUploadComplete || isUploading || isQueued}
           style={{ 
-            opacity: (isUploadComplete || isUploading) ? 0.5 : 1,
-            cursor: (isUploadComplete || isUploading) ? 'not-allowed' : 'pointer',
-            pointerEvents: (isUploadComplete || isUploading) ? 'none' : 'auto'
+            opacity: (isUploadComplete || isUploading || isQueued) ? 0.5 : 1,
+            cursor: (isUploadComplete || isUploading || isQueued) ? 'not-allowed' : 'pointer',
+            pointerEvents: (isUploadComplete || isUploading || isQueued) ? 'none' : 'auto'
           }}
-          title={(isUploadComplete || isUploading) ? 'Files are locked during upload. Use "Clear All" to start over.' : 'Remove file'}
+          title={(isUploadComplete || isUploading || isQueued) ? 'Files are locked during upload. Use "Clear All" to start over.' : 'Remove file'}
         >
           ×
         </button>
