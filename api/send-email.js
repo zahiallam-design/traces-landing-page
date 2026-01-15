@@ -14,6 +14,7 @@ export default async function handler(req, res) {
     const EMAILJS_SERVICE_ID = process.env.EMAILJS_SERVICE_ID || process.env.VITE_EMAILJS_SERVICE_ID;
     const EMAILJS_TEMPLATE_ID = process.env.EMAILJS_TEMPLATE_ID || process.env.VITE_EMAILJS_TEMPLATE_ID;
     const EMAILJS_CUSTOMER_TEMPLATE_ID = process.env.EMAILJS_CUSTOMER_TEMPLATE_ID || process.env.VITE_EMAILJS_CUSTOMER_TEMPLATE_ID;
+    const EMAILJS_FEEDBACK_TEMPLATE_ID = process.env.EMAILJS_FEEDBACK_TEMPLATE_ID || process.env.VITE_EMAILJS_FEEDBACK_TEMPLATE_ID;
     const EMAILJS_PUBLIC_KEY = process.env.EMAILJS_PUBLIC_KEY || process.env.VITE_EMAILJS_PUBLIC_KEY;
     const EMAILJS_PRIVATE_KEY = process.env.EMAILJS_PRIVATE_KEY || process.env.VITE_EMAILJS_PRIVATE_KEY;
 
@@ -63,7 +64,7 @@ export default async function handler(req, res) {
     }
     
     const { 
-      templateType, // 'owner' or 'customer'
+      templateType, // 'owner', 'customer', or 'feedback'
       templateParams 
     } = body;
 
@@ -74,7 +75,9 @@ export default async function handler(req, res) {
     // Select template ID based on type
     const templateId = templateType === 'customer' 
       ? (EMAILJS_CUSTOMER_TEMPLATE_ID || EMAILJS_TEMPLATE_ID)
-      : EMAILJS_TEMPLATE_ID;
+      : templateType === 'feedback'
+        ? (EMAILJS_FEEDBACK_TEMPLATE_ID || EMAILJS_TEMPLATE_ID)
+        : EMAILJS_TEMPLATE_ID;
 
     if (!templateId) {
       return res.status(500).json({ error: 'EmailJS template ID not configured' });
