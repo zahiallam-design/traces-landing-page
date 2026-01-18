@@ -420,6 +420,10 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
         }
       }
       
+      if (signal.aborted || cancelUploadRef.current) {
+        throw new Error('Upload cancelled.');
+      }
+
       // Final verification: Re-check file sizes after compression
       const oversizedFiles = processedFiles.filter(file => file.size > MAX_FILE_SIZE);
       if (oversizedFiles.length > 0) {
@@ -520,6 +524,10 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
         
         return file;
       });
+
+      if (signal.aborted || cancelUploadRef.current) {
+        throw new Error('Upload cancelled.');
+      }
 
       const totalFiles = filesToUpload.length;
       const smashApiKey = import.meta.env.VITE_SMASH_API_KEY;
@@ -705,6 +713,10 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
       // Clear any interval if it exists
       if (progressInterval) {
         clearInterval(progressInterval);
+      }
+
+      if (signal.aborted || cancelUploadRef.current) {
+        throw new Error('Upload cancelled.');
       }
 
       if (!transferUrl) {
