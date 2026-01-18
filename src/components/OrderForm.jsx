@@ -32,6 +32,14 @@ function OrderForm({
   const deliveryCharge = subtotal >= 90 ? 0 : 4; // Free delivery on orders above $90
   const total = subtotal + deliveryCharge;
 
+  const formatFileSize = (bytes) => {
+    if (!Number.isFinite(bytes) || bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     
@@ -282,9 +290,15 @@ function OrderForm({
                   <div style={{ fontSize: '0.85rem', color: 'var(--text-dark)', display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'center', marginBottom: '1.5rem' }}>
                     {Object.entries(albumUploadProgress).map(([albumIndex, progress]) => {
                       const albumNum = parseInt(albumIndex) + 1;
+                      const hasByteProgress = Number.isFinite(progress?.totalBytes) && progress.totalBytes > 0;
+                      const currentFiles = progress?.currentFiles ?? progress?.current ?? 0;
+                      const totalFiles = progress?.totalFiles ?? progress?.total ?? 0;
                       return (
                         <span key={albumIndex}>
-                          Album {albumNum} ({progress.current}/{progress.total})
+                          Album {albumNum} ({hasByteProgress
+                            ? `${formatFileSize(progress.uploadedBytes || 0)} / ${formatFileSize(progress.totalBytes)}`
+                            : `${currentFiles}/${totalFiles}`
+                          })
                         </span>
                       );
                     })}

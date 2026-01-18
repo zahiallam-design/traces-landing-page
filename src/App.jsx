@@ -741,13 +741,16 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
                         console.error(`[App] Error updating files selected for album ${index}:`, error);
                       }
                     }}
-                    onUploadProgress={(albumIdx, current, total) => {
-                      console.log(`[App] Upload progress for album ${albumIdx}:`, { current, total });
+                    onUploadProgress={(albumIdx, progress, total) => {
+                      const normalized = typeof progress === 'object' && progress !== null
+                        ? progress
+                        : { currentFiles: progress, totalFiles: total };
+                      console.log(`[App] Upload progress for album ${albumIdx}:`, normalized);
                       try {
                         // Track upload progress per album
                         setAlbumUploadProgress(prev => ({
                           ...prev,
-                          [albumIdx]: { current, total }
+                          [albumIdx]: normalized
                         }));
                       } catch (error) {
                         console.error(`[App] Error updating upload progress for album ${albumIdx}:`, error);
