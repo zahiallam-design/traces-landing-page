@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import imageCompression from 'browser-image-compression';
+import { SmashUploader } from '@smash-sdk/uploader';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 import './UploadSection.css';
 
@@ -491,164 +492,174 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
         return file;
       });
 
-      // Upload files in batches to avoid Vercel's 4.5MB request size limit
-      // Vercel serverless functions have a ~4.5MB body size limit
-      // For large files, use smaller batches (max 4MB per batch to be safe)
-      const MAX_BATCH_SIZE = 4 * 1024 * 1024; // 4MB max per batch
-      const averageFileSize = filesToUpload.reduce((sum, file) => sum + file.size, 0) / filesToUpload.length;
-      
-      // Files should already be under 4MB after compression check above
-      // Double-check for safety
-      const stillOversized = filesToUpload.filter(file => file.size > MAX_BATCH_SIZE);
-      if (stillOversized.length > 0) {
-        throw new Error(`Files exceed the 4MB size limit: ${stillOversized.map(f => `${f.name} (${(f.size / 1024 / 1024).toFixed(2)} MB)`).join(', ')}. Please compress your images.`);
-      }
-      
-      // Create batches dynamically, ensuring each batch doesn't exceed MAX_BATCH_SIZE
-      // Account for FormData overhead (~100KB per file)
-      const FORM_DATA_OVERHEAD = 100 * 1024; // ~100KB per file for FormData overhead
-      const batches = [];
-      let currentBatch = [];
-      let currentBatchSize = 0;
-      
-      for (const file of filesToUpload) {
-        const fileSizeWithOverhead = file.size + FORM_DATA_OVERHEAD;
-        
-        // If adding this file would exceed the limit, start a new batch
-        if (currentBatch.length > 0 && currentBatchSize + fileSizeWithOverhead > MAX_BATCH_SIZE) {
-          batches.push(currentBatch);
-          currentBatch = [file];
-          currentBatchSize = fileSizeWithOverhead;
-        } else {
-          currentBatch.push(file);
-          currentBatchSize += fileSizeWithOverhead;
-        }
-      }
-      
-      // Don't forget the last batch
-      if (currentBatch.length > 0) {
-        batches.push(currentBatch);
-      }
-      
-      // Verify all batches are within limit and log batch info
-      const batchSizes = batches.map(batch => {
-        const size = batch.reduce((sum, file) => sum + file.size + FORM_DATA_OVERHEAD, 0);
-        return { count: batch.length, sizeMB: (size / 1024 / 1024).toFixed(2) };
-      });
-      
-      const oversizedBatches = batchSizes.filter(b => b.sizeMB > 4.5);
-      if (oversizedBatches.length > 0) {
-        console.warn('Some batches exceed safe limit:', oversizedBatches);
-        // Re-batch oversized batches more aggressively
-        const rebatched = [];
-        for (let i = 0; i < batches.length; i++) {
-          const batch = batches[i];
-          const batchSize = batch.reduce((sum, file) => sum + file.size + FORM_DATA_OVERHEAD, 0);
-          
-          if (batchSize > MAX_BATCH_SIZE) {
-            // Split this batch - one file per batch
-            batch.forEach(file => rebatched.push([file]));
-          } else {
-            rebatched.push(batch);
-          }
-        }
-        batches.length = 0;
-        batches.push(...rebatched);
-      }
-      
-      console.log(`Uploading ${filesToUpload.length} files in ${batches.length} batches (avg file size: ${(averageFileSize / 1024 / 1024).toFixed(2)} MB)`);
-      batchSizes.forEach((batch, idx) => {
-        console.log(`  Batch ${idx + 1}: ${batch.count} files, ~${batch.sizeMB} MB`);
-      });
-
-      // Track progress
-      let uploadedCount = 0;
       const totalFiles = filesToUpload.length;
+      const smashApiKey = import.meta.env.VITE_SMASH_API_KEY;
+      const smashRegion = import.meta.env.VITE_SMASH_REGION || 'eu-west-3';
 
-      // Upload first batch to create transfer, then add remaining files
       let transferId = null;
       let transferUrl = null;
 
-      for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-        let batch = batches[batchIndex];
+      if (smashApiKey) {
+        console.log('Uploading directly to Smash from the browser...');
+        const uploader = new SmashUploader({
+          region: smashRegion,
+          token: smashApiKey
+        });
+        const result = await uploader.upload({ files: filesToUpload });
+        transferId = result.transfer?.id || result.id;
+        transferUrl = result.transfer?.transferUrl || result.transferUrl || (transferId ? `https://fromsmash.com/${transferId}` : null);
+      } else {
+        // Upload files in batches to avoid Vercel's 4.5MB request size limit
+        // Vercel serverless functions have a ~4.5MB body size limit
+        // For large files, use smaller batches (max 4MB per batch to be safe)
+        const MAX_BATCH_SIZE = 4 * 1024 * 1024; // 4MB max per batch
+        const averageFileSize = filesToUpload.reduce((sum, file) => sum + file.size, 0) / filesToUpload.length;
         
-        // Final safety check: verify batch size before uploading
-        let batchSize = batch.reduce((sum, file) => sum + file.size + FORM_DATA_OVERHEAD, 0);
-        
-        // If batch still exceeds limit, split it further (one file per batch)
-        if (batchSize > MAX_BATCH_SIZE) {
-          console.warn(`Batch ${batchIndex + 1} exceeds limit (${(batchSize / 1024 / 1024).toFixed(2)} MB), splitting further...`);
-          // Split into individual files
-          const splitBatches = batch.map(file => [file]);
-          // Replace current batch with first split, insert rest after
-          batch = splitBatches[0];
-          batches.splice(batchIndex + 1, 0, ...splitBatches.slice(1));
-          batchSize = batch.reduce((sum, file) => sum + file.size + FORM_DATA_OVERHEAD, 0);
+        // Files should already be under 4MB after compression check above
+        // Double-check for safety
+        const stillOversized = filesToUpload.filter(file => file.size > MAX_BATCH_SIZE);
+        if (stillOversized.length > 0) {
+          throw new Error(`Files exceed the 4MB size limit: ${stillOversized.map(f => `${f.name} (${(f.size / 1024 / 1024).toFixed(2)} MB)`).join(', ')}. Please compress your images.`);
         }
         
-        const formData = new FormData();
+        // Create batches dynamically, ensuring each batch doesn't exceed MAX_BATCH_SIZE
+        // Account for FormData overhead (~100KB per file)
+        const FORM_DATA_OVERHEAD = 100 * 1024; // ~100KB per file for FormData overhead
+        const batches = [];
+        let currentBatch = [];
+        let currentBatchSize = 0;
         
-        batch.forEach((file) => {
-          formData.append('files', file);
-        });
-
-        // Include transferId if we already have one (for subsequent batches)
-        if (transferId) {
-          formData.append('transferId', transferId);
-        }
-
-        // Update progress - track number of files uploaded
-        const filesUploadedSoFar = batches.slice(0, batchIndex + 1).reduce((sum, batch) => sum + batch.length, 0);
-        setUploadProgress(filesUploadedSoFar);
-
-        console.log(`Uploading batch ${batchIndex + 1}/${batches.length} (${batch.length} files, ~${(batchSize / 1024 / 1024).toFixed(2)} MB)...`);
-        
-        // Create timeout promise (60 seconds per batch)
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => {
-            reject(new Error('Upload timeout: Request took too long. Please try again or compress your images.'));
-          }, 60000);
-        });
-        
-        try {
-          // Race between fetch and timeout
-          const response = await Promise.race([
-            fetch('/api/upload', {
-              method: 'POST',
-              body: formData,
-              signal: signal
-            }),
-            timeoutPromise
-          ]);
+        for (const file of filesToUpload) {
+          const fileSizeWithOverhead = file.size + FORM_DATA_OVERHEAD;
           
-          if (!response.ok) {
-            const errorText = await response.text();
-            let errorData;
-            try {
-              errorData = JSON.parse(errorText);
-            } catch {
-              errorData = { error: errorText || `Server error (${response.status})` };
-            }
-            throw new Error(errorData.error || errorData.message || `Upload failed with status ${response.status}`);
+          // If adding this file would exceed the limit, start a new batch
+          if (currentBatch.length > 0 && currentBatchSize + fileSizeWithOverhead > MAX_BATCH_SIZE) {
+            batches.push(currentBatch);
+            currentBatch = [file];
+            currentBatchSize = fileSizeWithOverhead;
+          } else {
+            currentBatch.push(file);
+            currentBatchSize += fileSizeWithOverhead;
           }
-
-          const result = await response.json();
+        }
         
-          if (!result.success) {
-            throw new Error(result.error || result.message || 'Upload failed');
+        // Don't forget the last batch
+        if (currentBatch.length > 0) {
+          batches.push(currentBatch);
+        }
+        
+        // Verify all batches are within limit and log batch info
+        const batchSizes = batches.map(batch => {
+          const size = batch.reduce((sum, file) => sum + file.size + FORM_DATA_OVERHEAD, 0);
+          return { count: batch.length, sizeMB: (size / 1024 / 1024).toFixed(2) };
+        });
+        
+        const oversizedBatches = batchSizes.filter(b => b.sizeMB > 4.5);
+        if (oversizedBatches.length > 0) {
+          console.warn('Some batches exceed safe limit:', oversizedBatches);
+          // Re-batch oversized batches more aggressively
+          const rebatched = [];
+          for (let i = 0; i < batches.length; i++) {
+            const batch = batches[i];
+            const batchSize = batch.reduce((sum, file) => sum + file.size + FORM_DATA_OVERHEAD, 0);
+            
+            if (batchSize > MAX_BATCH_SIZE) {
+              // Split this batch - one file per batch
+              batch.forEach(file => rebatched.push([file]));
+            } else {
+              rebatched.push(batch);
+            }
+          }
+          batches.length = 0;
+          batches.push(...rebatched);
+        }
+        
+        console.log(`Uploading ${filesToUpload.length} files in ${batches.length} batches (avg file size: ${(averageFileSize / 1024 / 1024).toFixed(2)} MB)`);
+        batchSizes.forEach((batch, idx) => {
+          console.log(`  Batch ${idx + 1}: ${batch.count} files, ~${batch.sizeMB} MB`);
+        });
+
+        // Upload first batch to create transfer, then add remaining files
+        for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+          let batch = batches[batchIndex];
+          
+          // Final safety check: verify batch size before uploading
+          let batchSize = batch.reduce((sum, file) => sum + file.size + FORM_DATA_OVERHEAD, 0);
+          
+          // If batch still exceeds limit, split it further (one file per batch)
+          if (batchSize > MAX_BATCH_SIZE) {
+            console.warn(`Batch ${batchIndex + 1} exceeds limit (${(batchSize / 1024 / 1024).toFixed(2)} MB), splitting further...`);
+            // Split into individual files
+            const splitBatches = batch.map(file => [file]);
+            // Replace current batch with first split, insert rest after
+            batch = splitBatches[0];
+            batches.splice(batchIndex + 1, 0, ...splitBatches.slice(1));
+            batchSize = batch.reduce((sum, file) => sum + file.size + FORM_DATA_OVERHEAD, 0);
+          }
+          
+          const formData = new FormData();
+          
+          batch.forEach((file) => {
+            formData.append('files', file);
+          });
+
+          // Include transferId if we already have one (for subsequent batches)
+          if (transferId) {
+            formData.append('transferId', transferId);
           }
 
-          // Store transfer info from first batch
-          if (batchIndex === 0) {
-            transferId = result.transferId;
-            transferUrl = result.transferUrl;
-          }
+          // Update progress - track number of files uploaded
+          const filesUploadedSoFar = batches.slice(0, batchIndex + 1).reduce((sum, batch) => sum + batch.length, 0);
+          setUploadProgress(filesUploadedSoFar);
 
-          uploadedCount++;
-          console.log(`Batch ${batchIndex + 1}/${batches.length} completed successfully`);
-        } catch (batchError) {
-          console.error(`Batch ${batchIndex + 1} failed:`, batchError);
-          throw batchError;
+          console.log(`Uploading batch ${batchIndex + 1}/${batches.length} (${batch.length} files, ~${(batchSize / 1024 / 1024).toFixed(2)} MB)...`);
+          
+          // Create timeout promise (60 seconds per batch)
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => {
+              reject(new Error('Upload timeout: Request took too long. Please try again or compress your images.'));
+            }, 60000);
+          });
+          
+          try {
+            // Race between fetch and timeout
+            const response = await Promise.race([
+              fetch('/api/upload', {
+                method: 'POST',
+                body: formData,
+                signal: signal
+              }),
+              timeoutPromise
+            ]);
+            
+            if (!response.ok) {
+              const errorText = await response.text();
+              let errorData;
+              try {
+                errorData = JSON.parse(errorText);
+              } catch {
+                errorData = { error: errorText || `Server error (${response.status})` };
+              }
+              throw new Error(errorData.error || errorData.message || `Upload failed with status ${response.status}`);
+            }
+
+            const result = await response.json();
+          
+            if (!result.success) {
+              throw new Error(result.error || result.message || 'Upload failed');
+            }
+
+            // Store transfer info from first batch
+            if (batchIndex === 0) {
+              transferId = result.transferId;
+              transferUrl = result.transferUrl;
+            }
+
+            console.log(`Batch ${batchIndex + 1}/${batches.length} completed successfully`);
+          } catch (batchError) {
+            console.error(`Batch ${batchIndex + 1} failed:`, batchError);
+            throw batchError;
+          }
         }
       }
 

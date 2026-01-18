@@ -4,11 +4,12 @@ Complete list of all environment variables used in the project.
 
 ## 🔒 Security Update
 
-**Both Smash API and EmailJS are now secured using Vercel Serverless Functions!**
+**Smash API and EmailJS are secured using Vercel Serverless Functions.**
 
 - ✅ API keys stay on the server (never exposed to browser)
 - ✅ Use variables **WITHOUT** `VITE_` prefix for serverless functions
 - ✅ Only `VITE_WHATSAPP_NUMBER` needs `VITE_` prefix (frontend use)
+- ✅ Optional: enable direct Smash uploads from the browser to avoid batch splitting
 
 ---
 
@@ -70,6 +71,19 @@ Complete list of all environment variables used in the project.
 - **Environments**: Production, Preview, Development
 - **Used in**: Frontend components (Footer, WhatsAppButton)
 
+#### 5. Smash Direct Upload (Optional)
+- **Key**: `VITE_SMASH_API_KEY`
+- **Value**: Your Smash API key (browser use)
+- **Required**: No (only if you want direct browser uploads)
+- **Environments**: Production, Preview, Development
+- **Used in**: `src/components/UploadSection.jsx` (direct Smash upload)
+
+- **Key**: `VITE_SMASH_REGION` (Optional)
+- **Value**: `eu-west-3` or `us-east-1`
+- **Default**: `eu-west-3`
+- **Required**: No
+- **Environments**: Production, Preview, Development
+
 ---
 
 ## Summary Table
@@ -91,8 +105,10 @@ Complete list of all environment variables used in the project.
 | Variable Name | Purpose | Required | Default | Location |
 |--------------|---------|----------|---------|----------|
 | `VITE_WHATSAPP_NUMBER` | WhatsApp contact number | ✅ Yes | None | Frontend components |
+| `VITE_SMASH_API_KEY` | Smash API key for direct upload | ❌ No | None | Frontend (optional) |
+| `VITE_SMASH_REGION` | Smash API region for direct upload | ❌ No | `eu-west-3` | Frontend (optional) |
 
-**Total**: 8 environment variables (7 server-side, 1 frontend)
+**Total**: 10 environment variables (7 server-side, 3 frontend)
 
 ---
 
@@ -109,6 +125,8 @@ Complete list of all environment variables used in the project.
 
 ### Frontend (Browser):
 - `VITE_WHATSAPP_NUMBER` → `src/components/Footer.jsx` & `src/components/WhatsAppButton.jsx`
+- `VITE_SMASH_API_KEY` → `src/components/UploadSection.jsx` (direct upload, optional)
+- `VITE_SMASH_REGION` → `src/components/UploadSection.jsx` (direct upload, optional)
 
 ---
 
@@ -125,6 +143,8 @@ Complete list of all environment variables used in the project.
 
 ### Frontend Variables (WITH `VITE_` prefix):
 - [ ] `VITE_WHATSAPP_NUMBER` - Your WhatsApp number (no +, no spaces)
+- [ ] `VITE_SMASH_API_KEY` - Smash API key (optional, enables direct upload)
+- [ ] `VITE_SMASH_REGION` - Smash region (optional)
 
 ---
 
@@ -133,6 +153,7 @@ Complete list of all environment variables used in the project.
 ### Security Update:
 - ✅ **Server-side variables** (Smash, EmailJS) use NO `VITE_` prefix - they stay secure on the server
 - ✅ **Frontend variables** (WhatsApp) use `VITE_` prefix - only safe for public use
+- ⚠️ **Direct Smash upload** uses `VITE_SMASH_API_KEY` in the browser (public exposure). Only enable if acceptable.
 - ✅ After adding variables in Vercel, **redeploy** your site for changes to take effect
 - ✅ Server-side variables are **NEVER exposed** to the browser (secure!)
 
