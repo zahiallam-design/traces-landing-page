@@ -720,11 +720,16 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
                     onUploadStateChange={(isInProgress) => {
                       console.log(`[App] Upload state change for album ${index}:`, isInProgress);
                       try {
-                        // Track upload state per album
-                        setAlbumUploadStates(prev => ({
-                          ...prev,
-                          [index]: isInProgress
-                        }));
+                        // Track upload state per album (avoid re-render if unchanged)
+                        setAlbumUploadStates(prev => {
+                          if (prev[index] === isInProgress) {
+                            return prev;
+                          }
+                          return {
+                            ...prev,
+                            [index]: isInProgress
+                          };
+                        });
                       } catch (error) {
                         console.error(`[App] Error updating upload state for album ${index}:`, error);
                       }

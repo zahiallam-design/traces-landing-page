@@ -294,6 +294,8 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
     setIsQueued(false); // Clear queued state on cancel
     setUploadProgress(0);
     setCompressionProgress(0);
+    setUploadedBytes(0);
+    setTotalBytes(0);
     setUploadStatus({ 
       type: 'error', 
       message: 'Upload cancelled by user.' 
@@ -380,10 +382,12 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                 
                 // Always enforce renamed filename for compressed files
                 const targetName = renamedFile?.name || originalFile.name;
-                const compressedFile = new File([compressed], targetName, {
-                  type: compressed.type || originalFile.type,
-                  lastModified: originalFile.lastModified || Date.now()
-                });
+                const compressedFile = createFileFromBlob(
+                  compressed,
+                  targetName,
+                  originalFile.type,
+                  originalFile.lastModified
+                );
                 console.log(`Converted compressed file to File object for ${targetName}`);
                 
                 processedFiles[i] = compressedFile;
@@ -394,13 +398,13 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                 setCompressionProgress(progressPercent);
                 console.log(`Compression progress: ${compressedCount}/${totalToCompress} images compressed (${progressPercent.toFixed(1)}%)`);
               } catch (compressionError) {
-                console.error(`Compression failed for ${file.name}:`, compressionError);
+                console.error(`Compression failed for ${originalFile.name}:`, compressionError);
                 setIsCompressing(false);
                 setCompressionProgress(0);
                 throw compressionError;
               }
             } else {
-              console.log(`File ${file.name} is already under 2MB (${fileSizeMB} MB), skipping compression`);
+              console.log(`File ${originalFile.name} is already under 2MB (${fileSizeMB} MB), skipping compression`);
             }
           }
           
@@ -444,7 +448,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
       }
       
       const invalidFiles = processedFiles.filter(file => {
-        if (!(file instanceof File)) {
+        if (typeof File !== 'undefined' && !(file instanceof File)) {
           return true;
         }
         const hasSupportedType = supportedTypes.includes(file.type.toLowerCase());
@@ -482,7 +486,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
       const usedNames = new Set();
       
       const filesToUpload = processedFiles.map((file) => {
-        if (!(file instanceof File)) {
+        if (typeof File !== 'undefined' && !(file instanceof File)) {
           throw new Error(`Invalid file object: ${file.name}`);
         }
         
@@ -511,7 +515,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
         usedNames.add(finalFileName);
         
         if (finalFileName !== file.name) {
-          return new File([file], finalFileName, { type: file.type, lastModified: file.lastModified });
+          return createFileFromBlob(file, finalFileName, file.type, file.lastModified);
         }
         
         return file;
@@ -1019,6 +1023,20 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  };
+
+  const createFileFromBlob = (blob, name, fallbackType, fallbackLastModified) => {
+    if (typeof File !== 'undefined') {
+      return new File([blob], name, {
+        type: blob.type || fallbackType,
+        lastModified: fallbackLastModified || Date.now()
+      });
+    }
+    return Object.assign(blob, {
+      name,
+      type: blob.type || fallbackType,
+      lastModified: fallbackLastModified || Date.now()
+    });
   };
 
 
