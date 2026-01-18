@@ -49,7 +49,7 @@ function App() {
         id: generateAlbumId(),
         selectedAlbum: null,
         selectedColor: null,
-        smashTransferUrl: null,
+        photosFolderLink: null,
         fileCount: 0,
         cover: null
       }]);
@@ -69,7 +69,7 @@ function App() {
         id: generateAlbumId(),
         selectedAlbum: null,
         selectedColor: null,
-        smashTransferUrl: null,
+        photosFolderLink: null,
         fileCount: 0,
         cover: null
       };
@@ -283,7 +283,7 @@ function App() {
       if (updatedAlbums[albumIndex]) {
         updatedAlbums[albumIndex] = { 
           ...updatedAlbums[albumIndex], 
-          smashTransferUrl: transferUrl,
+          photosFolderLink: transferUrl,
           fileCount: count
         };
       }
@@ -348,7 +348,7 @@ function App() {
           color: album.selectedColor,
           price: album.selectedAlbum?.price
         },
-        smashTransferUrl: album.smashTransferUrl,
+        photosFolderLink: album.photosFolderLink,
         fileCount: album.fileCount,
         cover: album.cover
       })),
@@ -767,10 +767,11 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
                     onUploadCancel={handleUploadCancel}
                   />
                 )}
-                {(album.smashTransferUrl || albumUploadStates[index] || (album.selectedAlbum && album.selectedColor)) && (
+                {(album.photosFolderLink || albumUploadStates[index] || (album.selectedAlbum && album.selectedColor)) && (
                   <>
                     <CoverCustomization
                       albumIndex={index}
+                      orderNumber={orderNumber}
                       onCoverChange={(coverData) => {
                         handleCoverChange(index, coverData);
                         // Clear validation error when cover is set

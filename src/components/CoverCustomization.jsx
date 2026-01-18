@@ -1,10 +1,10 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { useBreakpoint } from '../hooks/useBreakpoint';
-import imageCompression from 'browser-image-compression';
 import Cropper from 'react-easy-crop';
+import { ensureFolder, getOrCreateSharedLink, uploadFileResumable } from '../services/dropboxService';
 import './CoverCustomization.css';
 
-function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
+function CoverCustomization({ albumIndex, orderNumber, onCoverChange, hasError }) {
   const breakpoint = useBreakpoint();
   const [coverType, setCoverType] = useState(null); // 'image' or 'text'
   const [coverImage, setCoverImage] = useState(null);
@@ -60,83 +60,7 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
     }
   };
 
-  // Compress cover image if needed (same logic as main upload)
-  const compressCoverImageIfNeeded = async (file) => {
-    const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB
-    
-    if (file.size <= MAX_FILE_SIZE) {
-      return file;
-    }
-    
-    console.log(`Compressing cover image ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)...`);
-    
-    const TARGET_SIZE_MB = 3.8;
-    const isVeryLarge = file.size > 20 * 1024 * 1024;
-    let currentFile = file;
-    let quality = 0.9;
-    let maxSizeMB = TARGET_SIZE_MB;
-    const maxAttempts = 5;
-    
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      try {
-        const isAvif = currentFile.type === 'image/avif' || currentFile.name.toLowerCase().endsWith('.avif');
-        let outputType = currentFile.type;
-        if (isAvif || currentFile.type === 'image/avif') {
-          outputType = 'image/jpeg';
-        }
-        
-        const options = {
-          maxSizeMB: maxSizeMB,
-          maxWidthOrHeight: 4000,
-          useWebWorker: !isVeryLarge,
-          fileType: outputType,
-          initialQuality: quality,
-          alwaysKeepResolution: true,
-        };
-        
-        const compressionTimeout = isVeryLarge ? 60000 : 30000;
-        const compressionPromise = imageCompression(currentFile, options);
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Compression timeout')), compressionTimeout);
-        });
-        
-        const compressedFile = await Promise.race([compressionPromise, timeoutPromise]);
-        
-        if (compressedFile.size <= MAX_FILE_SIZE) {
-          console.log(`✓ Successfully compressed cover image to ${(compressedFile.size / 1024 / 1024).toFixed(2)} MB`);
-          return compressedFile;
-        }
-        
-        currentFile = compressedFile;
-        if (attempt < maxAttempts) {
-          quality = Math.max(0.5, quality - (attempt === 1 ? 0.05 : 0.1));
-          maxSizeMB = Math.max(3.0, maxSizeMB - 0.1);
-        } else {
-          const finalOptions = {
-            maxSizeMB: 3.5,
-            maxWidthOrHeight: 4000,
-            useWebWorker: !isVeryLarge,
-            fileType: (isAvif || currentFile.type === 'image/avif') ? 'image/jpeg' : currentFile.type,
-            initialQuality: 0.6,
-            alwaysKeepResolution: false,
-          };
-          const finalCompressed = await imageCompression(currentFile, finalOptions);
-          if (finalCompressed.size <= MAX_FILE_SIZE) {
-            return finalCompressed;
-          }
-          throw new Error(`Unable to compress cover image below 4MB. Final size: ${(finalCompressed.size / 1024 / 1024).toFixed(2)} MB`);
-        }
-      } catch (error) {
-        if (attempt === maxAttempts) {
-          throw new Error(`Failed to compress cover image: ${error.message}`);
-        }
-        quality = Math.max(0.3, quality - 0.2);
-        maxSizeMB = Math.max(2.0, maxSizeMB - 0.4);
-      }
-    }
-    
-    throw new Error(`Unable to compress cover image below 4MB`);
-  };
+  // Compression removed for low-memory devices
 
   // Check if image is square
   const isImageSquare = (file) => {
@@ -386,45 +310,28 @@ function CoverCustomization({ albumIndex, onCoverChange, hasError }) {
   };
 
   const uploadCoverImage = async (file) => {
-    setIsCompressingCover(true);
-    
     try {
-      // Compress if needed
-      let fileToUpload = file;
-      if (file.size > 4 * 1024 * 1024) {
-        fileToUpload = await compressCoverImageIfNeeded(file);
-      }
-      
-      setIsCompressingCover(false);
       setIsUploadingCover(true);
-      setCoverImage(fileToUpload);
-      
-      // Upload cover image to Smash
-      const formData = new FormData();
-      formData.append('files', fileToUpload);
-      
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Failed to upload cover image');
-      }
-      
-      const result = await response.json();
-      
-      if (!result.success || !result.transferUrl) {
-        throw new Error('No transfer URL received for cover image');
-      }
-      
-      setCoverImageUrl(result.transferUrl);
+      setCoverImage(file);
+
+      const orderFolderPath = `/${orderNumber || `order-${Date.now()}`}`;
+      const albumFolderPath = `${orderFolderPath}/album-${albumIndex + 1}`;
+      const coverFolderPath = `${albumFolderPath}/cover image`;
+
+      await ensureFolder(orderFolderPath);
+      await ensureFolder(albumFolderPath);
+      await ensureFolder(coverFolderPath);
+
+      const filePath = `${coverFolderPath}/${file.name}`;
+      await uploadFileResumable(file, filePath);
+      const sharedLink = await getOrCreateSharedLink(filePath);
+
+      setCoverImageUrl(sharedLink);
       setUploadError(null); // Clear any previous errors
       onCoverChange({
         type: 'image',
-        image: fileToUpload,
-        imageUrl: result.transferUrl
+        image: file,
+        imageUrl: sharedLink
       });
     } catch (error) {
       console.error('Cover image upload error:', error);

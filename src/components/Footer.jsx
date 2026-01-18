@@ -111,9 +111,8 @@ function Footer() {
               </ul>
               
               <h3>3. Photo Storage and Security</h3>
-              <p>Your photos are uploaded securely using Smash API, a trusted file transfer service. Photos are:</p>
+              <p>Your photos are uploaded securely to our storage service. Photos are:</p>
               <ul>
-                <li>Automatically compressed if they exceed 4MB to ensure smooth upload and processing</li>
                 <li>Renamed with sequential numbers based on your selected order for accurate printing</li>
                 <li>Stored temporarily for order processing</li>
                 <li>Used solely for creating your photo albums</li>
@@ -174,7 +173,6 @@ function Footer() {
                 <li>You must provide accurate and complete information</li>
                 <li>You must own or have permission to use all uploaded photos</li>
                 <li>Photos must be in supported formats (JPEG, PNG, WebP, HEIC, HEIF, AVIF)</li>
-                <li>Large photos (over 4MB) will be automatically compressed to ensure quality while maintaining reasonable file sizes</li>
                 <li>You can arrange photos in your preferred order before uploading - this order determines how photos will be printed</li>
                 <li>Cover images can be cropped to square format (9×9 cm) if needed</li>
                 <li>You are responsible for ensuring photo quality meets your expectations</li>

@@ -59,7 +59,7 @@ function OrderForm({
       } else if (!album.selectedColor) {
         errors[`album-${i}-color`] = `Please select a color for Album ${i + 1}`;
         if (!firstErrorSection) firstErrorSection = `color-selection-${i}`;
-      } else if (!album.smashTransferUrl) {
+      } else if (!album.photosFolderLink) {
         errors[`album-${i}-photos`] = `Please upload photos for Album ${i + 1}`;
         if (!firstErrorSection) firstErrorSection = `upload-photos-${i}`;
       } else if (!album.cover) {

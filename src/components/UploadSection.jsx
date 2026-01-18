@@ -1,11 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import imageCompression from 'browser-image-compression';
-import { SmashUploader } from '@smash-sdk/uploader';
 import { useBreakpoint } from '../hooks/useBreakpoint';
+import { ensureFolder, getOrCreateSharedLink, uploadFileResumable } from '../services/dropboxService';
 import './UploadSection.css';
 
-// Smash API key is now handled server-side via Vercel Serverless Functions
-// No API key needed in frontend - more secure!
+// Dropbox uploads are handled directly from the client
 
 function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplete, hasError, onUploadStateChange, onFilesSelected, onUploadProgress, requestUploadStart, currentlyProcessingAlbum, onUploadStart, onUploadCancel }) {
   console.log(`[UploadSection] Component mounting/rendering for album ${albumIndex}`, {
@@ -20,9 +18,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
   const [uploadProgress, setUploadProgress] = useState(0); // Number of files uploaded
   const [uploadStatus, setUploadStatus] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [isCompressing, setIsCompressing] = useState(false);
   const [isQueued, setIsQueued] = useState(false); // Track if upload is queued
-  const [compressionProgress, setCompressionProgress] = useState(0); // Percentage of compression progress (0-100)
   const [uploadedBytes, setUploadedBytes] = useState(0);
   const [totalBytes, setTotalBytes] = useState(0);
   const [draggedIndex, setDraggedIndex] = useState(null);
@@ -31,25 +27,24 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
   const dropzoneRef = useRef(null);
   const abortControllerRef = useRef(null);
   const cancelUploadRef = useRef(false);
-  const uploadToSmashRef = useRef(null); // Ref to store uploadToSmash function
+  const uploadToDropboxRef = useRef(null); // Ref to store uploadToDropbox function
 
   const maxFiles = selectedAlbum?.size || 52;
 
-  // Notify parent of upload/compression state changes
+  // Notify parent of upload state changes
   useEffect(() => {
     console.log(`[UploadSection] Upload state effect triggered for album ${albumIndex}`, {
       isUploading,
-      isCompressing,
       hasCallback: !!onUploadStateChange
     });
     if (onUploadStateChange) {
       try {
-        onUploadStateChange(isUploading || isCompressing);
+        onUploadStateChange(isUploading);
       } catch (error) {
         console.error(`[UploadSection] Error in onUploadStateChange for album ${albumIndex}:`, error);
       }
     }
-  }, [isUploading, isCompressing, onUploadStateChange, albumIndex]);
+  }, [isUploading, onUploadStateChange, albumIndex]);
 
   // Notify parent of upload progress
   useEffect(() => {
@@ -67,7 +62,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
   useEffect(() => {
     console.log(`[UploadSection] Queue listener effect setting up for album ${albumIndex}`, {
       currentlyProcessingAlbum,
-      hasUploadToSmash: typeof uploadToSmash === 'function'
+      hasUploadToDropbox: typeof uploadToDropbox === 'function'
     });
     
     const handleQueuedUpload = (event) => {
@@ -75,20 +70,19 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
         eventAlbumIndex: event.detail?.albumIndex,
         currentlyProcessingAlbum,
         isUploading,
-        isCompressing,
         selectedFilesCount: selectedFiles.length
       });
       
       if (event.detail.albumIndex === albumIndex && currentlyProcessingAlbum === albumIndex) {
         // This album is next in queue, start upload
-        if (!isUploading && !isCompressing && selectedFiles.length > 0) {
+        if (!isUploading && selectedFiles.length > 0) {
           console.log(`[UploadSection] Starting queued upload for album ${albumIndex}`);
           setIsQueued(false); // Clear queued state when starting
           try {
-            if (uploadToSmashRef.current) {
-              uploadToSmashRef.current();
+            if (uploadToDropboxRef.current) {
+              uploadToDropboxRef.current();
             } else {
-              console.warn(`[UploadSection] uploadToSmash not available yet for album ${albumIndex}`);
+              console.warn(`[UploadSection] uploadToDropbox not available yet for album ${albumIndex}`);
             }
           } catch (error) {
             console.error(`[UploadSection] Error starting queued upload for album ${albumIndex}:`, error);
@@ -112,176 +106,9 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
         console.error(`[UploadSection] Error removing queue listener for album ${albumIndex}:`, error);
       }
     };
-  }, [albumIndex, currentlyProcessingAlbum, isUploading, isCompressing, selectedFiles.length]);
+  }, [albumIndex, currentlyProcessingAlbum, isUploading, selectedFiles.length]);
 
-  // Check WebP browser support (cache the result)
-  const supportsWebP = useCallback(() => {
-    console.log(`[UploadSection] Checking WebP support for album ${albumIndex}`);
-    try {
-      const canvas = document.createElement('canvas');
-      canvas.width = 1;
-      canvas.height = 1;
-      const result = canvas.toDataURL('image/webp').indexOf('data:image/webp') === 0;
-      console.log(`[UploadSection] WebP support check result for album ${albumIndex}:`, result);
-      return result;
-    } catch (error) {
-      console.error(`[UploadSection] Error checking WebP support for album ${albumIndex}:`, error);
-      return false;
-    }
-  }, [albumIndex]);
-  
-  const [webPSupported, setWebPSupported] = useState(null);
-  
-  useEffect(() => {
-    console.log(`[UploadSection] WebP effect triggered for album ${albumIndex}`, {
-      webPSupported,
-      hasSupportsWebP: typeof supportsWebP === 'function'
-    });
-    
-    if (webPSupported === null) {
-      try {
-        const result = supportsWebP();
-        console.log(`[UploadSection] Setting WebP support for album ${albumIndex}:`, result);
-        setWebPSupported(result);
-      } catch (error) {
-        console.error(`[UploadSection] Error in WebP effect for album ${albumIndex}:`, error);
-        setWebPSupported(false);
-      }
-    }
-  }, [supportsWebP, webPSupported, albumIndex]);
-
-  // Compress images that are larger than 2MB
-  const compressImageIfNeeded = async (file) => {
-    if (cancelUploadRef.current) {
-      throw new Error('Upload cancelled.');
-    }
-    const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
-    
-    // If file is already under 2MB, return as-is
-    if (file.size <= MAX_FILE_SIZE) {
-      return file;
-    }
-    
-    console.log(`Compressing ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)...`);
-    
-    // Target between 1.5-2MB to reduce upload time while preserving quality for A6 printing
-    const TARGET_SIZE_MB = 1.75; // Middle of 1.5-2MB range
-    const TARGET_SIZE = TARGET_SIZE_MB * 1024 * 1024;
-    
-    // For very large files (>20MB), disable web worker (can cause memory issues)
-    const isVeryLarge = file.size > 20 * 1024 * 1024;
-    
-    let currentFile = file; // Use current file (original or previously compressed) for next attempt
-    let quality = 0.85; // Start with high quality (85%)
-    let maxSizeMB = TARGET_SIZE_MB; // Target 1.75MB (middle of 1.5-2MB range)
-    const maxAttempts = 5;
-    
-    // Use cached WebP support check
-    const useWebP = webPSupported === true;
-    
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      try {
-        if (cancelUploadRef.current) {
-          throw new Error('Upload cancelled.');
-        }
-        // Determine output type: prefer WebP if supported, otherwise JPEG
-        let outputType = currentFile.type;
-        if (currentFile.type === 'image/avif' || currentFile.name.toLowerCase().endsWith('.avif')) {
-          // Convert AVIF to WebP or JPEG
-          outputType = useWebP ? 'image/webp' : 'image/jpeg';
-        } else if (useWebP && (currentFile.type === 'image/jpeg' || currentFile.type === 'image/png')) {
-          // Use WebP for better compression if browser supports it
-          outputType = 'image/webp';
-        } else {
-          // Fallback to JPEG
-          outputType = 'image/jpeg';
-        }
-        
-        const options = {
-          maxSizeMB: maxSizeMB,
-          maxWidthOrHeight: 2500, // Optimized for A6 printing (300 DPI needs ~1063px, 2500px provides good quality with faster compression)
-          useWebWorker: !isVeryLarge, // Disable web worker for very large files (can cause memory issues)
-          fileType: outputType, // Use WebP if supported, otherwise JPEG
-          initialQuality: quality,
-          alwaysKeepResolution: true, // Try to keep resolution, only compress quality
-        };
-        
-        console.log(`Compression attempt ${attempt} options:`, { maxSizeMB, quality, fileSize: (currentFile.size / 1024 / 1024).toFixed(2) + ' MB', useWebWorker: options.useWebWorker });
-        
-        // Add timeout for compression (60 seconds per attempt for large files)
-        const compressionTimeout = isVeryLarge ? 60000 : 30000;
-        const compressionPromise = imageCompression(currentFile, options);
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Compression timeout - file may be too large')), compressionTimeout);
-        });
-        
-        const compressedFile = await Promise.race([compressionPromise, timeoutPromise]);
-        if (cancelUploadRef.current) {
-          throw new Error('Upload cancelled.');
-        }
-        console.log(`Attempt ${attempt}: Compressed ${file.name}: ${(currentFile.size / 1024 / 1024).toFixed(2)} MB → ${(compressedFile.size / 1024 / 1024).toFixed(2)} MB`);
-        
-        // If file is now under 2MB, we're done
-        if (compressedFile.size <= MAX_FILE_SIZE) {
-          console.log(`✓ Successfully compressed ${file.name} to ${(compressedFile.size / 1024 / 1024).toFixed(2)} MB (target: ~${TARGET_SIZE_MB} MB)`);
-          return compressedFile;
-        }
-        
-        // Update currentFile to use compressed version for next attempt
-        currentFile = compressedFile;
-        
-        // If still too large, gradually reduce quality and target size
-        if (attempt < maxAttempts) {
-          // Reduce quality more gradually (by 5-10% per attempt)
-          quality = Math.max(0.5, quality - (attempt === 1 ? 0.05 : 0.1)); // Small reduction first, then more
-          maxSizeMB = Math.max(1.5, maxSizeMB - 0.05); // Reduce target size gradually, minimum 1.5MB
-          console.log(`File still too large (${(compressedFile.size / 1024 / 1024).toFixed(2)} MB), trying slightly more compression (quality: ${quality}, maxSizeMB: ${maxSizeMB})...`);
-        } else {
-          // Last attempt - allow more aggressive compression if needed
-          if (compressedFile.size > MAX_FILE_SIZE) {
-            // Try one more time with more aggressive settings
-            // Use cached WebP support for final attempt
-            const useWebPFinal = webPSupported === true;
-            let finalOutputType = currentFile.type;
-            if (currentFile.type === 'image/avif' || currentFile.name.toLowerCase().endsWith('.avif')) {
-              finalOutputType = useWebPFinal ? 'image/webp' : 'image/jpeg';
-            } else if (useWebPFinal && (currentFile.type === 'image/jpeg' || currentFile.type === 'image/png')) {
-              finalOutputType = 'image/webp';
-            } else {
-              finalOutputType = 'image/jpeg';
-            }
-            
-            const finalOptions = {
-              maxSizeMB: 2.0, // Target upper limit of range
-              maxWidthOrHeight: 2500, // Optimized for A6 printing
-              useWebWorker: !isVeryLarge,
-              fileType: finalOutputType, // Use WebP if supported, otherwise JPEG
-              initialQuality: 0.6,
-              alwaysKeepResolution: false, // Allow resizing as last resort
-            };
-            const finalCompressed = await imageCompression(currentFile, finalOptions);
-            if (finalCompressed.size <= MAX_FILE_SIZE) {
-              console.log(`✓ Successfully compressed ${file.name} to ${(finalCompressed.size / 1024 / 1024).toFixed(2)} MB (final attempt)`);
-              return finalCompressed;
-            }
-            throw new Error(`Unable to compress ${file.name} below 2MB after ${maxAttempts} attempts. Final size: ${(finalCompressed.size / 1024 / 1024).toFixed(2)} MB`);
-          }
-        }
-      } catch (error) {
-        console.error(`Compression attempt ${attempt} failed for ${file.name}:`, error);
-        if (attempt === maxAttempts) {
-          // Last attempt failed, throw error
-          throw new Error(`Failed to compress ${file.name} after ${maxAttempts} attempts: ${error.message}`);
-        }
-        // Try again with more aggressive settings
-        quality = Math.max(0.3, quality - 0.2);
-        maxSizeMB = Math.max(1.5, maxSizeMB - 0.3);
-      }
-    }
-    
-    // Should never reach here, but just in case
-    throw new Error(`Unable to compress ${file.name} below 4MB. Please use a smaller image.`);
-  };
+  // Compression removed to reduce client memory usage
 
   const cancelUpload = useCallback(() => {
     cancelUploadRef.current = true;
@@ -290,10 +117,8 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
       abortControllerRef.current = null;
     }
     setIsUploading(false);
-    setIsCompressing(false);
     setIsQueued(false); // Clear queued state on cancel
     setUploadProgress(0);
-    setCompressionProgress(0);
     setUploadedBytes(0);
     setTotalBytes(0);
     setUploadStatus({ 
@@ -307,7 +132,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
     }
   }, [albumIndex, onUploadCancel]);
 
-  const uploadToSmash = useCallback(async () => {
+  const uploadToDropbox = useCallback(async () => {
     if (selectedFiles.length === 0 || isUploading) return;
     
     // Double-check file count limit
@@ -327,8 +152,6 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
     setIsUploading(false);
     setUploadProgress(0); // Reset to 0 files uploaded
     setUploadStatus(null);
-    setIsCompressing(false);
-    setCompressionProgress(0); // Reset to 0 files compressed
     setUploadedBytes(0);
     setTotalBytes(0);
 
@@ -340,94 +163,10 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
       
       // Rename files with sequential numbers based on user's order
       const renamedFiles = renameFilesWithOrder(selectedFiles);
-      
-      // Compress large images before upload
-      const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
-      const filesToCompress = renamedFiles.filter(file => file.size > MAX_FILE_SIZE);
-      let processedFiles = [...renamedFiles];
-      
-      if (filesToCompress.length > 0) {
-        console.log(`Found ${filesToCompress.length} files to compress:`, filesToCompress.map(f => `${f.name} (${(f.size / 1024 / 1024).toFixed(2)} MB)`));
-        setIsCompressing(true);
-        setUploadStatus({ 
-          type: 'info', 
-          message: `Compressing ${filesToCompress.length} large image(s)...` 
-        });
-        
-        // Compress files one by one with progress
-        try {
-          let compressedCount = 0;
-          const totalToCompress = filesToCompress.length;
-          
-          for (let i = 0; i < selectedFiles.length; i++) {
-            if (cancelUploadRef.current) {
-              throw new Error('Upload cancelled.');
-            }
-            const originalFile = selectedFiles[i];
-            const renamedFile = renamedFiles[i];
-            const fileSizeMB = (originalFile.size / 1024 / 1024).toFixed(2);
-            console.log(`Processing file ${i + 1}/${selectedFiles.length}: ${originalFile.name} (${fileSizeMB} MB)`);
-            
-            if (originalFile.size > MAX_FILE_SIZE) {
-              try {
-                console.log(`File ${originalFile.name} is ${fileSizeMB} MB, compressing...`);
-                const compressed = await compressImageIfNeeded(originalFile);
-                const compressedSizeMB = (compressed.size / 1024 / 1024).toFixed(2);
-                console.log(`Compression complete: ${originalFile.name} → ${compressedSizeMB} MB`);
-                
-                // Verify compression was successful
-                if (compressed.size > MAX_FILE_SIZE) {
-                  throw new Error(`${originalFile.name} could not be compressed below 2MB. Final size: ${compressedSizeMB} MB`);
-                }
-                
-                // Always enforce renamed filename for compressed files
-                const targetName = renamedFile?.name || originalFile.name;
-                const compressedFile = createFileFromBlob(
-                  compressed,
-                  targetName,
-                  originalFile.type,
-                  originalFile.lastModified
-                );
-                console.log(`Converted compressed file to File object for ${targetName}`);
-                
-                processedFiles[i] = compressedFile;
-                compressedCount++;
-                
-                // Update progress based on actual compression progress
-                const progressPercent = totalToCompress > 0 ? (compressedCount / totalToCompress) * 100 : 100;
-                setCompressionProgress(progressPercent);
-                console.log(`Compression progress: ${compressedCount}/${totalToCompress} images compressed (${progressPercent.toFixed(1)}%)`);
-              } catch (compressionError) {
-                console.error(`Compression failed for ${originalFile.name}:`, compressionError);
-                setIsCompressing(false);
-                setCompressionProgress(0);
-                throw compressionError;
-              }
-            } else {
-              console.log(`File ${originalFile.name} is already under 2MB (${fileSizeMB} MB), skipping compression`);
-            }
-          }
-          
-          console.log('All files processed. Compression complete.');
-          setIsCompressing(false);
-          setCompressionProgress(0);
-          setUploadStatus(null);
-        } catch (compressionError) {
-          console.error('Compression error:', compressionError);
-          setIsCompressing(false);
-          setCompressionProgress(0);
-          throw compressionError;
-        }
-      }
-      
+      const processedFiles = [...renamedFiles];
+
       if (signal.aborted || cancelUploadRef.current) {
         throw new Error('Upload cancelled.');
-      }
-
-      // Final verification: Re-check file sizes after compression
-      const oversizedFiles = processedFiles.filter(file => file.size > MAX_FILE_SIZE);
-      if (oversizedFiles.length > 0) {
-        throw new Error(`Some images are still too large after compression: ${oversizedFiles.map(f => `${f.name} (${(f.size / 1024 / 1024).toFixed(2)} MB)`).join(', ')}. Please use smaller images.`);
       }
       
       // Ensure files have proper extensions and unique names
@@ -530,185 +269,40 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
       }
 
       const totalFiles = filesToUpload.length;
-      const smashApiKey = import.meta.env.VITE_SMASH_API_KEY;
-      const smashRegion = import.meta.env.VITE_SMASH_REGION || 'eu-west-3';
+      const totalBytes = filesToUpload.reduce((sum, file) => sum + file.size, 0);
+      setTotalBytes(totalBytes);
 
-      let transferId = null;
+      const orderFolderPath = `/${orderNumber || `order-${Date.now()}`}`;
+      const albumFolderPath = `${orderFolderPath}/album-${albumIndex + 1}`;
+      const albumImagesFolderPath = `${albumFolderPath}/album images`;
+      const coverFolderPath = `${albumFolderPath}/cover image`;
+
+      await ensureFolder(orderFolderPath);
+      await ensureFolder(albumFolderPath);
+      await ensureFolder(albumImagesFolderPath);
+      await ensureFolder(coverFolderPath);
+
+      let uploadedBytesSoFar = 0;
       let transferUrl = null;
 
-      if (smashApiKey) {
-        console.log('Uploading directly to Smash from the browser...');
-        setIsUploading(true);
-        const uploader = new SmashUploader({
-          region: smashRegion,
-          token: smashApiKey
-        });
-        uploader.on('progress', (event) => {
-          const nextTotal = event?.data?.totalBytes || 0;
-          const nextUploaded = event?.data?.uploadedBytes || 0;
-          if (nextTotal) {
-            setTotalBytes(nextTotal);
-          }
-          setUploadedBytes(nextUploaded);
-        });
-        const result = await uploader.upload({ files: filesToUpload });
-        transferId = result.transfer?.id || result.id;
-        transferUrl = result.transfer?.transferUrl || result.transferUrl || (transferId ? `https://fromsmash.com/${transferId}` : null);
-      } else {
-        // Upload files in batches to avoid Vercel's 4.5MB request size limit
-        // Vercel serverless functions have a ~4.5MB body size limit
-        // For large files, use smaller batches (max 4MB per batch to be safe)
-        const MAX_BATCH_SIZE = 4 * 1024 * 1024; // 4MB max per batch
-        const averageFileSize = filesToUpload.reduce((sum, file) => sum + file.size, 0) / filesToUpload.length;
-        
-        // Files should already be under 4MB after compression check above
-        // Double-check for safety
-        const stillOversized = filesToUpload.filter(file => file.size > MAX_BATCH_SIZE);
-        if (stillOversized.length > 0) {
-          throw new Error(`Files exceed the 4MB size limit: ${stillOversized.map(f => `${f.name} (${(f.size / 1024 / 1024).toFixed(2)} MB)`).join(', ')}. Please compress your images.`);
+      setIsUploading(true);
+      for (let i = 0; i < filesToUpload.length; i++) {
+        if (signal.aborted || cancelUploadRef.current) {
+          throw new Error('Upload cancelled.');
         }
-        
-        // Create batches dynamically, ensuring each batch doesn't exceed MAX_BATCH_SIZE
-        // Account for FormData overhead (~100KB per file)
-        const FORM_DATA_OVERHEAD = 100 * 1024; // ~100KB per file for FormData overhead
-        const batches = [];
-        let currentBatch = [];
-        let currentBatchSize = 0;
-        
-        for (const file of filesToUpload) {
-          const fileSizeWithOverhead = file.size + FORM_DATA_OVERHEAD;
-          
-          // If adding this file would exceed the limit, start a new batch
-          if (currentBatch.length > 0 && currentBatchSize + fileSizeWithOverhead > MAX_BATCH_SIZE) {
-            batches.push(currentBatch);
-            currentBatch = [file];
-            currentBatchSize = fileSizeWithOverhead;
-          } else {
-            currentBatch.push(file);
-            currentBatchSize += fileSizeWithOverhead;
-          }
-        }
-        
-        // Don't forget the last batch
-        if (currentBatch.length > 0) {
-          batches.push(currentBatch);
-        }
-        
-        // Verify all batches are within limit and log batch info
-        const batchSizes = batches.map(batch => {
-          const size = batch.reduce((sum, file) => sum + file.size + FORM_DATA_OVERHEAD, 0);
-          return { count: batch.length, sizeMB: (size / 1024 / 1024).toFixed(2) };
-        });
-        
-        const oversizedBatches = batchSizes.filter(b => b.sizeMB > 4.5);
-        if (oversizedBatches.length > 0) {
-          console.warn('Some batches exceed safe limit:', oversizedBatches);
-          // Re-batch oversized batches more aggressively
-          const rebatched = [];
-          for (let i = 0; i < batches.length; i++) {
-            const batch = batches[i];
-            const batchSize = batch.reduce((sum, file) => sum + file.size + FORM_DATA_OVERHEAD, 0);
-            
-            if (batchSize > MAX_BATCH_SIZE) {
-              // Split this batch - one file per batch
-              batch.forEach(file => rebatched.push([file]));
-            } else {
-              rebatched.push(batch);
-            }
-          }
-          batches.length = 0;
-          batches.push(...rebatched);
-        }
-        
-        console.log(`Uploading ${filesToUpload.length} files in ${batches.length} batches (avg file size: ${(averageFileSize / 1024 / 1024).toFixed(2)} MB)`);
-        batchSizes.forEach((batch, idx) => {
-          console.log(`  Batch ${idx + 1}: ${batch.count} files, ~${batch.sizeMB} MB`);
+        const file = filesToUpload[i];
+        const destinationPath = `${albumImagesFolderPath}/${file.name}`;
+
+        await uploadFileResumable(file, destinationPath, (uploadedForFile) => {
+          setUploadedBytes(uploadedBytesSoFar + uploadedForFile);
+          setTotalBytes(totalBytes);
         });
 
-        // Upload first batch to create transfer, then add remaining files
-        setIsUploading(true);
-        for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-          let batch = batches[batchIndex];
-          
-          // Final safety check: verify batch size before uploading
-          let batchSize = batch.reduce((sum, file) => sum + file.size + FORM_DATA_OVERHEAD, 0);
-          
-          // If batch still exceeds limit, split it further (one file per batch)
-          if (batchSize > MAX_BATCH_SIZE) {
-            console.warn(`Batch ${batchIndex + 1} exceeds limit (${(batchSize / 1024 / 1024).toFixed(2)} MB), splitting further...`);
-            // Split into individual files
-            const splitBatches = batch.map(file => [file]);
-            // Replace current batch with first split, insert rest after
-            batch = splitBatches[0];
-            batches.splice(batchIndex + 1, 0, ...splitBatches.slice(1));
-            batchSize = batch.reduce((sum, file) => sum + file.size + FORM_DATA_OVERHEAD, 0);
-          }
-          
-          const formData = new FormData();
-          
-          batch.forEach((file) => {
-            formData.append('files', file);
-          });
-
-          // Include transferId if we already have one (for subsequent batches)
-          if (transferId) {
-            formData.append('transferId', transferId);
-          }
-
-          // Update progress - track number of files uploaded
-          const filesUploadedSoFar = batches.slice(0, batchIndex + 1).reduce((sum, batch) => sum + batch.length, 0);
-          setUploadProgress(filesUploadedSoFar);
-
-          console.log(`Uploading batch ${batchIndex + 1}/${batches.length} (${batch.length} files, ~${(batchSize / 1024 / 1024).toFixed(2)} MB)...`);
-          
-          // Create timeout promise (60 seconds per batch)
-          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => {
-              reject(new Error('Upload timeout: Request took too long. Please try again or compress your images.'));
-            }, 60000);
-          });
-          
-          try {
-            // Race between fetch and timeout
-            const response = await Promise.race([
-              fetch('/api/upload', {
-                method: 'POST',
-                body: formData,
-                signal: signal
-              }),
-              timeoutPromise
-            ]);
-            
-            if (!response.ok) {
-              const errorText = await response.text();
-              let errorData;
-              try {
-                errorData = JSON.parse(errorText);
-              } catch {
-                errorData = { error: errorText || `Server error (${response.status})` };
-              }
-              throw new Error(errorData.error || errorData.message || `Upload failed with status ${response.status}`);
-            }
-
-            const result = await response.json();
-          
-            if (!result.success) {
-              throw new Error(result.error || result.message || 'Upload failed');
-            }
-
-            // Store transfer info from first batch
-            if (batchIndex === 0) {
-              transferId = result.transferId;
-              transferUrl = result.transferUrl;
-            }
-
-            console.log(`Batch ${batchIndex + 1}/${batches.length} completed successfully`);
-          } catch (batchError) {
-            console.error(`Batch ${batchIndex + 1} failed:`, batchError);
-            throw batchError;
-          }
-        }
+        uploadedBytesSoFar += file.size;
+        setUploadProgress(i + 1);
       }
+
+      transferUrl = await getOrCreateSharedLink(orderFolderPath);
 
       // Clear any interval if it exists
       if (progressInterval) {
@@ -751,23 +345,19 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
       }
       
       // Reset compression state on error
-      setIsCompressing(false);
-      setCompressionProgress(0);
       
       let errorMessage = 'Upload failed. ';
       
       if (error.name === 'AbortError' || signal.aborted) {
         errorMessage = 'Upload cancelled.';
       } else if (error.message?.includes('timeout') || error.message?.includes('Timeout')) {
-        errorMessage += 'Upload took too long. Large files may take longer. Please try again or compress your images.';
+        errorMessage += 'Upload took too long. Please try again.';
       } else if (error.message?.includes('API key')) {
         errorMessage += 'Server configuration error. Please contact support.';
       } else if (error.message?.includes('413') || error.message?.includes('too large')) {
-        errorMessage += 'Files are too large. Please compress your images or upload fewer files at once.';
-      } else if (error.message?.includes('compress') || error.message?.includes('Compression') || error.message?.includes('Unable to compress')) {
-        errorMessage = error.message; // Use compression error message as-is
+        errorMessage += 'Files are too large. Please upload fewer files at once.';
       } else {
-        errorMessage += error.message || 'Please try again. If the problem persists, try compressing your images.';
+        errorMessage += error.message || 'Please try again.';
       }
       
       console.error('Upload error details:', error);
@@ -784,16 +374,14 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
       if (!signal.aborted) {
         setIsUploading(false);
       }
-      setIsCompressing(false);
-      setCompressionProgress(0);
       abortControllerRef.current = null;
     }
-  }, [selectedFiles, isUploading, onUploadComplete, webPSupported]);
+  }, [selectedFiles, isUploading, onUploadComplete, orderNumber, albumIndex]);
 
-  // Update ref whenever uploadToSmash changes
+  // Update ref whenever uploadToDropbox changes
   useEffect(() => {
-    uploadToSmashRef.current = uploadToSmash;
-  }, [uploadToSmash]);
+    uploadToDropboxRef.current = uploadToDropbox;
+  }, [uploadToDropbox]);
 
   // Manual upload - no automatic trigger
   const handleUploadClick = async () => {
@@ -805,7 +393,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
       alert(`You have selected ${selectedFiles.length} photos, but this album only allows ${maxFiles} photos. Please remove ${selectedFiles.length - maxFiles} photo${selectedFiles.length - maxFiles > 1 ? 's' : ''} to proceed.`);
       return;
     }
-    if (isUploading || isCompressing) {
+    if (isUploading) {
       return;
     }
     
@@ -830,7 +418,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
     
     // Clear queued state when starting upload
     setIsQueued(false);
-    uploadToSmash();
+    uploadToDropbox();
   };
 
   const handleFileSelect = (files) => {
@@ -921,8 +509,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
     // Continue with valid files only
     const filesToProcess = validFiles;
     
-    // Note: Large files will be automatically compressed when user clicks "Upload Photos"
-    // No need to block file selection here - compression happens during upload
+    // Files are uploaded as-is (no compression)
     
     // If we already have uploaded files and are adding more, reset upload status
     const willResetUpload = uploadStatus?.type === 'success';
@@ -992,7 +579,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
 
   const removeFile = (index) => {
     // Don't allow removing files after upload is complete or during upload/compression
-    if (uploadStatus?.type === 'success' || isUploading || isCompressing) {
+    if (uploadStatus?.type === 'success' || isUploading) {
       return;
     }
     
@@ -1057,14 +644,14 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
   };
 
   const moveFileUp = (index) => {
-    if (index === 0 || uploadStatus?.type === 'success' || isUploading || isCompressing) return;
+    if (index === 0 || uploadStatus?.type === 'success' || isUploading) return;
     const newFiles = [...selectedFiles];
     [newFiles[index - 1], newFiles[index]] = [newFiles[index], newFiles[index - 1]];
     setSelectedFiles(newFiles);
   };
 
   const moveFileDown = (index) => {
-    if (index === selectedFiles.length - 1 || uploadStatus?.type === 'success' || isUploading || isCompressing) return;
+    if (index === selectedFiles.length - 1 || uploadStatus?.type === 'success' || isUploading) return;
     const newFiles = [...selectedFiles];
     [newFiles[index], newFiles[index + 1]] = [newFiles[index + 1], newFiles[index]];
     setSelectedFiles(newFiles);
@@ -1239,7 +826,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                           index={index}
                         onRemove={removeFile}
                         formatFileSize={formatFileSize}
-                        isUploadComplete={uploadStatus?.type === 'success' || isUploading || isCompressing || isQueued}
+                        isUploadComplete={uploadStatus?.type === 'success' || isUploading || isQueued}
                         onDragStart={handleDragStart}
                         onDragOver={handleFileDragOver}
                         onDragEnd={handleDragEnd}
@@ -1248,7 +835,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                         onMoveDown={moveFileDown}
                         canMoveUp={index > 0}
                         canMoveDown={index < selectedFiles.length - 1}
-                        isUploading={isUploading || isCompressing || isQueued}
+                        isUploading={isUploading || isQueued}
                         isQueued={isQueued}
                         />
                       ))}
@@ -1263,16 +850,16 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                         <button 
                           onClick={handleUploadClick}
                           className="btn btn-primary"
-                          disabled={selectedFiles.length > maxFiles || isQueued || isUploading || isCompressing}
+                          disabled={selectedFiles.length > maxFiles || isQueued || isUploading}
                           style={{ 
                             padding: '0.75rem 2rem', 
                             fontSize: '1rem',
-                            opacity: (selectedFiles.length > maxFiles || isQueued || isUploading || isCompressing) ? 0.5 : 1,
-                            cursor: (selectedFiles.length > maxFiles || isQueued || isUploading || isCompressing) ? 'not-allowed' : 'pointer',
+                            opacity: (selectedFiles.length > maxFiles || isQueued || isUploading) ? 0.5 : 1,
+                            cursor: (selectedFiles.length > maxFiles || isQueued || isUploading) ? 'not-allowed' : 'pointer',
                             backgroundColor: isQueued ? '#95a5a6' : undefined
                           }}
                         >
-                          {isQueued ? '⏳ Upload Queued' : isUploading || isCompressing ? 'Uploading...' : 'Upload Photos'}
+                          {isQueued ? '⏳ Upload Queued' : isUploading ? 'Uploading...' : 'Upload Photos'}
                         </button>
                       </div>
                     )}
@@ -1289,17 +876,6 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                     )}
                   </div>
                 </>
-              )}
-              {isCompressing && (
-                <div className="upload-progress">
-                  <div className="progress-bar">
-                    <div className="progress-fill" style={{ width: `${compressionProgress}%` }}></div>
-                  </div>
-                  <p className="progress-text" style={{ marginTop: '0.5rem' }}>Compressing images...</p>
-                  <p style={{ marginTop: '1rem', fontSize: '0.9rem', color: 'var(--pastel-green-dark)', fontStyle: 'italic', textAlign: 'center' }}>
-                    💡 You can continue the process and scroll down to customize your cover while compression is in progress.
-                  </p>
-                </div>
               )}
               {isUploading && (
                 <div className="upload-progress">
@@ -1330,14 +906,12 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                       Cancel Upload
                     </button>
                   </div>
-                  {!isCompressing && (
-                    <p style={{ marginTop: '1rem', fontSize: '0.9rem', color: 'var(--pastel-green-dark)', fontStyle: 'italic', textAlign: 'center' }}>
-                      💡 You can continue the process and scroll down to customize your cover while upload is in progress.
-                    </p>
-                  )}
+                  <p style={{ marginTop: '1rem', fontSize: '0.9rem', color: 'var(--pastel-green-dark)', fontStyle: 'italic', textAlign: 'center' }}>
+                    💡 You can continue the process and scroll down to customize your cover while upload is in progress.
+                  </p>
                 </div>
               )}
-              {uploadStatus && !isUploading && !isCompressing && (
+              {uploadStatus && !isUploading && (
                 <div className={`upload-status ${uploadStatus.type}`} style={{
                   ...(uploadStatus.type === 'info' && isQueued ? {
                     background: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
