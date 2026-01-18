@@ -1452,7 +1452,6 @@ function FileItem({ file, index, onRemove, formatFileSize, isUploadComplete, onD
   useEffect(() => {
     if (!isVisible || preview) return;
 
-    let thumbnailUrl = null;
     let cancelled = false;
 
     // Generate thumbnail with small delay to batch process
@@ -1460,7 +1459,6 @@ function FileItem({ file, index, onRemove, formatFileSize, isUploadComplete, onD
       generateThumbnail(file)
         .then((url) => {
           if (!cancelled) {
-            thumbnailUrl = url;
             setPreview(url);
           }
         })
@@ -1469,7 +1467,6 @@ function FileItem({ file, index, onRemove, formatFileSize, isUploadComplete, onD
           // Fallback: use object URL directly (less memory efficient but works)
           if (!cancelled) {
             const fallbackUrl = URL.createObjectURL(file);
-            thumbnailUrl = fallbackUrl;
             setPreview(fallbackUrl);
           }
         });
@@ -1478,10 +1475,6 @@ function FileItem({ file, index, onRemove, formatFileSize, isUploadComplete, onD
     return () => {
       cancelled = true;
       clearTimeout(timeoutId);
-      // Clean up object URL
-      if (thumbnailUrl) {
-        URL.revokeObjectURL(thumbnailUrl);
-      }
     };
   }, [isVisible, file, index, generateThumbnail, preview]);
 
