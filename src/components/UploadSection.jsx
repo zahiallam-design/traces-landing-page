@@ -23,6 +23,9 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
   const [isCompressing, setIsCompressing] = useState(false);
   const [isQueued, setIsQueued] = useState(false); // Track if upload is queued
   const [compressionProgress, setCompressionProgress] = useState(0); // Percentage of compression progress (0-100)
+  const [uploadedBytes, setUploadedBytes] = useState(0);
+  const [totalBytes, setTotalBytes] = useState(0);
+  const [remainingTime, setRemainingTime] = useState(null);
   const [draggedIndex, setDraggedIndex] = useState(null);
   const [rejectedRawFiles, setRejectedRawFiles] = useState([]); // Track rejected RAW files (File objects)
   const fileInputRef = useRef(null);
@@ -306,6 +309,9 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
     setUploadStatus(null);
     setIsCompressing(false);
     setCompressionProgress(0); // Reset to 0 files compressed
+    setUploadedBytes(0);
+    setTotalBytes(0);
+    setRemainingTime(null);
 
     // Declare progressInterval outside try block so it's accessible in catch/finally
     let progressInterval = null;
@@ -504,6 +510,16 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
         const uploader = new SmashUploader({
           region: smashRegion,
           token: smashApiKey
+        });
+        uploader.on('progress', (event) => {
+          const nextTotal = event?.data?.totalBytes || 0;
+          const nextUploaded = event?.data?.uploadedBytes || 0;
+          const nextRemaining = Number.isFinite(event?.data?.remainingTime) ? event.data.remainingTime : null;
+          if (nextTotal) {
+            setTotalBytes(nextTotal);
+          }
+          setUploadedBytes(nextUploaded);
+          setRemainingTime(nextRemaining);
         });
         const result = await uploader.upload({ files: filesToUpload });
         transferId = result.transfer?.id || result.id;
@@ -986,6 +1002,14 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
   };
 
+  const formatDuration = (seconds) => {
+    if (!Number.isFinite(seconds) || seconds === null) return null;
+    if (seconds < 60) return `${Math.round(seconds)}s`;
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.round(seconds % 60);
+    return `${mins}m ${secs}s`;
+  };
+
   const handleDragStart = (index) => {
     setDraggedIndex(index);
   };
@@ -1241,10 +1265,21 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                     ⏱️ This may take a few minutes depending on your internet connection speed and image sizes.
                   </p>
                   <div className="progress-bar">
-                    <div className="progress-fill" style={{ width: `${(uploadProgress / selectedFiles.length) * 100}%` }}></div>
+                    <div
+                      className="progress-fill"
+                      style={{
+                        width: totalBytes > 0
+                          ? `${(uploadedBytes / totalBytes) * 100}%`
+                          : `${(uploadProgress / selectedFiles.length) * 100}%`
+                      }}
+                    ></div>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    <p className="progress-text">Uploading... {uploadProgress} of {selectedFiles.length} images</p>
+                    <p className="progress-text">
+                      {totalBytes > 0
+                        ? `Uploading... ${formatFileSize(uploadedBytes)} / ${formatFileSize(totalBytes)}${formatDuration(remainingTime) ? ` • ${formatDuration(remainingTime)} left` : ''}`
+                        : `Uploading... ${uploadProgress} of ${selectedFiles.length} images`}
+                    </p>
                     <button 
                       onClick={cancelUpload}
                       className="btn btn-secondary"
