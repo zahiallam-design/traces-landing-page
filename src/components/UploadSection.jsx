@@ -712,6 +712,12 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
       setUploadStatus({ type: 'error', message: errorMessage });
       setUploadProgress(0);
       setIsUploading(false);
+      setIsQueued(false);
+      
+      // Clear queue lock on error so user can retry
+      if (onUploadCancel) {
+        onUploadCancel(albumIndex);
+      }
     } finally {
       if (!signal.aborted) {
         setIsUploading(false);
