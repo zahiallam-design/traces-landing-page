@@ -30,6 +30,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
   const fileInputRef = useRef(null);
   const dropzoneRef = useRef(null);
   const abortControllerRef = useRef(null);
+  const cancelUploadRef = useRef(false);
   const uploadToSmashRef = useRef(null); // Ref to store uploadToSmash function
 
   const maxFiles = selectedAlbum?.size || 52;
@@ -151,6 +152,9 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
 
   // Compress images that are larger than 2MB
   const compressImageIfNeeded = async (file) => {
+    if (cancelUploadRef.current) {
+      throw new Error('Upload cancelled.');
+    }
     const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
     
     // If file is already under 2MB, return as-is
@@ -177,6 +181,9 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
     
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
+        if (cancelUploadRef.current) {
+          throw new Error('Upload cancelled.');
+        }
         // Determine output type: prefer WebP if supported, otherwise JPEG
         let outputType = currentFile.type;
         if (currentFile.type === 'image/avif' || currentFile.name.toLowerCase().endsWith('.avif')) {
@@ -209,6 +216,9 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
         });
         
         const compressedFile = await Promise.race([compressionPromise, timeoutPromise]);
+        if (cancelUploadRef.current) {
+          throw new Error('Upload cancelled.');
+        }
         console.log(`Attempt ${attempt}: Compressed ${file.name}: ${(currentFile.size / 1024 / 1024).toFixed(2)} MB → ${(compressedFile.size / 1024 / 1024).toFixed(2)} MB`);
         
         // If file is now under 2MB, we're done
@@ -274,13 +284,16 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
   };
 
   const cancelUpload = useCallback(() => {
+    cancelUploadRef.current = true;
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
     setIsUploading(false);
+    setIsCompressing(false);
     setIsQueued(false); // Clear queued state on cancel
     setUploadProgress(0);
+    setCompressionProgress(0);
     setUploadStatus({ 
       type: 'error', 
       message: 'Upload cancelled by user.' 
@@ -308,7 +321,8 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
     abortControllerRef.current = new AbortController();
     const signal = abortControllerRef.current.signal;
 
-    setIsUploading(true);
+    cancelUploadRef.current = false;
+    setIsUploading(false);
     setUploadProgress(0); // Reset to 0 files uploaded
     setUploadStatus(null);
     setIsCompressing(false);
@@ -344,31 +358,33 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
           const totalToCompress = filesToCompress.length;
           
           for (let i = 0; i < selectedFiles.length; i++) {
-            const file = selectedFiles[i];
-            const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
-            console.log(`Processing file ${i + 1}/${selectedFiles.length}: ${file.name} (${fileSizeMB} MB)`);
+            if (cancelUploadRef.current) {
+              throw new Error('Upload cancelled.');
+            }
+            const originalFile = selectedFiles[i];
+            const renamedFile = renamedFiles[i];
+            const fileSizeMB = (originalFile.size / 1024 / 1024).toFixed(2);
+            console.log(`Processing file ${i + 1}/${selectedFiles.length}: ${originalFile.name} (${fileSizeMB} MB)`);
             
-            if (file.size > MAX_FILE_SIZE) {
+            if (originalFile.size > MAX_FILE_SIZE) {
               try {
-                console.log(`File ${file.name} is ${fileSizeMB} MB, compressing...`);
-                const compressed = await compressImageIfNeeded(file);
+                console.log(`File ${originalFile.name} is ${fileSizeMB} MB, compressing...`);
+                const compressed = await compressImageIfNeeded(originalFile);
                 const compressedSizeMB = (compressed.size / 1024 / 1024).toFixed(2);
-                console.log(`Compression complete: ${file.name} → ${compressedSizeMB} MB`);
+                console.log(`Compression complete: ${originalFile.name} → ${compressedSizeMB} MB`);
                 
                 // Verify compression was successful
                 if (compressed.size > MAX_FILE_SIZE) {
-                  throw new Error(`${file.name} could not be compressed below 2MB. Final size: ${compressedSizeMB} MB`);
+                  throw new Error(`${originalFile.name} could not be compressed below 2MB. Final size: ${compressedSizeMB} MB`);
                 }
                 
-                // Convert Blob to File if needed (browser-image-compression returns Blob)
-                let compressedFile = compressed;
-                if (compressed instanceof Blob && !(compressed instanceof File)) {
-                  compressedFile = new File([compressed], file.name, {
-                    type: file.type,
-                    lastModified: file.lastModified || Date.now()
-                  });
-                  console.log(`Converted compressed Blob to File object for ${file.name}`);
-                }
+                // Always enforce renamed filename for compressed files
+                const targetName = renamedFile?.name || originalFile.name;
+                const compressedFile = new File([compressed], targetName, {
+                  type: compressed.type || originalFile.type,
+                  lastModified: originalFile.lastModified || Date.now()
+                });
+                console.log(`Converted compressed file to File object for ${targetName}`);
                 
                 processedFiles[i] = compressedFile;
                 compressedCount++;
@@ -510,6 +526,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
 
       if (smashApiKey) {
         console.log('Uploading directly to Smash from the browser...');
+        setIsUploading(true);
         const uploader = new SmashUploader({
           region: smashRegion,
           token: smashApiKey
@@ -597,6 +614,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
         });
 
         // Upload first batch to create transfer, then add remaining files
+        setIsUploading(true);
         for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
           let batch = batches[batchIndex];
           
@@ -707,7 +725,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
       console.error('Upload error:', error);
       
       // Don't show error if upload was cancelled
-      if (signal.aborted) {
+      if (signal.aborted || cancelUploadRef.current) {
         return;
       }
       
