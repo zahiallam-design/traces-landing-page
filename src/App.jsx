@@ -694,6 +694,7 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
                   onRemoveAlbum={handleRemoveAlbum}
                   canRemoveAlbum={albums.length > 1}
                   isUploading={albumUploadStates[index]}
+                  isLocked={albumUploadStates[index] || !!album.photosFolderLink}
                 />
                 {album.selectedAlbum && album.selectedColor && (
                   <UploadSection

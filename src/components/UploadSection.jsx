@@ -302,7 +302,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
         setUploadProgress(i + 1);
       }
 
-      transferUrl = await getOrCreateSharedLink(orderFolderPath);
+      transferUrl = await getOrCreateSharedLink(albumImagesFolderPath);
 
       // Clear any interval if it exists
       if (progressInterval) {

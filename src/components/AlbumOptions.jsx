@@ -7,11 +7,14 @@ const albums = [
   { size: 100, price: 47 }
 ];
 
-function AlbumOptions({ albumIndex, selectedAlbum, onAlbumSelect, selectedColor, onColorChange, hasError, onRemoveAlbum, canRemoveAlbum, isUploading }) {
+function AlbumOptions({ albumIndex, selectedAlbum, onAlbumSelect, selectedColor, onColorChange, hasError, onRemoveAlbum, canRemoveAlbum, isUploading, isLocked = false }) {
   const breakpoint = useBreakpoint();
   const isMobile = ['xs', 'ss', 'sm'].includes(breakpoint);
 
   const handleSizeSelect = (album) => {
+    if (isLocked) {
+      return;
+    }
     onAlbumSelect(album);
     // Scroll to color selection after a short delay
     setTimeout(() => {
@@ -23,6 +26,9 @@ function AlbumOptions({ albumIndex, selectedAlbum, onAlbumSelect, selectedColor,
   };
 
   const handleColorSelect = (color) => {
+    if (isLocked) {
+      return;
+    }
     onColorChange(color);
     // Scroll to upload section after color is selected
     setTimeout(() => {
@@ -85,6 +91,12 @@ function AlbumOptions({ albumIndex, selectedAlbum, onAlbumSelect, selectedColor,
                 key={album.size}
                 className={`size-btn ${selectedAlbum?.size === album.size ? 'selected' : ''}`}
                 onClick={() => handleSizeSelect(album)}
+                disabled={isLocked}
+                title={isLocked ? 'Album size is locked' : 'Select album size'}
+                style={{
+                  opacity: isLocked ? 0.6 : 1,
+                  cursor: isLocked ? 'not-allowed' : 'pointer'
+                }}
               >
                 <span className="size-number">{album.size}</span>
                 <span className="size-label">Photos</span>
@@ -105,6 +117,12 @@ function AlbumOptions({ albumIndex, selectedAlbum, onAlbumSelect, selectedColor,
               <button
                 className={`color-album-btn ${selectedColor === 'green' ? 'selected' : ''}`}
                 onClick={() => handleColorSelect('green')}
+                disabled={isLocked}
+                title={isLocked ? 'Album color is locked' : 'Select album color'}
+                style={{
+                  opacity: isLocked ? 0.6 : 1,
+                  cursor: isLocked ? 'not-allowed' : 'pointer'
+                }}
               >
                 <img 
                   src="/Green Album.jpeg" 
@@ -116,6 +134,12 @@ function AlbumOptions({ albumIndex, selectedAlbum, onAlbumSelect, selectedColor,
               <button
                 className={`color-album-btn ${selectedColor === 'grey' ? 'selected' : ''}`}
                 onClick={() => handleColorSelect('grey')}
+                disabled={isLocked}
+                title={isLocked ? 'Album color is locked' : 'Select album color'}
+                style={{
+                  opacity: isLocked ? 0.6 : 1,
+                  cursor: isLocked ? 'not-allowed' : 'pointer'
+                }}
               >
                 <img 
                   src="/Grey Album.jpeg" 

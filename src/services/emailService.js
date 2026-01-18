@@ -201,7 +201,7 @@ ALBUM ${index + 1}:
 - Color: ${albumData.album.color.charAt(0).toUpperCase() + albumData.album.color.slice(1)}
 - Price: $${albumData.album.price.toFixed(2)}
 - Photos: ${albumData.fileCount} photos
-- Photos Folder Link: ${albumData.photosFolderLink}
+- Album Images Link: ${albumData.photosFolderLink}
 - Cover: ${coverInfo}
 `;
   });
@@ -348,7 +348,7 @@ function formatWhatsAppMessageForPrinting(orderData) {
   let albumsText = '';
   orderData.albums.forEach((albumData, index) => {
     albumsText += `\n*Album ${index + 1}:*\n`;
-    albumsText += `• Photos Link: ${albumData.photosFolderLink || 'N/A'}\n`;
+    albumsText += `• Album Images Link: ${albumData.photosFolderLink || 'N/A'}\n`;
     
     // Only add cover image link if it's an image cover with a URL (skip text covers)
     if (albumData.cover?.type === 'image' && albumData.cover.imageUrl) {
@@ -387,7 +387,7 @@ ${whatsappLink}
 The message includes:
 • Order number: ${orderData.orderNumber || 'N/A'}
 • Date and time sent
-• Album links (Photos folder URLs)
+• Album image links (per-album folders)
 • Cover image links (if image cover selected)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`.trim();
