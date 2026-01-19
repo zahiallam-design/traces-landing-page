@@ -2,16 +2,35 @@ const API_BASE = 'https://api.dropboxapi.com/2';
 const CONTENT_BASE = 'https://content.dropboxapi.com/2';
 const DEFAULT_CHUNK_SIZE = 8 * 1024 * 1024; // 8MB
 
-const getAccessToken = () => {
-  const token = import.meta.env.VITE_DROPBOX_ACCESS_TOKEN;
-  if (!token) {
-    throw new Error('Dropbox access token is missing. Set VITE_DROPBOX_ACCESS_TOKEN.');
+let cachedToken = null;
+let cachedTokenExpiry = 0;
+
+const getAccessToken = async () => {
+  const staticToken = import.meta.env.VITE_DROPBOX_ACCESS_TOKEN;
+  if (staticToken) {
+    return staticToken;
   }
-  return token;
+
+  const now = Date.now();
+  if (cachedToken && cachedTokenExpiry > now) {
+    return cachedToken;
+  }
+
+  const response = await fetch('/api/dropbox-access-token');
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.error || 'Failed to fetch Dropbox access token');
+  }
+
+  const data = await response.json();
+  cachedToken = data.access_token;
+  cachedTokenExpiry = now + (data.expires_in || 0) * 1000 - 30000;
+
+  return cachedToken;
 };
 
 const dropboxApiRequest = async (endpoint, body) => {
-  const token = getAccessToken();
+  const token = await getAccessToken();
   const response = await fetch(`${API_BASE}${endpoint}`, {
     method: 'POST',
     headers: {
@@ -63,7 +82,7 @@ export const getOrCreateSharedLink = async (path) => {
 };
 
 const uploadSmallFile = async (file, path) => {
-  const token = getAccessToken();
+  const token = await getAccessToken();
   const response = await fetch(`${CONTENT_BASE}/files/upload`, {
     method: 'POST',
     headers: {
@@ -97,7 +116,7 @@ export const uploadFileResumable = async (file, path, onProgress, chunkSize = DE
     return result;
   }
 
-  const token = getAccessToken();
+  const token = await getAccessToken();
   let offset = 0;
   let sessionId = null;
 

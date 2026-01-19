@@ -4,12 +4,11 @@ Complete list of all environment variables used in the project.
 
 ## 🔒 Security Update
 
-**Smash API and EmailJS are secured using Vercel Serverless Functions.**
+**Dropbox and EmailJS are secured using Vercel Serverless Functions.**
 
 - ✅ API keys stay on the server (never exposed to browser)
 - ✅ Use variables **WITHOUT** `VITE_` prefix for serverless functions
 - ✅ Only `VITE_WHATSAPP_NUMBER` needs `VITE_` prefix (frontend use)
-- ✅ Optional: enable direct Smash uploads from the browser to avoid batch splitting
 
 ---
 
@@ -17,16 +16,30 @@ Complete list of all environment variables used in the project.
 
 ### Server-Side Variables (Serverless Functions) - NO `VITE_` prefix
 
-#### 1. Smash API
-- **Key**: `SMASH_API_KEY` ⚠️ (NOT `VITE_SMASH_API_KEY`)
-- **Value**: Your Smash API key
+#### 1. Dropbox OAuth (Recommended - refresh tokens)
+- **Key**: `DROPBOX_APP_KEY`
+- **Value**: Dropbox App Key
 - **Required**: Yes
 - **Environments**: Production, Preview, Development
-- **Used in**: `api/upload.js` (serverless function)
+- **Used in**: `api/dropbox-oauth-*`, `api/dropbox-access-token.js`
 
-- **Key**: `SMASH_REGION` (Optional)
-- **Value**: `eu-west-3` or `us-east-1`
-- **Default**: `eu-west-3` (if not set)
+- **Key**: `DROPBOX_APP_SECRET`
+- **Value**: Dropbox App Secret
+- **Required**: Yes
+- **Environments**: Production, Preview, Development
+
+- **Key**: `DROPBOX_REFRESH_TOKEN`
+- **Value**: Dropbox refresh token (from OAuth)
+- **Required**: Yes
+- **Environments**: Production, Preview, Development
+
+- **Key**: `DROPBOX_REDIRECT_URI` (Optional)
+- **Value**: OAuth redirect URL (e.g., `https://your-domain/api/dropbox-oauth-callback`)
+- **Required**: No (auto-detected if omitted)
+- **Environments**: Production, Preview, Development
+
+- **Key**: `DROPBOX_SCOPES` (Optional)
+- **Value**: Space-separated scopes (default: `files.content.write files.metadata.write sharing.write`)
 - **Required**: No
 - **Environments**: Production, Preview, Development
 
@@ -71,18 +84,12 @@ Complete list of all environment variables used in the project.
 - **Environments**: Production, Preview, Development
 - **Used in**: Frontend components (Footer, WhatsAppButton)
 
-#### 5. Smash Direct Upload (Optional)
-- **Key**: `VITE_SMASH_API_KEY`
-- **Value**: Your Smash API key (browser use)
-- **Required**: No (only if you want direct browser uploads)
-- **Environments**: Production, Preview, Development
-- **Used in**: `src/components/UploadSection.jsx` (direct Smash upload)
-
-- **Key**: `VITE_SMASH_REGION` (Optional)
-- **Value**: `eu-west-3` or `us-east-1`
-- **Default**: `eu-west-3`
-- **Required**: No
-- **Environments**: Production, Preview, Development
+#### 5. Dropbox (Client token - Optional, for testing only)
+- **Key**: `VITE_DROPBOX_ACCESS_TOKEN`
+- **Value**: Short-lived Dropbox access token
+- **Required**: No (only for local testing)
+- **Environments**: Development
+- **Used in**: `src/services/dropboxService.js`
 
 ---
 
@@ -92,8 +99,11 @@ Complete list of all environment variables used in the project.
 
 | Variable Name | Purpose | Required | Default | Location |
 |--------------|---------|----------|---------|----------|
-| `SMASH_API_KEY` | Smash API key for photo uploads | ✅ Yes | None | Serverless function |
-| `SMASH_REGION` | Smash API region | ❌ No | `eu-west-3` | Serverless function |
+| `DROPBOX_APP_KEY` | Dropbox app key | ✅ Yes | None | Serverless function |
+| `DROPBOX_APP_SECRET` | Dropbox app secret | ✅ Yes | None | Serverless function |
+| `DROPBOX_REFRESH_TOKEN` | Dropbox refresh token | ✅ Yes | None | Serverless function |
+| `DROPBOX_REDIRECT_URI` | Dropbox redirect URI | ❌ No | Auto | Serverless function |
+| `DROPBOX_SCOPES` | Dropbox scopes | ❌ No | Default | Serverless function |
 | `EMAILJS_SERVICE_ID` | EmailJS service ID | ✅ Yes | None | Serverless function |
 | `EMAILJS_TEMPLATE_ID` | Business owner email template | ✅ Yes | None | Serverless function |
 | `EMAILJS_CUSTOMER_TEMPLATE_ID` | Customer confirmation template | ✅ Yes | None | Serverless function |
@@ -105,18 +115,20 @@ Complete list of all environment variables used in the project.
 | Variable Name | Purpose | Required | Default | Location |
 |--------------|---------|----------|---------|----------|
 | `VITE_WHATSAPP_NUMBER` | WhatsApp contact number | ✅ Yes | None | Frontend components |
-| `VITE_SMASH_API_KEY` | Smash API key for direct upload | ❌ No | None | Frontend (optional) |
-| `VITE_SMASH_REGION` | Smash API region for direct upload | ❌ No | `eu-west-3` | Frontend (optional) |
+| `VITE_DROPBOX_ACCESS_TOKEN` | Dropbox access token (dev only) | ❌ No | None | Frontend (optional) |
 
-**Total**: 10 environment variables (7 server-side, 3 frontend)
+**Total**: 12 environment variables (10 server-side, 2 frontend)
 
 ---
 
 ## Where They're Used in Code
 
 ### Server-Side (Secure):
-- `SMASH_API_KEY` → `api/upload.js` (serverless function)
-- `SMASH_REGION` → `api/upload.js` (serverless function)
+- `DROPBOX_APP_KEY` → `api/dropbox-oauth-*`, `api/dropbox-access-token.js`
+- `DROPBOX_APP_SECRET` → `api/dropbox-oauth-*`, `api/dropbox-access-token.js`
+- `DROPBOX_REFRESH_TOKEN` → `api/dropbox-access-token.js`
+- `DROPBOX_REDIRECT_URI` → `api/dropbox-oauth-*` (optional)
+- `DROPBOX_SCOPES` → `api/dropbox-oauth-url.js` (optional)
 - `EMAILJS_SERVICE_ID` → `api/send-email.js` (serverless function)
 - `EMAILJS_TEMPLATE_ID` → `api/send-email.js` (serverless function)
 - `EMAILJS_CUSTOMER_TEMPLATE_ID` → `api/send-email.js` (serverless function)
@@ -125,16 +137,18 @@ Complete list of all environment variables used in the project.
 
 ### Frontend (Browser):
 - `VITE_WHATSAPP_NUMBER` → `src/components/Footer.jsx` & `src/components/WhatsAppButton.jsx`
-- `VITE_SMASH_API_KEY` → `src/components/UploadSection.jsx` (direct upload, optional)
-- `VITE_SMASH_REGION` → `src/components/UploadSection.jsx` (direct upload, optional)
+- `VITE_DROPBOX_ACCESS_TOKEN` → `src/services/dropboxService.js` (dev only)
 
 ---
 
 ## Quick Setup Checklist
 
 ### Server-Side Variables (NO `VITE_` prefix):
-- [ ] `SMASH_API_KEY` - Get from Smash dashboard
-- [ ] `SMASH_REGION` - Set to `eu-west-3` or `us-east-1` (optional)
+- [ ] `DROPBOX_APP_KEY` - Get from Dropbox app console
+- [ ] `DROPBOX_APP_SECRET` - Get from Dropbox app console
+- [ ] `DROPBOX_REFRESH_TOKEN` - Generate via OAuth flow
+- [ ] `DROPBOX_REDIRECT_URI` - Set to `/api/dropbox-oauth-callback` (optional)
+- [ ] `DROPBOX_SCOPES` - Optional scopes override
 - [ ] `EMAILJS_SERVICE_ID` - Get from EmailJS dashboard
 - [ ] `EMAILJS_TEMPLATE_ID` - Get from EmailJS templates (Business Owner)
 - [ ] `EMAILJS_CUSTOMER_TEMPLATE_ID` - Get from EmailJS templates (Customer)
@@ -143,23 +157,22 @@ Complete list of all environment variables used in the project.
 
 ### Frontend Variables (WITH `VITE_` prefix):
 - [ ] `VITE_WHATSAPP_NUMBER` - Your WhatsApp number (no +, no spaces)
-- [ ] `VITE_SMASH_API_KEY` - Smash API key (optional, enables direct upload)
-- [ ] `VITE_SMASH_REGION` - Smash region (optional)
+- [ ] `VITE_DROPBOX_ACCESS_TOKEN` - Dropbox token (dev only)
 
 ---
 
 ## Notes
 
 ### Security Update:
-- ✅ **Server-side variables** (Smash, EmailJS) use NO `VITE_` prefix - they stay secure on the server
+- ✅ **Server-side variables** (Dropbox, EmailJS) use NO `VITE_` prefix - they stay secure on the server
 - ✅ **Frontend variables** (WhatsApp) use `VITE_` prefix - only safe for public use
-- ⚠️ **Direct Smash upload** uses `VITE_SMASH_API_KEY` in the browser (public exposure). Only enable if acceptable.
+- ⚠️ `VITE_DROPBOX_ACCESS_TOKEN` is for local testing only
 - ✅ After adding variables in Vercel, **redeploy** your site for changes to take effect
 - ✅ Server-side variables are **NEVER exposed** to the browser (secure!)
 
 ### Setup Guides:
 - `SECURE_SETUP_STEPS.md` - Step-by-step setup instructions
 - `SECURE_API_SETUP.md` - Detailed architecture and security info
-- `SMASH_SETUP.md` - Smash API setup (updated for serverless)
+- `DROPBOX_SETUP.md` - Dropbox API setup (if added)
 - `EMAILJS_SETUP.md` - EmailJS setup (updated for serverless)
 
