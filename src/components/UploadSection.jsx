@@ -435,6 +435,7 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
           type: 'info',
           message: 'Your upload is queued and will start automatically once the current upload finishes. Please wait...'
         });
+        alert('Please keep your screen awake while your upload is queued and in progress. Some browsers pause uploads when the phone locks.');
         return;
       }
     }
@@ -446,6 +447,7 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
     
     // Clear queued state when starting upload
     setIsQueued(false);
+    alert('Please keep your screen awake while your upload is in progress. Some browsers pause uploads when the phone locks.');
     uploadToDropbox();
   };
 
