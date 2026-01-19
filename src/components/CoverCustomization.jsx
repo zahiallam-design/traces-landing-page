@@ -569,8 +569,8 @@ function CoverCustomization({ albumIndex, albumId, orderNumber, onCoverChange, h
         <div className="crop-modal-overlay">
           <div className="crop-modal-content">
             <h3>Crop Your Cover Image</h3>
-            <p style={{ marginBottom: '1rem', color: 'var(--text-light)' }}>
-              Your cover image must be square (9×9 cm). Please select the square area you want to use.
+            <p style={{ marginBottom: '1rem', color: 'var(--text-light)', fontSize: '0.8em' }}>
+              Your cover image must be square. Please select the area you want to use.
             </p>
             <div className="crop-container">
               <Cropper
