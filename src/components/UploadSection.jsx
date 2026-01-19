@@ -939,7 +939,7 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
                   </p>
                 </div>
               )}
-              {uploadStatus && !isUploading && (
+              {uploadStatus && (!isUploading || uploadStatus.type === 'warning') && (
                 <div className={`upload-status ${uploadStatus.type}`} style={{
                   ...(uploadStatus.type === 'info' && isQueued ? {
                     background: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
