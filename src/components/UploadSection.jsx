@@ -893,19 +893,12 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
                       }}
                     ></div>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '0.5rem' }}>
                     <p className="progress-text">
                       {totalBytes > 0
                         ? `Uploading... ${formatFileSize(uploadedBytes)} / ${formatFileSize(totalBytes)}`
                         : `Uploading... ${uploadProgress} of ${selectedFiles.length} images`}
                     </p>
-                    <button 
-                      onClick={cancelUpload}
-                      className="btn btn-secondary"
-                      style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
-                    >
-                      Cancel Upload
-                    </button>
                   </div>
                   <p style={{ marginTop: '1rem', fontSize: '0.9rem', color: 'var(--pastel-green-dark)', fontStyle: 'italic', textAlign: 'center' }}>
                     💡 You can continue the process and scroll down to customize your cover while upload is in progress.
