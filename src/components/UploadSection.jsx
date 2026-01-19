@@ -913,7 +913,10 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
               {isUploading && (
                 <div className="upload-progress">
                   <p style={{ marginBottom: '0.5rem', fontSize: '0.85rem', color: 'var(--text-light)', fontStyle: 'italic' }}>
-                    ⏱️ This may take a few minutes depending on your internet connection speed and image sizes.
+                    ⏱️ This may take a few minutes depending on your internet connection speed and image sizes.{' '}
+                    <strong style={{ color: 'var(--pastel-green-dark)' }}>
+                      If the upload is slow, consider using your 4G/5G connection.
+                    </strong>
                   </p>
                   <div className="progress-bar">
                     <div
