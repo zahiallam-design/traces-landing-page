@@ -437,6 +437,8 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
     if (isUploading) {
       return;
     }
+
+    setIsInitiatingUpload(true);
     
     // Request to start upload (will queue if another album is processing)
     if (requestUploadStart) {
@@ -449,6 +451,7 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
           message: 'Your upload is queued and will start automatically once the current upload finishes. Please wait...'
         });
         setShowUploadWarning(true);
+        setIsInitiatingUpload(false);
         return;
       }
     }
@@ -903,12 +906,12 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
                         <button 
                           onClick={handleUploadClick}
                           className="btn btn-primary"
-                          disabled={selectedFiles.length > maxFiles || isQueued || isUploading}
+                          disabled={selectedFiles.length > maxFiles || isQueued || isUploading || isInitiatingUpload}
                           style={{ 
                             padding: '0.75rem 2rem', 
                             fontSize: '1rem',
-                            opacity: (selectedFiles.length > maxFiles || isQueued || isUploading) ? 0.5 : 1,
-                            cursor: (selectedFiles.length > maxFiles || isQueued || isUploading) ? 'not-allowed' : 'pointer',
+                            opacity: (selectedFiles.length > maxFiles || isQueued || isUploading || isInitiatingUpload) ? 0.5 : 1,
+                            cursor: (selectedFiles.length > maxFiles || isQueued || isUploading || isInitiatingUpload) ? 'not-allowed' : 'pointer',
                             backgroundColor: isQueued ? '#95a5a6' : undefined
                           }}
                         >
