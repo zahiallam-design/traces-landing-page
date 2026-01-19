@@ -18,6 +18,7 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
   const [uploadProgress, setUploadProgress] = useState(0); // Number of files uploaded
   const [uploadStatus, setUploadStatus] = useState(null);
   const [showUploadWarning, setShowUploadWarning] = useState(false);
+  const [isInitiatingUpload, setIsInitiatingUpload] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isQueued, setIsQueued] = useState(false); // Track if upload is queued
   const [uploadedBytes, setUploadedBytes] = useState(0);
@@ -162,6 +163,7 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
     setUploadStatus(null);
     setUploadedBytes(0);
     setTotalBytes(0);
+    setIsInitiatingUpload(false);
 
     // Declare progressInterval outside try block so it's accessible in catch/finally
     let progressInterval = null;
@@ -294,10 +296,14 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
       const albumImagesFolderPath = `${albumFolderPath}/album images`;
       const coverFolderPath = `${albumFolderPath}/cover image`;
 
-      await ensureFolder(orderFolderPath);
-      await ensureFolder(albumFolderPath);
-      await ensureFolder(albumImagesFolderPath);
-      await ensureFolder(coverFolderPath);
+      const handleRetry = () => {
+        setIsInitiatingUpload(true);
+      };
+
+      await ensureFolder(orderFolderPath, handleRetry);
+      await ensureFolder(albumFolderPath, handleRetry);
+      await ensureFolder(albumImagesFolderPath, handleRetry);
+      await ensureFolder(coverFolderPath, handleRetry);
 
       let uploadedBytesSoFar = 0;
       let transferUrl = null;
@@ -313,13 +319,14 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
         await uploadFileResumable(file, destinationPath, (uploadedForFile) => {
           setUploadedBytes(uploadedBytesSoFar + uploadedForFile);
           setTotalBytes(totalBytes);
-        });
+          setIsInitiatingUpload(false);
+        }, undefined, handleRetry);
 
         uploadedBytesSoFar += file.size;
         setUploadProgress(i + 1);
       }
 
-      transferUrl = await getOrCreateSharedLink(albumImagesFolderPath);
+      transferUrl = await getOrCreateSharedLink(albumImagesFolderPath, handleRetry);
 
       // Clear any interval if it exists
       if (progressInterval) {
@@ -345,6 +352,7 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
       setShowUploadWarning(false);
       setIsQueued(false); // Clear queued state on completion
       onUploadComplete(transferUrl, totalFiles);
+      setIsInitiatingUpload(false);
 
       if (wakeLockRef.current) {
         await wakeLockRef.current.release().catch(() => null);
@@ -393,6 +401,7 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
       setIsUploading(false);
       setIsQueued(false);
       setShowUploadWarning(false);
+      setIsInitiatingUpload(false);
       
       // Clear queue lock on error so user can retry
       if (onUploadCancel) {
@@ -903,7 +912,11 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
                             backgroundColor: isQueued ? '#95a5a6' : undefined
                           }}
                         >
-                          {isQueued ? '⏳ Upload Queued' : isUploading ? 'Uploading...' : 'Upload Photos'}
+                          {isQueued
+                            ? '⏳ Upload Queued'
+                            : isUploading
+                              ? (isInitiatingUpload ? 'Initiating upload...' : 'Uploading...')
+                              : 'Upload Photos'}
                         </button>
                       </div>
                     )}

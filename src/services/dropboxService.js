@@ -38,7 +38,7 @@ const shouldRetry = (message) => {
   return lower.includes('too_many_write_operations') || lower.includes('rate') || lower.includes('timeout');
 };
 
-const dropboxApiRequest = async (endpoint, body) => {
+const dropboxApiRequest = async (endpoint, body, onRetry) => {
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     const token = await getAccessToken();
     const response = await fetch(`${API_BASE}${endpoint}`, {
@@ -58,6 +58,9 @@ const dropboxApiRequest = async (endpoint, body) => {
     const errorMessage = errorData?.error_summary || errorData?.error?.tag || 'Dropbox API request failed';
 
     if (attempt < MAX_RETRIES && shouldRetry(errorMessage)) {
+      if (onRetry) {
+        onRetry({ attempt, error: errorMessage });
+      }
       await sleep(BASE_RETRY_DELAY_MS * attempt);
       continue;
     }
@@ -66,12 +69,12 @@ const dropboxApiRequest = async (endpoint, body) => {
   }
 };
 
-export const ensureFolder = async (path) => {
+export const ensureFolder = async (path, onRetry) => {
   try {
     await dropboxApiRequest('/files/create_folder_v2', {
       path,
       autorename: false
-    });
+    }, onRetry);
   } catch (error) {
     if (!String(error.message || '').includes('path/conflict')) {
       throw error;
@@ -79,12 +82,12 @@ export const ensureFolder = async (path) => {
   }
 };
 
-export const getOrCreateSharedLink = async (path) => {
+export const getOrCreateSharedLink = async (path, onRetry) => {
   try {
     const result = await dropboxApiRequest('/sharing/create_shared_link_with_settings', {
       path,
       settings: { requested_visibility: 'public' }
-    });
+    }, onRetry);
     return result?.url;
   } catch (error) {
     if (!String(error.message || '').includes('shared_link_already_exists')) {
@@ -95,11 +98,11 @@ export const getOrCreateSharedLink = async (path) => {
   const existing = await dropboxApiRequest('/sharing/list_shared_links', {
     path,
     direct_only: true
-  });
+  }, onRetry);
   return existing?.links?.[0]?.url || null;
 };
 
-const uploadSmallFile = async (file, path) => {
+const uploadSmallFile = async (file, path, onRetry) => {
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     const token = await getAccessToken();
     const response = await fetch(`${CONTENT_BASE}/files/upload`, {
@@ -126,6 +129,9 @@ const uploadSmallFile = async (file, path) => {
     const errorMessage = errorData?.error_summary || errorData?.error?.tag || 'Dropbox upload failed';
 
     if (attempt < MAX_RETRIES && shouldRetry(errorMessage)) {
+      if (onRetry) {
+        onRetry({ attempt, error: errorMessage });
+      }
       await sleep(BASE_RETRY_DELAY_MS * attempt);
       continue;
     }
@@ -134,9 +140,9 @@ const uploadSmallFile = async (file, path) => {
   }
 };
 
-export const uploadFileResumable = async (file, path, onProgress, chunkSize = DEFAULT_CHUNK_SIZE) => {
+export const uploadFileResumable = async (file, path, onProgress, chunkSize = DEFAULT_CHUNK_SIZE, onRetry) => {
   if (file.size <= chunkSize) {
-    const result = await uploadSmallFile(file, path);
+    const result = await uploadSmallFile(file, path, onRetry);
     if (onProgress) {
       onProgress(file.size, file.size);
     }
@@ -168,6 +174,9 @@ export const uploadFileResumable = async (file, path, onProgress, chunkSize = DE
       const errorMessage = errorData?.error_summary || errorData?.error?.tag || 'Dropbox upload session start failed';
 
       if (attempt < MAX_RETRIES && shouldRetry(errorMessage)) {
+        if (onRetry) {
+          onRetry({ attempt, error: errorMessage });
+        }
         await sleep(BASE_RETRY_DELAY_MS * attempt);
         continue;
       }
@@ -222,6 +231,9 @@ export const uploadFileResumable = async (file, path, onProgress, chunkSize = DE
       const errorMessage = errorData?.error_summary || errorData?.error?.tag || 'Dropbox upload failed';
 
       if (attempt < MAX_RETRIES && shouldRetry(errorMessage)) {
+        if (onRetry) {
+          onRetry({ attempt, error: errorMessage });
+        }
         await sleep(BASE_RETRY_DELAY_MS * attempt);
         attempt += 1;
         continue;
