@@ -17,6 +17,7 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploadProgress, setUploadProgress] = useState(0); // Number of files uploaded
   const [uploadStatus, setUploadStatus] = useState(null);
+  const [showUploadWarning, setShowUploadWarning] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isQueued, setIsQueued] = useState(false); // Track if upload is queued
   const [uploadedBytes, setUploadedBytes] = useState(0);
@@ -131,6 +132,7 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
       type: 'error', 
       message: 'Upload cancelled by user.' 
     });
+    setShowUploadWarning(false);
     
     // Notify parent that upload was cancelled so queue can process next item
     if (onUploadCancel) {
@@ -340,6 +342,7 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
         type: 'success', 
         message: 'Upload complete! Photos uploaded successfully. You can now proceed with your order.' 
       });
+      setShowUploadWarning(false);
       setIsQueued(false); // Clear queued state on completion
       onUploadComplete(transferUrl, totalFiles);
 
@@ -389,6 +392,7 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
       setUploadProgress(0);
       setIsUploading(false);
       setIsQueued(false);
+      setShowUploadWarning(false);
       
       // Clear queue lock on error so user can retry
       if (onUploadCancel) {
@@ -435,10 +439,7 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
           type: 'info',
           message: 'Your upload is queued and will start automatically once the current upload finishes. Please wait...'
         });
-        setUploadStatus({
-          type: 'warning',
-          message: 'Please keep your screen awake while your upload is queued and in progress. Some browsers pause uploads when the phone locks.'
-        });
+        setShowUploadWarning(true);
         return;
       }
     }
@@ -450,10 +451,7 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
     
     // Clear queued state when starting upload
     setIsQueued(false);
-    setUploadStatus({
-      type: 'warning',
-      message: 'Please keep your screen awake while your upload is in progress. Some browsers pause uploads when the phone locks.'
-    });
+    setShowUploadWarning(true);
     uploadToDropbox();
   };
 
@@ -939,7 +937,25 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
                   </p>
                 </div>
               )}
-              {uploadStatus && (!isUploading || uploadStatus.type === 'warning') && (
+              {showUploadWarning && (
+                <div className="upload-status warning" style={{
+                  background: '#fff8e1',
+                  border: '2px solid #f6c343',
+                  borderRadius: '12px',
+                  padding: '1rem 1.5rem',
+                  marginTop: '1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  fontSize: '0.95rem',
+                  fontWeight: '500',
+                  color: '#8a6d3b',
+                  boxShadow: '0 2px 8px rgba(246, 195, 67, 0.2)'
+                }}>
+                  ⚠ Please keep your screen awake while your upload is in progress. Some browsers pause uploads when the phone locks.
+                </div>
+              )}
+              {uploadStatus && !isUploading && (
                 <div className={`upload-status ${uploadStatus.type}`} style={{
                   ...(uploadStatus.type === 'info' && isQueued ? {
                     background: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
@@ -955,28 +971,12 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
                     color: '#1565c0',
                     boxShadow: '0 2px 8px rgba(33, 150, 243, 0.15)'
                   } : {}),
-                  ...(uploadStatus.type === 'warning' ? {
-                    background: '#fff8e1',
-                    border: '2px solid #f6c343',
-                    borderRadius: '12px',
-                    padding: '1rem 1.5rem',
-                    marginTop: '1rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    fontSize: '0.95rem',
-                    fontWeight: '500',
-                    color: '#8a6d3b',
-                    boxShadow: '0 2px 8px rgba(246, 195, 67, 0.2)'
-                  } : {})
                 }}>
                   {uploadStatus.type === 'success'
                     ? '✓'
                     : uploadStatus.type === 'info'
                       ? (isQueued ? '⏳' : 'ℹ')
-                      : uploadStatus.type === 'warning'
-                        ? '⚠'
-                        : '✗'} {uploadStatus.message}
+                      : '✗'} {uploadStatus.message}
                 </div>
               )}
             </div>

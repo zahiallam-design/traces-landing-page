@@ -1,6 +1,8 @@
 const API_BASE = 'https://api.dropboxapi.com/2';
 const CONTENT_BASE = 'https://content.dropboxapi.com/2';
 const DEFAULT_CHUNK_SIZE = 8 * 1024 * 1024; // 8MB
+const MAX_RETRIES = 5;
+const BASE_RETRY_DELAY_MS = 2000;
 
 let cachedToken = null;
 let cachedTokenExpiry = 0;
@@ -29,23 +31,39 @@ const getAccessToken = async () => {
   return cachedToken;
 };
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const shouldRetry = (message) => {
+  const lower = String(message || '').toLowerCase();
+  return lower.includes('too_many_write_operations') || lower.includes('rate') || lower.includes('timeout');
+};
+
 const dropboxApiRequest = async (endpoint, body) => {
-  const token = await getAccessToken();
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(body)
-  });
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    const token = await getAccessToken();
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
 
-  if (!response.ok) {
+    if (response.ok) {
+      return response.json();
+    }
+
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData?.error_summary || errorData?.error?.tag || 'Dropbox API request failed');
-  }
+    const errorMessage = errorData?.error_summary || errorData?.error?.tag || 'Dropbox API request failed';
 
-  return response.json();
+    if (attempt < MAX_RETRIES && shouldRetry(errorMessage)) {
+      await sleep(BASE_RETRY_DELAY_MS * attempt);
+      continue;
+    }
+
+    throw new Error(errorMessage);
+  }
 };
 
 export const ensureFolder = async (path) => {
@@ -82,29 +100,38 @@ export const getOrCreateSharedLink = async (path) => {
 };
 
 const uploadSmallFile = async (file, path) => {
-  const token = await getAccessToken();
-  const response = await fetch(`${CONTENT_BASE}/files/upload`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/octet-stream',
-      'Dropbox-API-Arg': JSON.stringify({
-        path,
-        mode: 'add',
-        autorename: true,
-        mute: false,
-        strict_conflict: false
-      })
-    },
-    body: file
-  });
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    const token = await getAccessToken();
+    const response = await fetch(`${CONTENT_BASE}/files/upload`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/octet-stream',
+        'Dropbox-API-Arg': JSON.stringify({
+          path,
+          mode: 'add',
+          autorename: true,
+          mute: false,
+          strict_conflict: false
+        })
+      },
+      body: file
+    });
 
-  if (!response.ok) {
+    if (response.ok) {
+      return response.json();
+    }
+
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData?.error_summary || errorData?.error?.tag || 'Dropbox upload failed');
-  }
+    const errorMessage = errorData?.error_summary || errorData?.error?.tag || 'Dropbox upload failed';
 
-  return response.json();
+    if (attempt < MAX_RETRIES && shouldRetry(errorMessage)) {
+      await sleep(BASE_RETRY_DELAY_MS * attempt);
+      continue;
+    }
+
+    throw new Error(errorMessage);
+  }
 };
 
 export const uploadFileResumable = async (file, path, onProgress, chunkSize = DEFAULT_CHUNK_SIZE) => {
@@ -121,22 +148,33 @@ export const uploadFileResumable = async (file, path, onProgress, chunkSize = DE
   let sessionId = null;
 
   const startChunk = file.slice(0, chunkSize);
-  const startResponse = await fetch(`${CONTENT_BASE}/files/upload_session/start`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/octet-stream',
-      'Dropbox-API-Arg': JSON.stringify({ close: false })
-    },
-    body: startChunk
-  });
+  const startData = await (async () => {
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      const startResponse = await fetch(`${CONTENT_BASE}/files/upload_session/start`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/octet-stream',
+          'Dropbox-API-Arg': JSON.stringify({ close: false })
+        },
+        body: startChunk
+      });
 
-  if (!startResponse.ok) {
-    const errorData = await startResponse.json().catch(() => ({}));
-    throw new Error(errorData?.error_summary || errorData?.error?.tag || 'Dropbox upload session start failed');
-  }
+      if (startResponse.ok) {
+        return startResponse.json();
+      }
 
-  const startData = await startResponse.json();
+      const errorData = await startResponse.json().catch(() => ({}));
+      const errorMessage = errorData?.error_summary || errorData?.error?.tag || 'Dropbox upload session start failed';
+
+      if (attempt < MAX_RETRIES && shouldRetry(errorMessage)) {
+        await sleep(BASE_RETRY_DELAY_MS * attempt);
+        continue;
+      }
+
+      throw new Error(errorMessage);
+    }
+  })();
   sessionId = startData.session_id;
   offset += startChunk.size;
   if (onProgress) {
@@ -164,19 +202,32 @@ export const uploadFileResumable = async (file, path, onProgress, chunkSize = DE
           close: false
         };
 
-    const response = await fetch(`${CONTENT_BASE}${endpoint}`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/octet-stream',
-        'Dropbox-API-Arg': JSON.stringify(args)
-      },
-      body: chunk
-    });
+    let attempt = 1;
+    while (attempt <= MAX_RETRIES) {
+      const response = await fetch(`${CONTENT_BASE}${endpoint}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/octet-stream',
+          'Dropbox-API-Arg': JSON.stringify(args)
+        },
+        body: chunk
+      });
 
-    if (!response.ok) {
+      if (response.ok) {
+        break;
+      }
+
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData?.error_summary || errorData?.error?.tag || 'Dropbox upload failed');
+      const errorMessage = errorData?.error_summary || errorData?.error?.tag || 'Dropbox upload failed';
+
+      if (attempt < MAX_RETRIES && shouldRetry(errorMessage)) {
+        await sleep(BASE_RETRY_DELAY_MS * attempt);
+        attempt += 1;
+        continue;
+      }
+
+      throw new Error(errorMessage);
     }
 
     offset = nextOffset;
