@@ -435,7 +435,10 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
           type: 'info',
           message: 'Your upload is queued and will start automatically once the current upload finishes. Please wait...'
         });
-        alert('Please keep your screen awake while your upload is queued and in progress. Some browsers pause uploads when the phone locks.');
+        setUploadStatus({
+          type: 'warning',
+          message: 'Please keep your screen awake while your upload is queued and in progress. Some browsers pause uploads when the phone locks.'
+        });
         return;
       }
     }
@@ -447,7 +450,10 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
     
     // Clear queued state when starting upload
     setIsQueued(false);
-    alert('Please keep your screen awake while your upload is in progress. Some browsers pause uploads when the phone locks.');
+    setUploadStatus({
+      type: 'warning',
+      message: 'Please keep your screen awake while your upload is in progress. Some browsers pause uploads when the phone locks.'
+    });
     uploadToDropbox();
   };
 
@@ -948,9 +954,29 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
                     fontWeight: '500',
                     color: '#1565c0',
                     boxShadow: '0 2px 8px rgba(33, 150, 243, 0.15)'
+                  } : {}),
+                  ...(uploadStatus.type === 'warning' ? {
+                    background: '#fff8e1',
+                    border: '2px solid #f6c343',
+                    borderRadius: '12px',
+                    padding: '1rem 1.5rem',
+                    marginTop: '1rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    fontSize: '0.95rem',
+                    fontWeight: '500',
+                    color: '#8a6d3b',
+                    boxShadow: '0 2px 8px rgba(246, 195, 67, 0.2)'
                   } : {})
                 }}>
-                  {uploadStatus.type === 'success' ? '✓' : uploadStatus.type === 'info' ? (isQueued ? '⏳' : 'ℹ') : '✗'} {uploadStatus.message}
+                  {uploadStatus.type === 'success'
+                    ? '✓'
+                    : uploadStatus.type === 'info'
+                      ? (isQueued ? '⏳' : 'ℹ')
+                      : uploadStatus.type === 'warning'
+                        ? '⚠'
+                        : '✗'} {uploadStatus.message}
                 </div>
               )}
             </div>
