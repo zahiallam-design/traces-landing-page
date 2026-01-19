@@ -169,6 +169,16 @@ function App() {
         return updatedErrors;
       });
       
+      const shouldScrollToAdd = updatedAlbums.length >= 1 && updatedAlbums.length < MAX_ALBUMS;
+      if (shouldScrollToAdd) {
+        setTimeout(() => {
+          const target = document.getElementById('add-album-button');
+          if (target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 100);
+      }
+
       return updatedAlbums;
     });
   };
@@ -699,6 +709,7 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
                 {album.selectedAlbum && album.selectedColor && (
                   <UploadSection
                     albumIndex={index}
+                    albumId={album.id}
                     selectedAlbum={album.selectedAlbum}
                     orderNumber={orderNumber}
                     onUploadComplete={(transferUrl, count) => {
@@ -772,6 +783,7 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
                   <>
                     <CoverCustomization
                       albumIndex={index}
+                      albumId={album.id}
                       orderNumber={orderNumber}
                       onCoverChange={(coverData) => {
                         handleCoverChange(index, coverData);
@@ -788,7 +800,9 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
                     />
                     {/* Add Album button after cover customization */}
                     {index === albums.length - 1 && albums.length < MAX_ALBUMS && (
-                      <div style={{ 
+                      <div
+                        id="add-album-button"
+                        style={{ 
                         textAlign: 'center', 
                         marginTop: '3rem', 
                         marginBottom: '2rem',

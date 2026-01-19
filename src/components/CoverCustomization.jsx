@@ -4,7 +4,7 @@ import Cropper from 'react-easy-crop';
 import { ensureFolder, getOrCreateSharedLink, uploadFileResumable } from '../services/dropboxService';
 import './CoverCustomization.css';
 
-function CoverCustomization({ albumIndex, orderNumber, onCoverChange, hasError }) {
+function CoverCustomization({ albumIndex, albumId, orderNumber, onCoverChange, hasError }) {
   const breakpoint = useBreakpoint();
   const [coverType, setCoverType] = useState(null); // 'image' or 'text'
   const [coverImage, setCoverImage] = useState(null);
@@ -315,7 +315,8 @@ function CoverCustomization({ albumIndex, orderNumber, onCoverChange, hasError }
       setCoverImage(file);
 
       const orderFolderPath = `/${orderNumber || `order-${Date.now()}`}`;
-      const albumFolderPath = `${orderFolderPath}/album-${albumIndex + 1}`;
+      const safeAlbumId = albumId || `album-${albumIndex + 1}`;
+      const albumFolderPath = `${orderFolderPath}/${safeAlbumId}`;
       const coverFolderPath = `${albumFolderPath}/cover image`;
 
       await ensureFolder(orderFolderPath);

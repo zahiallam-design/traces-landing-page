@@ -5,7 +5,7 @@ import './UploadSection.css';
 
 // Dropbox uploads are handled directly from the client
 
-function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplete, hasError, onUploadStateChange, onFilesSelected, onUploadProgress, requestUploadStart, currentlyProcessingAlbum, onUploadStart, onUploadCancel }) {
+function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUploadComplete, hasError, onUploadStateChange, onFilesSelected, onUploadProgress, requestUploadStart, currentlyProcessingAlbum, onUploadStart, onUploadCancel }) {
   console.log(`[UploadSection] Component mounting/rendering for album ${albumIndex}`, {
     selectedAlbum,
     hasRequestUploadStart: !!requestUploadStart,
@@ -31,20 +31,21 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
 
   const maxFiles = selectedAlbum?.size || 52;
 
-  // Notify parent of upload state changes
+  // Notify parent of upload/queue state changes
   useEffect(() => {
     console.log(`[UploadSection] Upload state effect triggered for album ${albumIndex}`, {
       isUploading,
+      isQueued,
       hasCallback: !!onUploadStateChange
     });
     if (onUploadStateChange) {
       try {
-        onUploadStateChange(isUploading);
+        onUploadStateChange(isUploading || isQueued);
       } catch (error) {
         console.error(`[UploadSection] Error in onUploadStateChange for album ${albumIndex}:`, error);
       }
     }
-  }, [isUploading, onUploadStateChange, albumIndex]);
+  }, [isUploading, isQueued, onUploadStateChange, albumIndex]);
 
   // Notify parent of upload progress
   useEffect(() => {
@@ -273,7 +274,8 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
       setTotalBytes(totalBytes);
 
       const orderFolderPath = `/${orderNumber || `order-${Date.now()}`}`;
-      const albumFolderPath = `${orderFolderPath}/album-${albumIndex + 1}`;
+      const safeAlbumId = albumId || `album-${albumIndex + 1}`;
+      const albumFolderPath = `${orderFolderPath}/${safeAlbumId}`;
       const albumImagesFolderPath = `${albumFolderPath}/album images`;
       const coverFolderPath = `${albumFolderPath}/cover image`;
 
@@ -560,7 +562,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
   const handleDrop = (e) => {
     e.preventDefault();
     dropzoneRef.current?.classList.remove('dragover');
-    if (!isUploading && selectedAlbum) {
+    if (!isUploading && uploadStatus?.type !== 'success' && selectedAlbum) {
       handleFileSelect(e.dataTransfer.files);
     } else if (!selectedAlbum) {
       alert('Please select an album size first before uploading photos.');
@@ -727,6 +729,7 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                 accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,image/avif,.avif,.jpg,.jpeg,.png,.webp,.heic,.heif"
                 style={{ display: 'none' }}
                 onChange={(e) => handleFileSelect(e.target.files)}
+                disabled={isUploading || uploadStatus?.type === 'success'}
               />
               {selectedFiles.length === 0 && (
                 <p style={{ marginBottom: '1rem', fontSize: '0.95rem', color: 'var(--text-dark)', textAlign: 'center', lineHeight: '1.5' }}>
@@ -736,10 +739,19 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
               <div
                 ref={dropzoneRef}
                 className="upload-dropzone"
-                onClick={() => !isUploading && fileInputRef.current?.click()}
+                onClick={() => {
+                  if (!isUploading && uploadStatus?.type !== 'success') {
+                    fileInputRef.current?.click();
+                  }
+                }}
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
+                style={{
+                  cursor: isUploading || uploadStatus?.type === 'success' ? 'not-allowed' : 'pointer',
+                  opacity: isUploading || uploadStatus?.type === 'success' ? 0.6 : 1,
+                  pointerEvents: isUploading || uploadStatus?.type === 'success' ? 'none' : 'auto'
+                }}
               >
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -860,17 +872,6 @@ function UploadSection({ albumIndex, selectedAlbum, orderNumber, onUploadComplet
                           }}
                         >
                           {isQueued ? '⏳ Upload Queued' : isUploading ? 'Uploading...' : 'Upload Photos'}
-                        </button>
-                      </div>
-                    )}
-                    {uploadStatus?.type === 'success' && (
-                      <div style={{ marginTop: '1rem', display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
-                        <button 
-                          onClick={clearAllFiles}
-                          className="btn btn-secondary"
-                          style={{ padding: '0.75rem 2rem', fontSize: '1rem' }}
-                        >
-                          Clear All & Start Over
                         </button>
                       </div>
                     )}
@@ -1228,7 +1229,7 @@ function FileItem({ file, index, onRemove, formatFileSize, isUploadComplete, onD
             cursor: (isUploadComplete || isUploading || isQueued) ? 'not-allowed' : 'pointer',
             pointerEvents: (isUploadComplete || isUploading || isQueued) ? 'none' : 'auto'
           }}
-          title={(isUploadComplete || isUploading || isQueued) ? 'Files are locked during upload. Use "Clear All" to start over.' : 'Remove file'}
+          title={(isUploadComplete || isUploading || isQueued) ? 'Files are locked during upload.' : 'Remove file'}
         >
           ×
         </button>
