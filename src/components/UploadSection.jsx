@@ -27,6 +27,7 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
   const dropzoneRef = useRef(null);
   const abortControllerRef = useRef(null);
   const cancelUploadRef = useRef(false);
+  const wakeLockRef = useRef(null);
   const uploadToDropboxRef = useRef(null); // Ref to store uploadToDropbox function
 
   const maxFiles = selectedAlbum?.size || 52;
@@ -117,6 +118,10 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
+    if (wakeLockRef.current) {
+      wakeLockRef.current.release().catch(() => null);
+      wakeLockRef.current = null;
+    }
     setIsUploading(false);
     setIsQueued(false); // Clear queued state on cancel
     setUploadProgress(0);
@@ -161,6 +166,14 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
 
     try {
       console.log('Starting upload via API...', { fileCount: selectedFiles.length });
+
+      if ('wakeLock' in navigator && !wakeLockRef.current) {
+        try {
+          wakeLockRef.current = await navigator.wakeLock.request('screen');
+        } catch (error) {
+          console.warn('[UploadSection] Wake Lock not available:', error);
+        }
+      }
       
       // Rename files with sequential numbers based on user's order
       const renamedFiles = renameFilesWithOrder(selectedFiles);
@@ -329,6 +342,11 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
       });
       setIsQueued(false); // Clear queued state on completion
       onUploadComplete(transferUrl, totalFiles);
+
+      if (wakeLockRef.current) {
+        await wakeLockRef.current.release().catch(() => null);
+        wakeLockRef.current = null;
+      }
       
       // Notify that this album finished (for queue processing)
       window.dispatchEvent(new CustomEvent('albumUploadFinished', { detail: { albumIndex } }));
@@ -338,6 +356,10 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
       
       // Don't show error if upload was cancelled
       if (signal.aborted || cancelUploadRef.current) {
+        if (wakeLockRef.current) {
+          await wakeLockRef.current.release().catch(() => null);
+          wakeLockRef.current = null;
+        }
         return;
       }
       
@@ -373,6 +395,10 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
         onUploadCancel(albumIndex);
       }
     } finally {
+      if (wakeLockRef.current) {
+        await wakeLockRef.current.release().catch(() => null);
+        wakeLockRef.current = null;
+      }
       if (!signal.aborted) {
         setIsUploading(false);
       }
