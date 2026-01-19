@@ -34,21 +34,22 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
 
   const maxFiles = selectedAlbum?.size || 52;
 
-  // Notify parent of upload/queue state changes
+  // Notify parent of upload/queue/init state changes
   useEffect(() => {
     console.log(`[UploadSection] Upload state effect triggered for album ${albumIndex}`, {
       isUploading,
       isQueued,
+      isInitiatingUpload,
       hasCallback: !!onUploadStateChange
     });
     if (onUploadStateChange) {
       try {
-        onUploadStateChange(isUploading || isQueued);
+        onUploadStateChange(isUploading || isQueued || isInitiatingUpload);
       } catch (error) {
         console.error(`[UploadSection] Error in onUploadStateChange for album ${albumIndex}:`, error);
       }
     }
-  }, [isUploading, isQueued, onUploadStateChange, albumIndex]);
+  }, [isUploading, isQueued, isInitiatingUpload, onUploadStateChange, albumIndex]);
 
   // Notify parent of upload progress
   useEffect(() => {
@@ -434,7 +435,7 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
       alert(`You have selected ${selectedFiles.length} photos, but this album only allows ${maxFiles} photos. Please remove ${selectedFiles.length - maxFiles} photo${selectedFiles.length - maxFiles > 1 ? 's' : ''} to proceed.`);
       return;
     }
-    if (isUploading) {
+    if (isUploading || isInitiatingUpload) {
       return;
     }
 
@@ -476,7 +477,7 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
     }
     
     // If currently uploading, cancel it first
-    if (isUploading) {
+    if (isUploading || isInitiatingUpload) {
       cancelUpload();
     }
     
@@ -606,7 +607,7 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
   const handleDrop = (e) => {
     e.preventDefault();
     dropzoneRef.current?.classList.remove('dragover');
-    if (!isUploading && uploadStatus?.type !== 'success' && selectedAlbum) {
+    if (!isUploading && !isInitiatingUpload && uploadStatus?.type !== 'success' && selectedAlbum) {
       handleFileSelect(e.dataTransfer.files);
     } else if (!selectedAlbum) {
       alert('Please select an album size first before uploading photos.');
@@ -624,8 +625,8 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
   };
 
   const removeFile = (index) => {
-    // Don't allow removing files after upload is complete or during upload/compression
-    if (uploadStatus?.type === 'success' || isUploading) {
+    // Don't allow removing files after upload is complete or during upload/init
+    if (uploadStatus?.type === 'success' || isUploading || isInitiatingUpload) {
       return;
     }
     
@@ -690,14 +691,14 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
   };
 
   const moveFileUp = (index) => {
-    if (index === 0 || uploadStatus?.type === 'success' || isUploading) return;
+    if (index === 0 || uploadStatus?.type === 'success' || isUploading || isInitiatingUpload) return;
     const newFiles = [...selectedFiles];
     [newFiles[index - 1], newFiles[index]] = [newFiles[index], newFiles[index - 1]];
     setSelectedFiles(newFiles);
   };
 
   const moveFileDown = (index) => {
-    if (index === selectedFiles.length - 1 || uploadStatus?.type === 'success' || isUploading) return;
+    if (index === selectedFiles.length - 1 || uploadStatus?.type === 'success' || isUploading || isInitiatingUpload) return;
     const newFiles = [...selectedFiles];
     [newFiles[index], newFiles[index + 1]] = [newFiles[index + 1], newFiles[index]];
     setSelectedFiles(newFiles);
@@ -773,7 +774,7 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
                 accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif,image/avif,.avif,.jpg,.jpeg,.png,.webp,.heic,.heif"
                 style={{ display: 'none' }}
                 onChange={(e) => handleFileSelect(e.target.files)}
-                disabled={isUploading || uploadStatus?.type === 'success'}
+                disabled={isUploading || isInitiatingUpload || uploadStatus?.type === 'success'}
               />
               {selectedFiles.length === 0 && (
                 <p style={{ marginBottom: '1rem', fontSize: '0.95rem', color: 'var(--text-dark)', textAlign: 'center', lineHeight: '1.5' }}>
@@ -784,7 +785,7 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
                 ref={dropzoneRef}
                 className="upload-dropzone"
                 onClick={() => {
-                  if (!isUploading && uploadStatus?.type !== 'success') {
+                  if (!isUploading && !isInitiatingUpload && uploadStatus?.type !== 'success') {
                     fileInputRef.current?.click();
                   }
                 }}
@@ -792,9 +793,9 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 style={{
-                  cursor: isUploading || uploadStatus?.type === 'success' ? 'not-allowed' : 'pointer',
-                  opacity: isUploading || uploadStatus?.type === 'success' ? 0.6 : 1,
-                  pointerEvents: isUploading || uploadStatus?.type === 'success' ? 'none' : 'auto'
+                  cursor: isUploading || isInitiatingUpload || uploadStatus?.type === 'success' ? 'not-allowed' : 'pointer',
+                  opacity: isUploading || isInitiatingUpload || uploadStatus?.type === 'success' ? 0.6 : 1,
+                  pointerEvents: isUploading || isInitiatingUpload || uploadStatus?.type === 'success' ? 'none' : 'auto'
                 }}
               >
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -882,7 +883,7 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
                           index={index}
                         onRemove={removeFile}
                         formatFileSize={formatFileSize}
-                        isUploadComplete={uploadStatus?.type === 'success' || isUploading || isQueued}
+                        isUploadComplete={uploadStatus?.type === 'success' || isUploading || isQueued || isInitiatingUpload}
                         onDragStart={handleDragStart}
                         onDragOver={handleFileDragOver}
                         onDragEnd={handleDragEnd}
@@ -891,7 +892,7 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
                         onMoveDown={moveFileDown}
                         canMoveUp={index > 0}
                         canMoveDown={index < selectedFiles.length - 1}
-                        isUploading={isUploading || isQueued}
+                        isUploading={isUploading || isQueued || isInitiatingUpload}
                         isQueued={isQueued}
                         />
                       ))}
@@ -917,9 +918,11 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
                         >
                           {isQueued
                             ? '⏳ Upload Queued'
-                            : isUploading
-                              ? (isInitiatingUpload ? 'Initiating upload...' : 'Uploading...')
-                              : 'Upload Photos'}
+                            : isInitiatingUpload
+                              ? 'Initiating upload...'
+                              : isUploading
+                                ? 'Uploading...'
+                                : 'Upload Photos'}
                         </button>
                       </div>
                     )}
@@ -972,6 +975,23 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
                   boxShadow: '0 2px 8px rgba(246, 195, 67, 0.2)'
                 }}>
                   ⚠ Please keep your screen awake while your upload is in progress. Some browsers pause uploads when the phone locks.
+                </div>
+              )}
+              {isInitiatingUpload && !isUploading && (
+                <div className="upload-status info" style={{
+                  background: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)',
+                  border: '2px solid #2196f3',
+                  borderRadius: '12px',
+                  padding: '0.75rem 1.25rem',
+                  marginTop: '1rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  fontSize: '0.9rem',
+                  fontWeight: '500',
+                  color: '#1565c0'
+                }}>
+                  ⏳ Initiating upload...
                 </div>
               )}
               {uploadStatus && !isUploading && (
