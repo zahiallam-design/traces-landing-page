@@ -23,6 +23,7 @@ function App() {
   const [notesForUs, setNotesForUs] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderNumber, setOrderNumber] = useState(null); // Generate order number early for file naming
+  const [orderTimestamp, setOrderTimestamp] = useState(null);
   const [validationErrors, setValidationErrors] = useState({}); // Track validation errors per album
   const [albumUploadStates, setAlbumUploadStates] = useState({}); // Track upload state per album
   const [albumFilesSelected, setAlbumFilesSelected] = useState({}); // Track if files are selected per album
@@ -43,6 +44,7 @@ function App() {
       // Generate order number on mount
       const newOrderNumber = generateOrderNumber();
       setOrderNumber(newOrderNumber);
+      setOrderTimestamp(new Date().toISOString());
       
       // Initialize with 1 album
       setAlbums([{
@@ -712,6 +714,7 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
                     albumId={album.id}
                     selectedAlbum={album.selectedAlbum}
                     orderNumber={orderNumber}
+                      orderTimestamp={orderTimestamp}
                     onUploadComplete={(transferUrl, count) => {
                       console.log(`[App] Upload complete for album ${index}:`, { transferUrl, count });
                       try {
@@ -785,6 +788,7 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
                       albumIndex={index}
                       albumId={album.id}
                       orderNumber={orderNumber}
+                      orderTimestamp={orderTimestamp}
                       onCoverChange={(coverData) => {
                         handleCoverChange(index, coverData);
                         // Clear validation error when cover is set

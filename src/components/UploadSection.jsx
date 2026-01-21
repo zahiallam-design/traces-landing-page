@@ -5,7 +5,7 @@ import './UploadSection.css';
 
 // Dropbox uploads are handled directly from the client
 
-function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUploadComplete, hasError, onUploadStateChange, onFilesSelected, onUploadProgress, requestUploadStart, currentlyProcessingAlbum, onUploadStart, onUploadCancel }) {
+function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, orderTimestamp, onUploadComplete, hasError, onUploadStateChange, onFilesSelected, onUploadProgress, requestUploadStart, currentlyProcessingAlbum, onUploadStart, onUploadCancel }) {
   console.log(`[UploadSection] Component mounting/rendering for album ${albumIndex}`, {
     selectedAlbum,
     hasRequestUploadStart: !!requestUploadStart,
@@ -291,7 +291,7 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
       const totalBytes = filesToUpload.reduce((sum, file) => sum + file.size, 0);
       setTotalBytes(totalBytes);
 
-      const orderFolderPath = `/${orderNumber || `order-${Date.now()}`}`;
+      const orderFolderPath = `/${formatOrderFolderName()}`;
       const safeAlbumId = albumId || `album-${albumIndex + 1}`;
       const albumFolderPath = `${orderFolderPath}/${safeAlbumId}`;
       const albumImagesFolderPath = `${albumFolderPath}/album images`;
@@ -683,6 +683,18 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, onUplo
       type: blob.type || fallbackType,
       lastModified: fallbackLastModified || Date.now()
     });
+  };
+
+  const formatOrderFolderName = () => {
+    const base = orderNumber || `order-${Date.now()}`;
+    const date = orderTimestamp ? new Date(orderTimestamp) : new Date();
+    const pad = (value) => String(value).padStart(2, '0');
+    const mm = pad(date.getMonth() + 1);
+    const dd = pad(date.getDate());
+    const yyyy = date.getFullYear();
+    const hh = pad(date.getHours());
+    const min = pad(date.getMinutes());
+    return `${base}_${mm}-${dd}-${yyyy}_${hh}-${min}`;
   };
 
 

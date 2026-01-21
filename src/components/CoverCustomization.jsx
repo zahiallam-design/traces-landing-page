@@ -4,7 +4,7 @@ import Cropper from 'react-easy-crop';
 import { ensureFolder, getOrCreateSharedLink, uploadFileResumable } from '../services/dropboxService';
 import './CoverCustomization.css';
 
-function CoverCustomization({ albumIndex, albumId, orderNumber, onCoverChange, hasError }) {
+function CoverCustomization({ albumIndex, albumId, orderNumber, orderTimestamp, onCoverChange, hasError }) {
   const breakpoint = useBreakpoint();
   const [coverType, setCoverType] = useState(null); // 'image' or 'text'
   const [coverImage, setCoverImage] = useState(null);
@@ -58,6 +58,18 @@ function CoverCustomization({ albumIndex, albumId, orderNumber, onCoverChange, h
         onCoverChange(null);
       }
     }
+  };
+
+  const formatOrderFolderName = () => {
+    const base = orderNumber || `order-${Date.now()}`;
+    const date = orderTimestamp ? new Date(orderTimestamp) : new Date();
+    const pad = (value) => String(value).padStart(2, '0');
+    const mm = pad(date.getMonth() + 1);
+    const dd = pad(date.getDate());
+    const yyyy = date.getFullYear();
+    const hh = pad(date.getHours());
+    const min = pad(date.getMinutes());
+    return `${base}_${mm}-${dd}-${yyyy}_${hh}-${min}`;
   };
 
   // Compression removed for low-memory devices
@@ -314,7 +326,7 @@ function CoverCustomization({ albumIndex, albumId, orderNumber, onCoverChange, h
       setIsUploadingCover(true);
       setCoverImage(file);
 
-      const orderFolderPath = `/${orderNumber || `order-${Date.now()}`}`;
+      const orderFolderPath = `/${formatOrderFolderName()}`;
       const safeAlbumId = albumId || `album-${albumIndex + 1}`;
       const albumFolderPath = `${orderFolderPath}/${safeAlbumId}`;
       const coverFolderPath = `${albumFolderPath}/cover image`;
