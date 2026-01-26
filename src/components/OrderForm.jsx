@@ -9,6 +9,8 @@ function OrderForm({
   onDeliveryNotesChange,
   notesForUs,
   onNotesForUsChange,
+  valentineGiftWrap,
+  onValentineGiftWrapChange,
   onSubmit,
   isSubmitting = false,
   onValidationError,
@@ -93,6 +95,7 @@ function OrderForm({
     const orderData = {
       customer: formData,
       notes: deliveryNotes,
+      valentineGiftWrap: valentineGiftWrap || false,
       total,
       timestamp: new Date().toISOString()
     };
@@ -191,6 +194,19 @@ function OrderForm({
                 value={deliveryNotes}
                 onChange={(e) => onDeliveryNotesChange(e.target.value)}
               />
+            </div>
+            <div className="form-group">
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  id="valentine-gift-wrap"
+                  name="valentine-gift-wrap"
+                  checked={valentineGiftWrap || false}
+                  onChange={(e) => onValentineGiftWrapChange(e.target.checked)}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <span>Valentine Gift Wrap my albums</span>
+              </label>
             </div>
             <div className="form-group">
               <label htmlFor="notes-for-us">Notes for Us (Optional)</label>

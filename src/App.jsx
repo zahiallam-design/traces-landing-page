@@ -21,6 +21,7 @@ function App() {
   const [albums, setAlbums] = useState([]); // Array of album objects
   const [notes, setNotes] = useState('');
   const [notesForUs, setNotesForUs] = useState('');
+  const [valentineGiftWrap, setValentineGiftWrap] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderNumber, setOrderNumber] = useState(null); // Generate order number early for file naming
   const [orderTimestamp, setOrderTimestamp] = useState(null);
@@ -365,7 +366,8 @@ function App() {
         cover: album.cover
       })),
       notes,
-      notesForUs
+      notesForUs,
+      valentineGiftWrap
     };
     
     setIsSubmitting(true);
@@ -456,7 +458,7 @@ CUSTOMER DETAILS:
 DELIVERY NOTES:
 ${orderData.notes || 'None'}
 
-${orderData.notesForUs ? `NOTES FOR US:\n${orderData.notesForUs}\n\n` : ''}SUBTOTAL: $${subtotal.toFixed(2)}
+${orderData.valentineGiftWrap ? `VALENTINE GIFT WRAP: Yes, please gift wrap my albums\n\n` : ''}${orderData.notesForUs ? `NOTES FOR US:\n${orderData.notesForUs}\n\n` : ''}SUBTOTAL: $${subtotal.toFixed(2)}
 DELIVERY CHARGE: $${deliveryCharge.toFixed(2)}
 TOTAL: $${total.toFixed(2)}
 
@@ -601,6 +603,12 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
         yPosition += 5;
         addText('DELIVERY NOTES:', 12, true);
         addText(orderData.notes, 10);
+      }
+      
+      if (orderData.valentineGiftWrap) {
+        yPosition += 5;
+        addText('VALENTINE GIFT WRAP:', 12, true);
+        addText('Yes, please gift wrap my albums', 10);
       }
       
       if (orderData.notesForUs) {
@@ -907,6 +915,8 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
             onDeliveryNotesChange={setNotes}
             notesForUs={notesForUs}
             onNotesForUsChange={setNotesForUs}
+            valentineGiftWrap={valentineGiftWrap}
+            onValentineGiftWrapChange={setValentineGiftWrap}
             onSubmit={handleOrderSubmit}
             isSubmitting={isSubmitting}
             onValidationError={setValidationErrors}

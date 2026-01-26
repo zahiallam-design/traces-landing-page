@@ -39,6 +39,7 @@ export const sendOrderEmail = async (orderData) => {
     
     // Notes
     customer_notes: orderData.notes || 'None',
+    valentine_gift_wrap: orderData.valentineGiftWrap ? 'Yes, please gift wrap my albums' : 'No',
     notes_for_us: orderData.notesForUs || 'None',
     
     // Formatted order summary (for easy reading)
@@ -225,7 +226,7 @@ CUSTOMER DETAILS:
 DELIVERY NOTES:
 ${orderData.notes || 'None'}
 
-${orderData.notesForUs ? `NOTES FOR US:\n${orderData.notesForUs}\n\n` : ''}${(() => {
+${orderData.valentineGiftWrap ? `VALENTINE GIFT WRAP: Yes, please gift wrap my albums\n\n` : ''}${orderData.notesForUs ? `NOTES FOR US:\n${orderData.notesForUs}\n\n` : ''}${(() => {
   const subtotal = orderData.albums.reduce((sum, album) => sum + album.album.price, 0);
   const deliveryCharge = subtotal >= 90 ? 0 : 4;
   const total = subtotal + deliveryCharge;
@@ -286,7 +287,7 @@ ${albumsText}
 *DELIVERY ADDRESS:*
 ${orderData.customer.deliveryTown ? `${orderData.customer.deliveryTown}, ` : ''}${orderData.customer.deliveryAddress}
 
-${orderData.notes ? `*DELIVERY NOTES:*\n${orderData.notes}\n\n` : ''}${orderData.notesForUs ? `*NOTES FOR US:*\n${orderData.notesForUs}\n\n` : ''}*SUBTOTAL:* $${subtotal.toFixed(2)}
+${orderData.notes ? `*DELIVERY NOTES:*\n${orderData.notes}\n\n` : ''}${orderData.valentineGiftWrap ? `*VALENTINE GIFT WRAP:*\nYes, please gift wrap my albums\n\n` : ''}${orderData.notesForUs ? `*NOTES FOR US:*\n${orderData.notesForUs}\n\n` : ''}*SUBTOTAL:* $${subtotal.toFixed(2)}
 *DELIVERY CHARGE:* $${deliveryCharge.toFixed(2)}${deliveryCharge === 0 ? ' (Free delivery on orders above $90!)' : ''}
 *TOTAL:* $${total.toFixed(2)}
 
@@ -434,7 +435,7 @@ ${albumsText}
 DELIVERY ADDRESS:
 ${orderData.customer.deliveryTown ? `${orderData.customer.deliveryTown}, ` : ''}${orderData.customer.deliveryAddress}
 
-${orderData.notes ? `DELIVERY NOTES:\n${orderData.notes}\n\n` : ''}${orderData.notesForUs ? `NOTES FOR US:\n${orderData.notesForUs}\n\n` : ''}${(() => {
+${orderData.notes ? `DELIVERY NOTES:\n${orderData.notes}\n\n` : ''}${orderData.valentineGiftWrap ? `VALENTINE GIFT WRAP:\nYes, please gift wrap my albums\n\n` : ''}${orderData.notesForUs ? `NOTES FOR US:\n${orderData.notesForUs}\n\n` : ''}${(() => {
   const subtotal = orderData.albums.reduce((sum, album) => sum + album.album.price, 0);
   const deliveryCharge = subtotal >= 90 ? 0 : 4;
   const total = subtotal + deliveryCharge;
