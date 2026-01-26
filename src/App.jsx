@@ -53,6 +53,7 @@ function App() {
         selectedAlbum: null,
         selectedColor: null,
         photosFolderLink: null,
+        albumFolderLink: null,
         fileCount: 0,
         cover: null
       }]);
@@ -73,6 +74,7 @@ function App() {
         selectedAlbum: null,
         selectedColor: null,
         photosFolderLink: null,
+        albumFolderLink: null,
         fileCount: 0,
         cover: null
       };
@@ -290,13 +292,14 @@ function App() {
     }
   }, []);
 
-  const handleUploadComplete = (albumIndex, transferUrl, count) => {
+  const handleUploadComplete = (albumIndex, transferUrl, count, albumFolderLink = null) => {
     setAlbums(prevAlbums => {
       const updatedAlbums = [...prevAlbums];
       if (updatedAlbums[albumIndex]) {
         updatedAlbums[albumIndex] = { 
           ...updatedAlbums[albumIndex], 
           photosFolderLink: transferUrl,
+          albumFolderLink: albumFolderLink || transferUrl, // Use album folder link if provided, fallback to photos folder link
           fileCount: count
         };
       }
@@ -362,6 +365,7 @@ function App() {
           price: album.selectedAlbum?.price
         },
         photosFolderLink: album.photosFolderLink,
+        albumFolderLink: album.albumFolderLink,
         fileCount: album.fileCount,
         cover: album.cover
       })),

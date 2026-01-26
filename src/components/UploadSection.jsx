@@ -328,6 +328,9 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, orderT
       }
 
       transferUrl = await getOrCreateSharedLink(albumImagesFolderPath, handleRetry);
+      
+      // Also create shared link for the parent album folder (contains both album images and cover image subfolders)
+      const albumFolderLink = await getOrCreateSharedLink(albumFolderPath, handleRetry);
 
       // Clear any interval if it exists
       if (progressInterval) {
@@ -352,7 +355,7 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, orderT
       });
       setShowUploadWarning(false);
       setIsQueued(false); // Clear queued state on completion
-      onUploadComplete(transferUrl, totalFiles);
+      onUploadComplete(transferUrl, totalFiles, albumFolderLink || transferUrl);
       setIsInitiatingUpload(false);
 
       if (wakeLockRef.current) {

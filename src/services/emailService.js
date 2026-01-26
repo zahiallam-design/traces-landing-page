@@ -348,14 +348,11 @@ The message includes:
 function formatWhatsAppMessageForPrinting(orderData) {
   let albumsText = '';
   orderData.albums.forEach((albumData, index) => {
+    // Use album folder link (parent folder containing both album images and cover image subfolders)
+    const albumLink = albumData.albumFolderLink || albumData.photosFolderLink || 'N/A';
     albumsText += `\n*Album ${index + 1}:*\n`;
-    albumsText += `• Album Images Link: ${albumData.photosFolderLink || 'N/A'}\n`;
-    
-    // Only add cover image link if it's an image cover with a URL (skip text covers)
-    if (albumData.cover?.type === 'image' && albumData.cover.imageUrl) {
-      albumsText += `• Cover Image Link: ${albumData.cover.imageUrl}\n`;
-    }
-    // Text covers are dismissed (not included)
+    albumsText += `• Album Link: ${albumLink}\n`;
+    // Note: The album folder contains both "album images" and "cover image" subfolders
   });
 
   // Format date and time
@@ -388,8 +385,7 @@ ${whatsappLink}
 The message includes:
 • Order number: ${orderData.orderNumber || 'N/A'}
 • Date and time sent
-• Album image links (per-album folders)
-• Cover image links (if image cover selected)
+• Album folder links (each link contains both "album images" and "cover image" subfolders)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`.trim();
 }
