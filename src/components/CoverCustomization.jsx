@@ -21,9 +21,48 @@ function CoverCustomization({ albumIndex, albumId, orderNumber, orderTimestamp, 
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+  const [showSwitchConfirm, setShowSwitchConfirm] = useState(false);
+  const [pendingCoverType, setPendingCoverType] = useState(null);
   const fileInputRef = useRef(null);
 
   const handleCoverTypeSelect = (type) => {
+    // If switching from one type to another (and current type has content), show confirmation
+    if (coverType !== null && coverType !== type) {
+      // Check if current type has content
+      const hasCurrentContent = 
+        (coverType === 'image' && (coverImage || coverImageUrl)) ||
+        (coverType === 'text' && coverTitle && coverTitle.trim() !== '' && coverTextColor);
+      
+      if (hasCurrentContent) {
+        // Show confirmation dialog
+        setPendingCoverType(type);
+        setShowSwitchConfirm(true);
+        return;
+      }
+    }
+    
+    // No conflict or no content to lose, proceed directly
+    proceedWithCoverTypeSelect(type);
+  };
+
+  const proceedWithCoverTypeSelect = (type) => {
+    // Clear the previous cover type's data
+    if (type === 'image') {
+      // Switching to image - clear text data
+      setCoverTitle('');
+      setCoverTextColor(null);
+    } else {
+      // Switching to text - clear image data
+      setCoverImage(null);
+      setCoverImageUrl(null);
+      setCroppedSquarePreview(null);
+      if (imageToCropUrl) {
+        URL.revokeObjectURL(imageToCropUrl);
+      }
+      setImageToCrop(null);
+      setImageToCropUrl(null);
+    }
+    
     setCoverType(type);
     // If image type is selected, automatically trigger file input
     if (type === 'image') {
@@ -58,6 +97,19 @@ function CoverCustomization({ albumIndex, albumId, orderNumber, orderTimestamp, 
         onCoverChange(null);
       }
     }
+  };
+
+  const handleConfirmSwitch = () => {
+    if (pendingCoverType) {
+      proceedWithCoverTypeSelect(pendingCoverType);
+      setShowSwitchConfirm(false);
+      setPendingCoverType(null);
+    }
+  };
+
+  const handleCancelSwitch = () => {
+    setShowSwitchConfirm(false);
+    setPendingCoverType(null);
   };
 
   const formatOrderFolderName = () => {
@@ -407,8 +459,12 @@ function CoverCustomization({ albumIndex, albumId, orderNumber, orderTimestamp, 
           
           <div className="cover-type-selection">
             <button
-              className={`cover-type-btn ${coverType === 'image' ? 'selected' : ''}`}
+              className={`cover-type-btn ${coverType === 'image' ? 'selected' : ''} ${coverType === 'text' && (coverTitle || coverTextColor) ? 'disabled' : ''}`}
               onClick={() => handleCoverTypeSelect('image')}
+              style={{
+                opacity: coverType === 'text' && (coverTitle || coverTextColor) ? 0.5 : 1,
+                cursor: 'pointer'
+              }}
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
@@ -418,8 +474,12 @@ function CoverCustomization({ albumIndex, albumId, orderNumber, orderTimestamp, 
               <span>Image Cover</span>
             </button>
             <button
-              className={`cover-type-btn ${coverType === 'text' ? 'selected' : ''}`}
+              className={`cover-type-btn ${coverType === 'text' ? 'selected' : ''} ${coverType === 'image' && (coverImage || coverImageUrl) ? 'disabled' : ''}`}
               onClick={() => handleCoverTypeSelect('text')}
+              style={{
+                opacity: coverType === 'image' && (coverImage || coverImageUrl) ? 0.5 : 1,
+                cursor: 'pointer'
+              }}
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <polyline points="4 7 4 4 20 4 20 7"></polyline>
@@ -631,6 +691,38 @@ function CoverCustomization({ albumIndex, albumId, orderNumber, orderTimestamp, 
                   setZoom(1);
                   setCroppedAreaPixels(null);
                 }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Switch Confirmation Modal */}
+      {showSwitchConfirm && (
+        <div className="crop-modal-overlay" style={{ zIndex: 10001 }}>
+          <div className="crop-modal-content" style={{ maxWidth: '500px' }}>
+            <h3>Switch Cover Type?</h3>
+            <p style={{ marginBottom: '1.5rem', color: 'var(--text-dark)', fontSize: '1rem', lineHeight: '1.6' }}>
+              {pendingCoverType === 'image' 
+                ? 'Switching to Image Cover will remove your current Text Cover.'
+                : 'Switching to Text Cover will remove your current Image Cover.'}
+              <br /><br />
+              Do you want to continue?
+            </p>
+            <div className="crop-actions" style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+              <button
+                className="btn btn-primary"
+                onClick={handleConfirmSwitch}
+                style={{ minWidth: '120px' }}
+              >
+                Continue
+              </button>
+              <button
+                className="btn btn-secondary"
+                onClick={handleCancelSwitch}
+                style={{ minWidth: '120px' }}
               >
                 Cancel
               </button>
