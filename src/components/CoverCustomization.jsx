@@ -264,15 +264,15 @@ function CoverCustomization({ albumIndex, albumId, orderNumber, orderTimestamp, 
     });
   };
 
-  // Place cropped square image on A6 white background at corner (9x9 cm)
+  // Place cropped square image on A6 white background at corner (8x8 cm)
   const placeOnA6Paper = async (croppedSquareFile) => {
     // A6 dimensions: 105mm × 148mm (10.5cm × 14.8cm)
     // At 300 DPI (print quality): 1240 × 1748 pixels
-    // 9x9 cm at 300 DPI = 1063 × 1063 pixels
+    // 8x8 cm at 300 DPI = 945 × 945 pixels
     const DPI = 300;
     const A6_WIDTH_MM = 105;
     const A6_HEIGHT_MM = 148;
-    const COVER_SIZE_CM = 9;
+    const COVER_SIZE_CM = 8;
     
     // Convert mm/cm to pixels at 300 DPI
     const mmToPixels = (mm) => (mm / 25.4) * DPI;
@@ -296,7 +296,7 @@ function CoverCustomization({ albumIndex, albumId, orderNumber, orderTimestamp, 
     const imageUrl = URL.createObjectURL(croppedSquareFile);
     const squareImage = await createImage(imageUrl);
     
-    // Place the square image at top-left corner (0, 0) with 9x9 cm size
+    // Place the square image at top-left corner (0, 0) with 8x8 cm size
     a6Ctx.drawImage(
       squareImage,
       0,

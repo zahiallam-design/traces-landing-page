@@ -48,7 +48,7 @@ export const sendOrderEmail = async (orderData) => {
     // WhatsApp message for copy-paste
     whatsapp_message: formatWhatsAppMessageForBusiness(orderData),
     
-    // WhatsApp message for printing shop (71792902)
+    // WhatsApp message for printing shop (70770267)
     whatsapp_message_printing: formatWhatsAppMessageForPrinting(orderData),
   };
 
@@ -342,7 +342,7 @@ The message includes:
 }
 
 /**
- * Format WhatsApp message for printing shop (71792902)
+ * Format WhatsApp message for printing shop (70770267)
  * Contains album links and cover customization only
  */
 function formatWhatsAppMessageForPrinting(orderData) {
@@ -366,8 +366,8 @@ ${orderDate}
 
 ${albumsText}`.trim();
 
-  // Create WhatsApp link for printing shop (71792902)
-  const printingShopNumber = '96171792902';
+  // Create WhatsApp link for printing shop (70770267)
+  const printingShopNumber = '96170770267';
   const encodedMessage = encodeURIComponent(whatsappMessage);
   const whatsappLink = `https://api.whatsapp.com/send?phone=${printingShopNumber}&text=${encodedMessage}`;
 
@@ -376,7 +376,7 @@ ${albumsText}`.trim();
 📱 SEND WHATSAPP MESSAGE TO PRINTING SHOP
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Click the link below to open WhatsApp with a pre-filled message ready to send to the printing shop (71792902):
+Click the link below to open WhatsApp with a pre-filled message ready to send to the printing shop (70770267):
 
 ${whatsappLink}
 
