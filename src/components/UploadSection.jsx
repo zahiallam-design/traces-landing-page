@@ -395,6 +395,24 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, orderT
         errorMessage += 'Server configuration error. Please contact support.';
       } else if (error.message?.includes('413') || error.message?.includes('too large')) {
         errorMessage += 'Files are too large. Please upload fewer files at once.';
+      } else if (error.message?.includes('fetch') || error.message?.includes('unable to fetch') || error.message?.includes('access') || error.message?.includes('permission') || error.name === 'SecurityError' || error.name === 'NotAllowedError') {
+        // File access/fetch error - show detailed help message
+        const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || '71532156';
+        const cleanNumber = whatsappNumber.replace(/[\s\-+()]/g, '');
+        // Add country code if missing (Lebanon: 961)
+        const fullNumber = cleanNumber.startsWith('961') ? cleanNumber : `961${cleanNumber}`;
+        const whatsappLink = `https://api.whatsapp.com/send?phone=${fullNumber}`;
+        
+        errorMessage = `Unable to fetch photos. This might be due to:
+
+• Browser permissions: Make sure your browser has permission to access your photos/files
+• Try a different browser: Chrome usually works best on Android
+• Cloud storage: If photos are stored in Google Drive, Dropbox, or other cloud services, please download them to your device first, then select them
+• File location: Select photos from your device's local gallery/photos folder
+
+If you continue to have issues, you can contact us on WhatsApp and send us your photos directly. We'll help you complete your order.
+
+Contact us: ${whatsappLink}`;
       } else {
         errorMessage += error.message || 'Please try again.';
       }
@@ -472,17 +490,36 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, orderT
   };
 
   const handleFileSelect = (files) => {
-    // Prevent uploads if no album is selected
-    if (!selectedAlbum) {
-      alert('Please select an album size first before uploading photos.');
-      document.getElementById('album-options')?.scrollIntoView({ behavior: 'smooth' });
-      return;
-    }
-    
-    // If currently uploading, cancel it first
-    if (isUploading || isInitiatingUpload) {
-      cancelUpload();
-    }
+    try {
+      // Prevent uploads if no album is selected
+      if (!selectedAlbum) {
+        alert('Please select an album size first before uploading photos.');
+        document.getElementById('album-options')?.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+      
+      // If currently uploading, cancel it first
+      if (isUploading || isInitiatingUpload) {
+        cancelUpload();
+      }
+      
+      // Check if files array is empty or invalid
+      if (!files || files.length === 0) {
+        showFileAccessError();
+        return;
+      }
+      
+      // Try to access file properties to check if files are readable
+      try {
+        Array.from(files).forEach(file => {
+          if (!file.name || file.size === undefined) {
+            throw new Error('File access error');
+          }
+        });
+      } catch (accessError) {
+        showFileAccessError();
+        return;
+      }
     
     // List of supported image formats
     const supportedTypes = [
@@ -604,6 +641,39 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, orderT
         onFilesSelected(true);
       }
       return updated;
+    });
+    } catch (error) {
+      console.error('File selection error:', error);
+      // Check if it's a file access error
+      if (error.message?.includes('fetch') || error.message?.includes('access') || error.message?.includes('permission') || error.name === 'SecurityError' || error.name === 'NotAllowedError') {
+        showFileAccessError();
+      } else {
+        showFileAccessError();
+      }
+    }
+  };
+
+  const showFileAccessError = () => {
+    const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || '71532156';
+    const cleanNumber = whatsappNumber.replace(/[\s\-+()]/g, '');
+    // Add country code if missing (Lebanon: 961)
+    const fullNumber = cleanNumber.startsWith('961') ? cleanNumber : `961${cleanNumber}`;
+    const whatsappLink = `https://api.whatsapp.com/send?phone=${fullNumber}`;
+    
+    const errorMessage = `Unable to access photos. This might be due to:
+
+• Browser permissions: Make sure your browser has permission to access your photos/files
+• Try a different browser: Chrome usually works best on Android
+• Cloud storage: If photos are stored in Google Drive, Dropbox, or other cloud services, please download them to your device first, then select them
+• File location: Select photos from your device's local gallery/photos folder
+
+If you continue to have issues, you can contact us on WhatsApp and send us your photos directly. We'll help you complete your order.
+
+Contact us: ${whatsappLink}`;
+
+    setUploadStatus({ 
+      type: 'error', 
+      message: errorMessage 
     });
   };
 
@@ -1026,11 +1096,16 @@ function UploadSection({ albumIndex, albumId, selectedAlbum, orderNumber, orderT
                     boxShadow: '0 2px 8px rgba(33, 150, 243, 0.15)'
                   } : {}),
                 }}>
-                  {uploadStatus.type === 'success'
-                    ? '✓'
-                    : uploadStatus.type === 'info'
-                      ? (isQueued ? '⏳' : 'ℹ')
-                      : '✗'} {uploadStatus.message}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                    <span>{uploadStatus.type === 'success'
+                      ? '✓'
+                      : uploadStatus.type === 'info'
+                        ? (isQueued ? '⏳' : 'ℹ')
+                        : '✗'}</span>
+                    <div style={{ flex: 1, whiteSpace: 'pre-line' }}>
+                      {uploadStatus.message}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
