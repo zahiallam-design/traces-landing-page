@@ -103,6 +103,59 @@ function OrderForm({
     onSubmit(orderData);
   };
 
+  const handleWhatsAppOrder = () => {
+    const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || '71532156';
+    const cleanNumber = whatsappNumber.replace(/[\s\-+()]/g, '');
+    // Add country code if missing (Lebanon: 961)
+    const fullNumber = cleanNumber.startsWith('961') ? cleanNumber : `961${cleanNumber}`;
+    
+    // Format WhatsApp message with template
+    let message = '*Order*\n';
+    
+    // Add album details
+    albums.forEach((album, index) => {
+      message += `\nAlbum #${index + 1}:\n`;
+      message += `- Size (52 or 100 photos): ${album.selectedAlbum?.size || '___'}\n`;
+      message += `- Color (Grey or Green): ${album.selectedColor ? album.selectedColor.charAt(0).toUpperCase() + album.selectedColor.slice(1) : '___'}\n`;
+      message += `- Cover: `;
+      
+      if (album.cover?.type === 'image') {
+        message += `Image\n`;
+        message += `    - If image please send it to us, it will be cropped to a square to fit the cover format\n`;
+      } else if (album.cover?.type === 'text') {
+        message += `Text\n`;
+        message += `    - Text: ${album.cover.title || '___'}\n`;
+        message += `    - Text color (grey or red): ${album.cover.color ? album.cover.color.charAt(0).toUpperCase() + album.cover.color.slice(1) : '___'}\n`;
+      } else {
+        message += `(text or image): ___\n`;
+        message += `    - If image please send it to us, it will be cropped to a square to fit the cover format\n`;
+        message += `    - If text please write it down:\n`;
+        message += `        - Text: ___\n`;
+        message += `        - Text color (grey or red): ___\n`;
+      }
+    });
+    
+    message += `\n*Delivery info*\n`;
+    message += `Full name: ${formData.fullName || '___'}\n`;
+    message += `Town city: ${formData.deliveryTown || '___'}\n`;
+    message += `Street address: ${formData.deliveryAddress || '___'}\n`;
+    message += `Any notes for delivery (optional): ${deliveryNotes || '___'}\n`;
+    message += `Any notes for us (optional): ${notesForUs || '___'}\n`;
+    message += `Email address (optional): ${formData.email || '___'}\n`;
+    message += `Phone number: ${formData.mobileNumber || '___'}\n`;
+    
+    message += `\n*Notes from us*\n`;
+    message += `Make sure to send the photos in HD to maintain quality.\n`;
+    message += `We will fill your order once all the details are received and send you a confirmation message.`;
+    
+    // Encode message for URL
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappLink = `https://api.whatsapp.com/send?phone=${fullNumber}&text=${encodedMessage}`;
+    
+    // Open WhatsApp
+    window.open(whatsappLink, '_blank');
+  };
+
   return (
     <section id="order-form" className="order-section">
       <div className="container">
@@ -296,6 +349,20 @@ function OrderForm({
               disabled={isSubmitting || isUploadInProgress}
             >
               {isSubmitting ? 'Submitting Order...' : 'Place Order – Pay on Delivery'}
+            </button>
+            <button 
+              type="button"
+              onClick={handleWhatsAppOrder}
+              className="btn btn-secondary btn-large"
+              style={{ marginTop: '1rem', backgroundColor: '#25D366', color: 'white', border: 'none' }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = '#20BA5A';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = '#25D366';
+              }}
+            >
+              📱 Complete Order Over WhatsApp
             </button>
             {isUploadInProgress && (
               <div style={{ marginTop: '0.5rem', textAlign: 'center' }}>
