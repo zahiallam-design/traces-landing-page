@@ -39,9 +39,6 @@ function Hero() {
     message += `Email address (optional):\n`;
     message += `Phone number: \n`;
     
-    message += `\n*Notes from us*\n`;
-    message += `Make sure to send the photos in HD to maintain quality.\n`;
-    message += `We will fill your order once all the details are received and send you a confirmation message.`;
     
     // Encode message for URL
     const encodedMessage = encodeURIComponent(message);
