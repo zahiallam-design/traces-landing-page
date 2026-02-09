@@ -109,40 +109,25 @@ function OrderForm({
     // Add country code if missing (Lebanon: 961)
     const fullNumber = cleanNumber.startsWith('961') ? cleanNumber : `961${cleanNumber}`;
     
-    // Format WhatsApp message with template
+    // Format WhatsApp message with blank template (no pre-filled data)
     let message = '*Order*\n';
-    
-    // Add album details
-    albums.forEach((album, index) => {
-      message += `\nAlbum #${index + 1}:\n`;
-      message += `- Size (52 or 100 photos): ${album.selectedAlbum?.size || '___'}\n`;
-      message += `- Color (Grey or Green): ${album.selectedColor ? album.selectedColor.charAt(0).toUpperCase() + album.selectedColor.slice(1) : '___'}\n`;
-      message += `- Cover: `;
-      
-      if (album.cover?.type === 'image') {
-        message += `Image\n`;
-        message += `    - If image please send it to us, it will be cropped to a square to fit the cover format\n`;
-      } else if (album.cover?.type === 'text') {
-        message += `Text\n`;
-        message += `    - Text: ${album.cover.title || '___'}\n`;
-        message += `    - Text color (grey or red): ${album.cover.color ? album.cover.color.charAt(0).toUpperCase() + album.cover.color.slice(1) : '___'}\n`;
-      } else {
-        message += `(text or image): ___\n`;
-        message += `    - If image please send it to us, it will be cropped to a square to fit the cover format\n`;
-        message += `    - If text please write it down:\n`;
-        message += `        - Text: ___\n`;
-        message += `        - Text color (grey or red): ___\n`;
-      }
-    });
+    message += `Album #:\n`;
+    message += `- Size (52 or 100 photos): \n`;
+    message += `- Color (Grey or Green): \n`;
+    message += `- Cover: (text or image)\n`;
+    message += `    - If image please send it to us, it will be cropped to a square to fit the cover format\n`;
+    message += `    - If text please write it down:\n`;
+    message += `        - Text:\n`;
+    message += `        - Text color (grey or red):\n`;
     
     message += `\n*Delivery info*\n`;
-    message += `Full name: ${formData.fullName || '___'}\n`;
-    message += `Town city: ${formData.deliveryTown || '___'}\n`;
-    message += `Street address: ${formData.deliveryAddress || '___'}\n`;
-    message += `Any notes for delivery (optional): ${deliveryNotes || '___'}\n`;
-    message += `Any notes for us (optional): ${notesForUs || '___'}\n`;
-    message += `Email address (optional): ${formData.email || '___'}\n`;
-    message += `Phone number: ${formData.mobileNumber || '___'}\n`;
+    message += `Full name: \n`;
+    message += `Town city:\n`;
+    message += `Street address: \n`;
+    message += `Any notes for delivery (optional):\n`;
+    message += `Any notes for us (optional):\n`;
+    message += `Email address (optional):\n`;
+    message += `Phone number: \n`;
     
     message += `\n*Notes from us*\n`;
     message += `Make sure to send the photos in HD to maintain quality.\n`;
@@ -201,6 +186,22 @@ function OrderForm({
               </div>
             </div>
           )}
+          <div style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
+            <button 
+              type="button"
+              onClick={handleWhatsAppOrder}
+              className="btn btn-secondary btn-large"
+              style={{ backgroundColor: '#25D366', color: 'white', border: 'none' }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = '#20BA5A';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = '#25D366';
+              }}
+            >
+              📱 Complete Order Over WhatsApp
+            </button>
+          </div>
           <form className="order-form-form" onSubmit={handleSubmit}>
             <div className="form-group">
               <label htmlFor="full-name">Full Name *</label>
@@ -349,20 +350,6 @@ function OrderForm({
               disabled={isSubmitting || isUploadInProgress}
             >
               {isSubmitting ? 'Submitting Order...' : 'Place Order – Pay on Delivery'}
-            </button>
-            <button 
-              type="button"
-              onClick={handleWhatsAppOrder}
-              className="btn btn-secondary btn-large"
-              style={{ marginTop: '1rem', backgroundColor: '#25D366', color: 'white', border: 'none' }}
-              onMouseEnter={(e) => {
-                e.target.style.backgroundColor = '#20BA5A';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.backgroundColor = '#25D366';
-              }}
-            >
-              📱 Complete Order Over WhatsApp
             </button>
             {isUploadInProgress && (
               <div style={{ marginTop: '0.5rem', textAlign: 'center' }}>
