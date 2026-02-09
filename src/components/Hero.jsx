@@ -20,24 +20,7 @@ function Hero() {
     const fullNumber = cleanNumber.startsWith('961') ? cleanNumber : `961${cleanNumber}`;
     
     // Format WhatsApp message with blank template (no pre-filled data)
-    let message = '*Order*\n';
-    message += `Album #:\n`;
-    message += `- Size (52 or 100 photos): \n`;
-    message += `- Color (Grey or Green): \n`;
-    message += `- Cover: (text or image)\n`;
-    message += `    - If image please send it to us, it will be cropped to a square to fit the cover format\n`;
-    message += `    - If text please write it down:\n`;
-    message += `        - Text:\n`;
-    message += `        - Text color (grey or red):\n`;
-    
-    message += `\n*Delivery info*\n`;
-    message += `Full name: \n`;
-    message += `Town city:\n`;
-    message += `Street address: \n`;
-    message += `Any notes for delivery (optional):\n`;
-    message += `Any notes for us (optional):\n`;
-    message += `Email address (optional):\n`;
-    message += `Phone number: \n`;
+    let message = 'Hello! I would like to put an order over whatsapp.';
     
     
     // Encode message for URL
