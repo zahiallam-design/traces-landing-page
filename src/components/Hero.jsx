@@ -65,32 +65,42 @@ function Hero() {
           <p style={{ marginTop: '1rem', marginBottom: '1.5rem', color: 'var(--pastel-green-dark)', fontWeight: '500', fontSize: '1rem' }}>
             🎉 Free delivery on orders above $90!
           </p>
-          <button 
-            className="btn btn-primary"
-            onClick={() => scrollToSection('album-sections')}
-          >
-            Start Your Order
-          </button>
-          <button 
-            className="btn btn-secondary"
-            onClick={handleWhatsAppOrder}
-            style={{ 
-              marginTop: '1rem', 
-              backgroundColor: '#25D366', 
-              color: 'white', 
-              border: 'none',
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+            <button 
+              className="btn btn-primary"
+              onClick={() => scrollToSection('album-sections')}
+            >
+              Start Your Order
+            </button>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '1rem',
               width: '100%',
-              maxWidth: '300px'
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.backgroundColor = '#20BA5A';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.backgroundColor = '#25D366';
-            }}
-          >
-            📱 Complete Order Over WhatsApp
-          </button>
+              maxWidth: '300px',
+              margin: '0.5rem 0'
+            }}>
+              <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(0,0,0,0.1)' }}></div>
+              <span style={{ 
+                color: 'var(--text-light)', 
+                fontWeight: '500',
+                fontSize: '0.9rem',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
+              }}>OR</span>
+              <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(0,0,0,0.1)' }}></div>
+            </div>
+            <button 
+              className="btn btn-primary"
+              onClick={handleWhatsAppOrder}
+              style={{ 
+                width: '100%',
+                maxWidth: '300px'
+              }}
+            >
+              📱 Complete Order Over WhatsApp
+            </button>
+          </div>
         </div>
       </div>
     </section>
