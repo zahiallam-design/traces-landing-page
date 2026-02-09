@@ -20,7 +20,7 @@ function Hero() {
     const fullNumber = cleanNumber.startsWith('961') ? cleanNumber : `961${cleanNumber}`;
     
     // Format WhatsApp message with blank template (no pre-filled data)
-    let message = 'Hello! I would like to put an order over whatsapp.';
+    let message = 'Hello! I would like to place an order over whatsapp.';
     
     
     // Encode message for URL
