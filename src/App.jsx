@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import jsPDF from 'jspdf';
+import { Analytics } from '@vercel/analytics/react';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import HowItWorks from './components/HowItWorks';
@@ -931,6 +932,7 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
       )}
       <Footer />
       <WhatsAppButton />
+      <Analytics />
     </div>
   );
 }
