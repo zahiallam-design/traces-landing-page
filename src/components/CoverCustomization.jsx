@@ -272,7 +272,7 @@ function CoverCustomization({ albumIndex, albumId, orderNumber, orderTimestamp, 
     const DPI = 300;
     const A6_WIDTH_MM = 105;
     const A6_HEIGHT_MM = 148;
-    const COVER_SIZE_CM = 8;
+    const COVER_SIZE_CM = 9;
     
     // Convert mm/cm to pixels at 300 DPI
     const mmToPixels = (mm) => (mm / 25.4) * DPI;
