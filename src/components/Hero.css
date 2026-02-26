@@ -21,9 +21,15 @@
 
 .offer-banner-text {
   display: inline-block;
-  padding-right: 3rem;
+  padding-right: 2rem;
   font-weight: 600;
   font-size: 0.95rem;
+}
+
+.offer-banner-gap {
+  display: inline-block;
+  min-width: 8rem;
+  padding-right: 2rem;
 }
 
 @keyframes offer-banner-slide {

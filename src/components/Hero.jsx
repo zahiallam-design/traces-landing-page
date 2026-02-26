@@ -36,7 +36,11 @@ function Hero() {
       <div className="offer-banner">
         <div className="offer-banner-content">
           <span className="offer-banner-text">You can now order 4 × 100 photos albums at the price of 3 – $149 including delivery</span>
+          <span className="offer-banner-gap" aria-hidden="true" />
+          <span className="offer-banner-text">🎉 Free delivery on orders above $90!</span>
           <span className="offer-banner-text">You can now order 4 × 100 photos albums at the price of 3 – $149 including delivery</span>
+          <span className="offer-banner-gap" aria-hidden="true" />
+          <span className="offer-banner-text">🎉 Free delivery on orders above $90!</span>
         </div>
       </div>
       <div className="container">
@@ -48,10 +52,7 @@ function Hero() {
             <p style={{ marginBottom: '0.5rem' }}>You select, upload and submit...</p>
             <p>We print, fill and send you the albums!</p>
           </div>
-          <p style={{ marginTop: '1rem', marginBottom: '1.5rem', color: 'var(--pastel-green-dark)', fontWeight: '500', fontSize: '1rem' }}>
-            🎉 Free delivery on orders above $90!
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', marginTop: '1.5rem' }}>
             <button 
               className="btn btn-primary"
               onClick={() => scrollToSection('album-sections')}
