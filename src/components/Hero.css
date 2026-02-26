@@ -71,6 +71,8 @@
 .hero-subtitle-mobile {
   font-size: 0.625rem;
   line-height: 1.4;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 .hero-visuals {
@@ -109,7 +111,8 @@
   font-size: 1rem;
 }
 
-@media (max-width: 600px) {
+/* 768px catches more mobile devices including Safari's viewport quirks */
+@media (max-width: 768px) {
   .hero {
     padding: 2rem 0;
   }
@@ -124,12 +127,17 @@
     font-size: 0.625rem;
     line-height: 1.4;
     margin-bottom: 1.5rem;
+    /* Force Safari on iOS to respect our font size */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 
   /* Smaller banner text on mobile */
   .offer-banner-copy {
     font-size: 0.8rem;
     padding-right: 4rem;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 }
 

@@ -33,6 +33,9 @@
 html {
   overflow-x: hidden;
   width: 100%;
+  /* Prevent iOS Safari from boosting font sizes and ignoring our CSS */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
