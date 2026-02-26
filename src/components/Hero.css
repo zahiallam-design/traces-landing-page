@@ -61,7 +61,8 @@
 }
 
 .hero-subtitle-mobile {
-  font-size: 1rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
 }
 
 .hero-visuals {
@@ -103,6 +104,13 @@
 @media (max-width: 600px) {
   .hero {
     padding: 2rem 0;
+  }
+
+  /* Smaller subtitle on phones so both sentences fit and are easy to read */
+  .hero-subtitle {
+    font-size: 0.875rem;
+    line-height: 1.4;
+    margin-bottom: 1.5rem;
   }
 }
 
