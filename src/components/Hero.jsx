@@ -35,16 +35,13 @@ function Hero() {
     <section className="hero">
       <div className="offer-banner">
         <div className="offer-banner-track">
-          <span className="offer-banner-copy">
-            You can now order 4 × 100 photos albums at the price of 3 – $149 including delivery
-            {'\u00A0'.repeat(15)}
-            🎉 Free delivery on orders above $90!
-          </span>
-          <span className="offer-banner-copy" aria-hidden="true">
-            You can now order 4 × 100 photos albums at the price of 3 – $149 including delivery
-            {'\u00A0'.repeat(15)}
-            🎉 Free delivery on orders above $90!
-          </span>
+          {[1, 2, 3, 4].map((i) => (
+            <span key={i} className="offer-banner-copy" aria-hidden={i > 1}>
+              You can now order 4 × 100 photos albums at the price of 3 – $149 including delivery
+              {'\u00A0'.repeat(15)}
+              🎉 Free delivery on orders above $90!
+            </span>
+          ))}
         </div>
       </div>
       <div className="container">

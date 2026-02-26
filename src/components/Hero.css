@@ -16,7 +16,7 @@
 .offer-banner-track {
   display: flex;
   width: max-content;
-  animation: offer-banner-slide 30s linear infinite;
+  animation: offer-banner-slide 40s linear infinite;
   will-change: transform;
 }
 
@@ -28,6 +28,7 @@
   font-size: 0.95rem;
 }
 
+/* Animate -50% = 2 copies. With 4 copies total, content always fills viewport for continuous flow. Loop seamless: copies 3,4 = 1,2 */
 @keyframes offer-banner-slide {
   from {
     transform: translateX(0);
