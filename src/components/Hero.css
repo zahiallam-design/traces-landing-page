@@ -4,39 +4,35 @@
   text-align: center;
 }
 
-/* Offer banner - sliding marquee */
+/* Offer banner - seamless infinite marquee */
 .offer-banner {
   background: linear-gradient(90deg, var(--pastel-green-dark) 0%, var(--pastel-green) 50%, var(--pastel-green-dark) 100%);
   color: white;
   padding: 0.6rem 0;
   overflow: hidden;
-  white-space: nowrap;
   margin-bottom: 1rem;
 }
 
-.offer-banner-content {
-  display: inline-block;
-  animation: offer-banner-slide 25s linear infinite;
+.offer-banner-track {
+  display: flex;
+  width: max-content;
+  animation: offer-banner-slide 30s linear infinite;
+  will-change: transform;
 }
 
-.offer-banner-text {
-  display: inline-block;
-  padding-right: 2rem;
+.offer-banner-copy {
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding-right: 6rem;
   font-weight: 600;
   font-size: 0.95rem;
 }
 
-.offer-banner-gap {
-  display: inline-block;
-  min-width: 8rem;
-  padding-right: 2rem;
-}
-
 @keyframes offer-banner-slide {
-  0% {
+  from {
     transform: translateX(0);
   }
-  100% {
+  to {
     transform: translateX(-50%);
   }
 }
