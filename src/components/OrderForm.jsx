@@ -31,11 +31,14 @@ function OrderForm({
     mobileNumber: ''
   });
 
-  const subtotal = albums.reduce((sum, album) => {
-    return sum + (album.selectedAlbum?.price || 0);
-  }, 0);
-  const deliveryCharge = subtotal >= 90 ? 0 : 4; // Free delivery on orders above $90
-  const total = subtotal + deliveryCharge;
+  // 4×100 offer: 4 albums of 100 photos each = $149 including delivery
+  const is4x100Offer = albums.length === 4 && albums.every(a => a.selectedAlbum?.size === 100);
+  
+  const subtotal = is4x100Offer 
+    ? 149 
+    : albums.reduce((sum, album) => sum + (album.selectedAlbum?.price || 0), 0);
+  const deliveryCharge = is4x100Offer ? 0 : (subtotal >= 90 ? 0 : 4); // Free delivery on orders above $90
+  const total = is4x100Offer ? 149 : subtotal + deliveryCharge;
 
   const formatFileSize = (bytes) => {
     if (!Number.isFinite(bytes) || bytes === 0) return '0 Bytes';
@@ -134,14 +137,24 @@ function OrderForm({
                   </div>
                 </div>
               ))}
-              <div className="summary-item">
-                <span>Subtotal:</span>
-                <span>${subtotal.toFixed(2)}</span>
-              </div>
-              <div className="summary-item">
-                <span>Delivery Charge:</span>
-                <span>${deliveryCharge.toFixed(2)}</span>
-              </div>
+              {is4x100Offer && (
+                <div className="summary-item" style={{ color: 'var(--pastel-green-dark)', fontWeight: '600' }}>
+                  <span>4×100 Special Offer:</span>
+                  <span>$149 (incl. delivery)</span>
+                </div>
+              )}
+              {!is4x100Offer && (
+                <>
+                  <div className="summary-item">
+                    <span>Subtotal:</span>
+                    <span>${subtotal.toFixed(2)}</span>
+                  </div>
+                  <div className="summary-item">
+                    <span>Delivery Charge:</span>
+                    <span>${deliveryCharge.toFixed(2)}</span>
+                  </div>
+                </>
+              )}
               <div className="summary-total">
                 <span>Total:</span>
                 <span>${total.toFixed(2)}</span>
@@ -272,14 +285,24 @@ function OrderForm({
                     </div>
                   </div>
                 ))}
-                <div className="summary-item">
-                  <span>Subtotal:</span>
-                  <span>${subtotal.toFixed(2)}</span>
-                </div>
-                <div className="summary-item">
-                  <span>Delivery Charge:</span>
-                  <span>${deliveryCharge.toFixed(2)}</span>
-                </div>
+                {is4x100Offer && (
+                  <div className="summary-item" style={{ color: 'var(--pastel-green-dark)', fontWeight: '600' }}>
+                    <span>4×100 Special Offer:</span>
+                    <span>$149 (incl. delivery)</span>
+                  </div>
+                )}
+                {!is4x100Offer && (
+                  <>
+                    <div className="summary-item">
+                      <span>Subtotal:</span>
+                      <span>${subtotal.toFixed(2)}</span>
+                    </div>
+                    <div className="summary-item">
+                      <span>Delivery Charge:</span>
+                      <span>${deliveryCharge.toFixed(2)}</span>
+                    </div>
+                  </>
+                )}
                 <div className="summary-total">
                   <span>Total:</span>
                   <span>${total.toFixed(2)}</span>

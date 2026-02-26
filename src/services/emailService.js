@@ -2,6 +2,17 @@
 // No credentials needed in frontend - more secure!
 
 /**
+ * Get pricing for order (handles 4×100 special offer)
+ */
+function getOrderPricing(albums) {
+  const is4x100Offer = albums.length === 4 && albums.every(a => a.album?.size === 100);
+  const subtotal = is4x100Offer ? 149 : albums.reduce((sum, album) => sum + album.album.price, 0);
+  const deliveryCharge = is4x100Offer ? 0 : (subtotal >= 90 ? 0 : 4);
+  const total = is4x100Offer ? 149 : subtotal + deliveryCharge;
+  return { subtotal, deliveryCharge, total, is4x100Offer };
+}
+
+/**
  * Initialize EmailJS (no longer needed, but kept for compatibility)
  * Email sending now happens via serverless function
  */
@@ -227,9 +238,8 @@ DELIVERY NOTES:
 ${orderData.notes || 'None'}
 
 ${orderData.valentineGiftWrap ? `VALENTINE GIFT WRAP: Yes, please gift wrap my albums\n\n` : ''}${orderData.notesForUs ? `NOTES FOR US:\n${orderData.notesForUs}\n\n` : ''}${(() => {
-  const subtotal = orderData.albums.reduce((sum, album) => sum + album.album.price, 0);
-  const deliveryCharge = subtotal >= 90 ? 0 : 4;
-  const total = subtotal + deliveryCharge;
+  const { subtotal, deliveryCharge, total, is4x100Offer } = getOrderPricing(orderData.albums);
+  if (is4x100Offer) return `4×100 SPECIAL OFFER: $149 (incl. delivery)\n\nTOTAL: $${total.toFixed(2)}`;
   return `SUBTOTAL: $${subtotal.toFixed(2)}\nDELIVERY CHARGE: $${deliveryCharge.toFixed(2)}${deliveryCharge === 0 ? ' (Free delivery on orders above $90!)' : ''}\nTOTAL: $${total.toFixed(2)}`;
 })()}
 
@@ -267,11 +277,13 @@ function formatWhatsAppMessageForBusiness(orderData) {
     albumsText += `• Cover: ${coverInfo}\n`;
   });
 
-  const subtotal = orderData.albums.reduce((sum, album) => sum + album.album.price, 0);
-  const deliveryCharge = subtotal >= 90 ? 0 : 4; // Free delivery on orders above $90
-  const total = subtotal + deliveryCharge;
+  const { subtotal, deliveryCharge, total, is4x100Offer } = getOrderPricing(orderData.albums);
   const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || '71532156';
   const cleanWhatsAppNumber = whatsappNumber.replace(/[\s\-+()]/g, '');
+
+  const pricingLines = is4x100Offer 
+    ? `*4×100 SPECIAL OFFER:* $149 (incl. delivery)\n*TOTAL:* $${total.toFixed(2)}`
+    : `*SUBTOTAL:* $${subtotal.toFixed(2)}\n*DELIVERY CHARGE:* $${deliveryCharge.toFixed(2)}${deliveryCharge === 0 ? ' (Free delivery on orders above $90!)' : ''}\n*TOTAL:* $${total.toFixed(2)}`;
 
   // Format WhatsApp message
   const whatsappMessage = `*ORDER CONFIRMATION*
@@ -287,9 +299,7 @@ ${albumsText}
 *DELIVERY ADDRESS:*
 ${orderData.customer.deliveryTown ? `${orderData.customer.deliveryTown}, ` : ''}${orderData.customer.deliveryAddress}
 
-${orderData.notes ? `*DELIVERY NOTES:*\n${orderData.notes}\n\n` : ''}${orderData.valentineGiftWrap ? `*VALENTINE GIFT WRAP:*\nYes, please gift wrap my albums\n\n` : ''}${orderData.notesForUs ? `*NOTES FOR US:*\n${orderData.notesForUs}\n\n` : ''}*SUBTOTAL:* $${subtotal.toFixed(2)}
-*DELIVERY CHARGE:* $${deliveryCharge.toFixed(2)}${deliveryCharge === 0 ? ' (Free delivery on orders above $90!)' : ''}
-*TOTAL:* $${total.toFixed(2)}
+${orderData.notes ? `*DELIVERY NOTES:*\n${orderData.notes}\n\n` : ''}${orderData.valentineGiftWrap ? `*VALENTINE GIFT WRAP:*\nYes, please gift wrap my albums\n\n` : ''}${orderData.notesForUs ? `*NOTES FOR US:*\n${orderData.notesForUs}\n\n` : ''}${pricingLines}
 
 *PAYMENT:* Cash on Delivery
 
@@ -432,9 +442,8 @@ DELIVERY ADDRESS:
 ${orderData.customer.deliveryTown ? `${orderData.customer.deliveryTown}, ` : ''}${orderData.customer.deliveryAddress}
 
 ${orderData.notes ? `DELIVERY NOTES:\n${orderData.notes}\n\n` : ''}${orderData.valentineGiftWrap ? `VALENTINE GIFT WRAP:\nYes, please gift wrap my albums\n\n` : ''}${orderData.notesForUs ? `NOTES FOR US:\n${orderData.notesForUs}\n\n` : ''}${(() => {
-  const subtotal = orderData.albums.reduce((sum, album) => sum + album.album.price, 0);
-  const deliveryCharge = subtotal >= 90 ? 0 : 4;
-  const total = subtotal + deliveryCharge;
+  const { subtotal, deliveryCharge, total, is4x100Offer } = getOrderPricing(orderData.albums);
+  if (is4x100Offer) return `4×100 SPECIAL OFFER: $149 (incl. delivery)\nTOTAL: $${total.toFixed(2)}`;
   return `SUBTOTAL: $${subtotal.toFixed(2)}\nDELIVERY CHARGE: $${deliveryCharge.toFixed(2)}${deliveryCharge === 0 ? ' (Free delivery on orders above $90!)' : ''}\nTOTAL: $${total.toFixed(2)}`;
 })()}
 

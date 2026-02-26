@@ -33,6 +33,12 @@ function Hero() {
 
   return (
     <section className="hero">
+      <div className="offer-banner">
+        <div className="offer-banner-content">
+          <span className="offer-banner-text">You can now order 4 × 100 photos albums at the price of 3 – $149 including delivery</span>
+          <span className="offer-banner-text">You can now order 4 × 100 photos albums at the price of 3 – $149 including delivery</span>
+        </div>
+      </div>
       <div className="container">
         <div className="hero-content">
           <h1 className={`hero-title ${isMobile ? 'hero-title-mobile' : ''}`}>

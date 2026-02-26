@@ -21,7 +21,7 @@ const steps = [
   {
     number: 4,
     title: 'Add more albums (optional)',
-    description: 'Want more than one album? You can add up to 3 albums per order'
+    description: 'Want more than one album? You can add up to 4 albums per order'
   },
   {
     number: 5,

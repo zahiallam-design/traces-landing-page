@@ -33,7 +33,7 @@ function App() {
   const [uploadQueue, setUploadQueue] = useState([]); // Queue for album uploads/compression
   const [currentlyProcessingAlbum, setCurrentlyProcessingAlbum] = useState(null); // Currently processing album index
 
-  const MAX_ALBUMS = 3;
+  const MAX_ALBUMS = 4;
 
   // Generate unique album ID
   const generateAlbumId = () => {
@@ -440,9 +440,11 @@ ALBUM ${index + 1}:
 `;
     });
 
-    const subtotal = orderData.albums.reduce((sum, album) => sum + album.album.price, 0);
-    const deliveryCharge = subtotal >= 90 ? 0 : 4; // Free delivery on orders above $90
-    const total = subtotal + deliveryCharge;
+    // 4×100 offer: 4 albums of 100 photos each = $149 including delivery
+    const is4x100Offer = orderData.albums.length === 4 && orderData.albums.every(a => a.album?.size === 100);
+    const subtotal = is4x100Offer ? 149 : orderData.albums.reduce((sum, album) => sum + album.album.price, 0);
+    const deliveryCharge = is4x100Offer ? 0 : (subtotal >= 90 ? 0 : 4);
+    const total = is4x100Offer ? 149 : subtotal + deliveryCharge;
 
     return `
 NEW ALBUM ORDER
@@ -463,9 +465,7 @@ CUSTOMER DETAILS:
 DELIVERY NOTES:
 ${orderData.notes || 'None'}
 
-${orderData.valentineGiftWrap ? `VALENTINE GIFT WRAP: Yes, please gift wrap my albums\n\n` : ''}${orderData.notesForUs ? `NOTES FOR US:\n${orderData.notesForUs}\n\n` : ''}SUBTOTAL: $${subtotal.toFixed(2)}
-DELIVERY CHARGE: $${deliveryCharge.toFixed(2)}
-TOTAL: $${total.toFixed(2)}
+${orderData.valentineGiftWrap ? `VALENTINE GIFT WRAP: Yes, please gift wrap my albums\n\n` : ''}${orderData.notesForUs ? `NOTES FOR US:\n${orderData.notesForUs}\n\n` : ''}${is4x100Offer ? `4×100 SPECIAL OFFER: $149 (incl. delivery)\n\n` : ''}${!is4x100Offer ? `SUBTOTAL: $${subtotal.toFixed(2)}\nDELIVERY CHARGE: $${deliveryCharge.toFixed(2)}\n` : ''}TOTAL: $${total.toFixed(2)}
 
 Order Date: ${orderData.timestamp ? new Date(orderData.timestamp).toLocaleString() : new Date().toLocaleString()}
 
@@ -623,11 +623,16 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
       }
       
       yPosition += 5;
-      const subtotal = orderData.albums.reduce((sum, album) => sum + album.album.price, 0);
-      const deliveryCharge = subtotal >= 90 ? 0 : 4; // Free delivery on orders above $90
-      const total = subtotal + deliveryCharge;
-      addText(`SUBTOTAL: $${subtotal.toFixed(2)}`, 10);
-      addText(`DELIVERY CHARGE: $${deliveryCharge.toFixed(2)}`, 10);
+      const is4x100Offer = orderData.albums.length === 4 && orderData.albums.every(a => a.album?.size === 100);
+      const subtotal = is4x100Offer ? 149 : orderData.albums.reduce((sum, album) => sum + album.album.price, 0);
+      const deliveryCharge = is4x100Offer ? 0 : (subtotal >= 90 ? 0 : 4);
+      const total = is4x100Offer ? 149 : subtotal + deliveryCharge;
+      if (is4x100Offer) {
+        addText('4×100 SPECIAL OFFER: $149 (incl. delivery)', 10);
+      } else {
+        addText(`SUBTOTAL: $${subtotal.toFixed(2)}`, 10);
+        addText(`DELIVERY CHARGE: $${deliveryCharge.toFixed(2)}`, 10);
+      }
       addText(`TOTAL: $${total.toFixed(2)}`, 14, true, [45, 134, 89]);
       
       yPosition += 10;

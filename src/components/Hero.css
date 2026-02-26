@@ -4,6 +4,37 @@
   text-align: center;
 }
 
+/* Offer banner - sliding marquee */
+.offer-banner {
+  background: linear-gradient(90deg, var(--pastel-green-dark) 0%, var(--pastel-green) 50%, var(--pastel-green-dark) 100%);
+  color: white;
+  padding: 0.6rem 0;
+  overflow: hidden;
+  white-space: nowrap;
+  margin-bottom: 1rem;
+}
+
+.offer-banner-content {
+  display: inline-block;
+  animation: offer-banner-slide 25s linear infinite;
+}
+
+.offer-banner-text {
+  display: inline-block;
+  padding-right: 3rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+@keyframes offer-banner-slide {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
 .hero-content {
   max-width: 800px;
   margin: 0 auto;
