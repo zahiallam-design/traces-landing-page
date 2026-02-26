@@ -69,7 +69,7 @@
 }
 
 .hero-subtitle-mobile {
-  font-size: 0.8rem;
+  font-size: 0.625rem;
   line-height: 1.4;
 }
 
@@ -121,7 +121,7 @@
   }
 
   .hero-subtitle {
-    font-size: 0.8rem;
+    font-size: 0.625rem;
     line-height: 1.4;
     margin-bottom: 1.5rem;
   }
