@@ -57,6 +57,12 @@ body {
   padding: 0 20px;
 }
 
+@media (max-width: 600px) {
+  .container {
+    padding: 0 1.25rem;
+  }
+}
+
 .section-title {
   font-size: 2rem;
   text-align: center;
