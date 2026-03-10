@@ -11,7 +11,7 @@ function CoverCustomization({ albumIndex, albumId, orderNumber, orderTimestamp, 
   const [coverImageUrl, setCoverImageUrl] = useState(null);
   const [croppedSquarePreview, setCroppedSquarePreview] = useState(null); // Preview of cropped square (not A6)
   const [coverTitle, setCoverTitle] = useState('');
-  const [coverTextColor, setCoverTextColor] = useState(null); // 'grey' or 'red'
+  const [coverTextColor, setCoverTextColor] = useState(null); // 'grey', 'red', or 'pink'
   const [isUploadingCover, setIsUploadingCover] = useState(false);
   const [isCompressingCover, setIsCompressingCover] = useState(false);
   const [uploadError, setUploadError] = useState(null);
@@ -590,6 +590,23 @@ function CoverCustomization({ albumIndex, albumId, orderNumber, orderTimestamp, 
                   >
                     Red
                   </button>
+                  <button
+                    type="button"
+                    className={`cover-color-btn ${coverTextColor === 'pink' ? 'selected' : ''}`}
+                    onClick={() => handleColorSelect('pink')}
+                    style={{
+                      backgroundColor: coverTextColor === 'pink' ? '#E9A0C1' : '#f5f5f5',
+                      color: coverTextColor === 'pink' ? 'white' : '#E9A0C1',
+                      border: `2px solid ${coverTextColor === 'pink' ? '#E9A0C1' : '#dee2e6'}`,
+                      padding: '0.75rem 1.5rem',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: '600',
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    Pink
+                  </button>
                 </div>
                 {hasError && !coverTextColor && (
                   <small style={{ color: '#e74c3c', display: 'block', marginTop: '0.25rem' }}>
@@ -620,7 +637,7 @@ function CoverCustomization({ albumIndex, albumId, orderNumber, orderTimestamp, 
                         fontFamily: '"Holiday", cursive',
                         fontSize: 'clamp(1.5rem, 4vw, 3rem)',
                         fontWeight: '400',
-                        color: coverTextColor === 'grey' ? '#5d5575' : coverTextColor === 'red' ? '#ff3131' : '#333',
+                        color: coverTextColor === 'grey' ? '#5d5575' : coverTextColor === 'red' ? '#ff3131' : coverTextColor === 'pink' ? '#E9A0C1' : '#333',
                         margin: 0,
                         wordWrap: 'break-word',
                         maxWidth: '100%'

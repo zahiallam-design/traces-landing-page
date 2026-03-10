@@ -427,7 +427,7 @@ function App() {
       const coverInfo = albumData.cover?.type === 'image' 
         ? 'Image cover'
         : albumData.cover?.type === 'text' 
-          ? `Text: "${albumData.cover.title}" (${albumData.cover.color === 'grey' ? 'Grey' : albumData.cover.color === 'red' ? 'Red' : 'Unknown'})`
+          ? `Text: "${albumData.cover.title}" (${albumData.cover.color === 'grey' ? 'Grey' : albumData.cover.color === 'red' ? 'Red' : albumData.cover.color === 'pink' ? 'Pink' : 'Unknown'})`
           : 'Not selected';
       
       albumsText += `
@@ -582,7 +582,7 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
         const coverInfo = albumData.cover?.type === 'image' 
           ? 'Image cover'
           : albumData.cover?.type === 'text' 
-            ? `Text: "${albumData.cover.title}" (${albumData.cover.color === 'grey' ? 'Grey' : albumData.cover.color === 'red' ? 'Red' : 'Unknown'})`
+            ? `Text: "${albumData.cover.title}" (${albumData.cover.color === 'grey' ? 'Grey' : albumData.cover.color === 'red' ? 'Red' : albumData.cover.color === 'pink' ? 'Pink' : 'Unknown'})`
             : 'Not selected';
         
         addText(`Album ${index + 1}:`, 11, true);
