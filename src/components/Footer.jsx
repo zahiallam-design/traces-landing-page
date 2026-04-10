@@ -184,9 +184,9 @@ function Footer() {
               <ul>
                 <li>Album printing and assembly</li>
                 <li>Cover customization</li>
-                <li>Delivery within Lebanon ($4 delivery charge applies to all orders)</li>
+                <li>Delivery within Lebanon ($5 delivery charge applies to all orders)</li>
               </ul>
-              <p>Current pricing: 52 photos - $33, 100 photos - $47, plus $4 delivery charge.</p>
+              <p>Current pricing: 52 photos - $33, 100 photos - $47, plus $5 delivery charge.</p>
               
               <h3>5. Photo Quality and Content</h3>
               <p>You are responsible for:</p>

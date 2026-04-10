@@ -223,7 +223,7 @@
 ### 6.4 Order Summary
 - [ ] Order summary displays all albums correctly
 - [ ] Prices are correct ($33 for 52 photos, $47 for 100 photos)
-- [ ] Delivery charge shows $4 (or $0 if subtotal >= $90)
+- [ ] Delivery charge shows $5 (or $0 if subtotal >= $90)
 - [ ] Free delivery message appears if order >= $90
 - [ ] Total calculation is correct
 - [ ] On mobile: Order summary appears after form fields, before submit button

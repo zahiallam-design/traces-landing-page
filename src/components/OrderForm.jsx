@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 import TicTacToe from './TicTacToe';
 import './OrderForm.css';
+import { DELIVERY_CHARGE_USD, FREE_DELIVERY_SUBTOTAL_USD } from '../constants/pricing.js';
 
 function OrderForm({ 
   albums,
@@ -37,7 +38,7 @@ function OrderForm({
   const subtotal = is4x100Offer 
     ? 149 
     : albums.reduce((sum, album) => sum + (album.selectedAlbum?.price || 0), 0);
-  const deliveryCharge = is4x100Offer ? 0 : (subtotal >= 90 ? 0 : 4); // Free delivery on orders above $90
+  const deliveryCharge = is4x100Offer ? 0 : (subtotal >= FREE_DELIVERY_SUBTOTAL_USD ? 0 : DELIVERY_CHARGE_USD); // Free delivery on orders above threshold
   const total = is4x100Offer ? 149 : subtotal + deliveryCharge;
 
   const formatFileSize = (bytes) => {

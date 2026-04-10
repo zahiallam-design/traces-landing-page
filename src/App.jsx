@@ -11,6 +11,7 @@ import OrderForm from './components/OrderForm';
 import Footer from './components/Footer';
 import WhatsAppButton from './components/WhatsAppButton';
 import { sendOrderEmail, sendCustomerConfirmationEmail } from './services/emailService';
+import { DELIVERY_CHARGE_USD, FREE_DELIVERY_SUBTOTAL_USD } from './constants/pricing.js';
 
 // Generate unique order number based on timestamp
 // Uses Unix timestamp in milliseconds - a single number that's always increasing
@@ -443,7 +444,7 @@ ALBUM ${index + 1}:
     // 4×100 offer: 4 albums of 100 photos each = $149 including delivery
     const is4x100Offer = orderData.albums.length === 4 && orderData.albums.every(a => a.album?.size === 100);
     const subtotal = is4x100Offer ? 149 : orderData.albums.reduce((sum, album) => sum + album.album.price, 0);
-    const deliveryCharge = is4x100Offer ? 0 : (subtotal >= 90 ? 0 : 4);
+    const deliveryCharge = is4x100Offer ? 0 : (subtotal >= FREE_DELIVERY_SUBTOTAL_USD ? 0 : DELIVERY_CHARGE_USD);
     const total = is4x100Offer ? 149 : subtotal + deliveryCharge;
 
     return `
@@ -625,7 +626,7 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
       yPosition += 5;
       const is4x100Offer = orderData.albums.length === 4 && orderData.albums.every(a => a.album?.size === 100);
       const subtotal = is4x100Offer ? 149 : orderData.albums.reduce((sum, album) => sum + album.album.price, 0);
-      const deliveryCharge = is4x100Offer ? 0 : (subtotal >= 90 ? 0 : 4);
+      const deliveryCharge = is4x100Offer ? 0 : (subtotal >= FREE_DELIVERY_SUBTOTAL_USD ? 0 : DELIVERY_CHARGE_USD);
       const total = is4x100Offer ? 149 : subtotal + deliveryCharge;
       if (is4x100Offer) {
         addText('4×100 SPECIAL OFFER: $149 (incl. delivery)', 10);
