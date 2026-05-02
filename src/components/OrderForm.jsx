@@ -2,7 +2,16 @@ import React, { useState } from 'react';
 import { useBreakpoint } from '../hooks/useBreakpoint';
 import TicTacToe from './TicTacToe';
 import './OrderForm.css';
-import { DELIVERY_CHARGE_USD, FREE_DELIVERY_SUBTOTAL_USD } from '../constants/pricing.js';
+import { FREE_DELIVERY_SUBTOTAL_USD } from '../constants/pricing.js';
+import {
+  getCheckoutPricingFromAlbumsState,
+} from '../utils/orderPricing.js';
+import {
+  isMypetPromoEligible,
+  isMypetPromoPeriodActive,
+  normalizePromoCode,
+  getMypetDiscountedPrice,
+} from '../constants/promoMypet.js';
 
 function OrderForm({ 
   albums,
@@ -32,14 +41,36 @@ function OrderForm({
     mobileNumber: ''
   });
 
+  const [promoCode, setPromoCode] = useState('');
+
   // 4×100 offer: 4 albums of 100 photos each = $149 including delivery
   const is4x100Offer = albums.length === 4 && albums.every(a => a.selectedAlbum?.size === 100);
   
-  const subtotal = is4x100Offer 
-    ? 149 
-    : albums.reduce((sum, album) => sum + (album.selectedAlbum?.price || 0), 0);
-  const deliveryCharge = is4x100Offer ? 0 : (subtotal >= FREE_DELIVERY_SUBTOTAL_USD ? 0 : DELIVERY_CHARGE_USD); // Free delivery on orders above threshold
-  const total = is4x100Offer ? 149 : subtotal + deliveryCharge;
+  const promoPeriodActive = isMypetPromoPeriodActive();
+  const promoMypetApplied = isMypetPromoEligible({
+    promoCodeInput: promoCode,
+    is4x100Offer,
+    date: new Date(),
+  });
+
+  const { preDiscountSubtotal, chargedSubtotal, deliveryCharge, total } =
+    getCheckoutPricingFromAlbumsState(albums, { promoMypetApplied, is4x100Offer });
+
+  const subtotal = is4x100Offer ? 149 : chargedSubtotal;
+
+  const promoHintCode = normalizePromoCode(promoCode);
+  const showPromoInactive =
+    promoPeriodActive && is4x100Offer && promoHintCode === 'mypet' && promoCode.trim() !== '';
+  const showPromoWrong =
+    promoPeriodActive &&
+    !is4x100Offer &&
+    promoCode.trim() !== '' &&
+    promoHintCode !== 'mypet';
+  const getDisplayedAlbumPrice = (album) => {
+    if (!album.selectedAlbum) return null;
+    if (is4x100Offer || !promoMypetApplied) return album.selectedAlbum.price;
+    return getMypetDiscountedPrice(album.selectedAlbum.size, album.selectedAlbum.price);
+  };
 
   const formatFileSize = (bytes) => {
     if (!Number.isFinite(bytes) || bytes === 0) return '0 Bytes';
@@ -103,6 +134,7 @@ function OrderForm({
       customer: formData,
       notes: deliveryNotes,
       valentineGiftWrap: valentineGiftWrap || false,
+      promoCode: promoCode.trim(),
       total,
       timestamp: new Date().toISOString()
     };
@@ -134,7 +166,7 @@ function OrderForm({
                   </div>
                   <div className="summary-item">
                     <span>Price:</span>
-                    <span>${album.selectedAlbum?.price.toFixed(2) || '0.00'}</span>
+                    <span>${(getDisplayedAlbumPrice(album) ?? 0).toFixed(2)}</span>
                   </div>
                 </div>
               ))}
@@ -142,6 +174,12 @@ function OrderForm({
                 <div className="summary-item" style={{ color: 'var(--pastel-green-dark)', fontWeight: '600' }}>
                   <span>4×100 Special Offer:</span>
                   <span>$149 (incl. delivery)</span>
+                </div>
+              )}
+              {!is4x100Offer && promoMypetApplied && (
+                <div className="summary-item" style={{ color: 'var(--pastel-green-dark)', fontSize: '0.9rem' }}>
+                  <span>Promo code:</span>
+                  <span>mypet applied</span>
                 </div>
               )}
               {!is4x100Offer && (
@@ -154,6 +192,11 @@ function OrderForm({
                     <span>Delivery Charge:</span>
                     <span>${deliveryCharge.toFixed(2)}</span>
                   </div>
+                  {!is4x100Offer && promoMypetApplied && preDiscountSubtotal >= FREE_DELIVERY_SUBTOTAL_USD && (
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-light)', margin: '0.25rem 0 0 0' }}>
+                      Free delivery applies because your pre-discount album total is ${preDiscountSubtotal.toFixed(2)}.
+                    </p>
+                  )}
                 </>
               )}
               <div className="summary-total">
@@ -201,6 +244,49 @@ function OrderForm({
                 placeholder="Street name, building, floor, apartment, landmarks..."
               />
             </div>
+            {promoPeriodActive && !is4x100Offer && (
+              <div className="form-group">
+                <label htmlFor="promo-code">Promo code (optional)</label>
+                <input
+                  type="text"
+                  id="promo-code"
+                  name="promo-code"
+                  autoComplete="off"
+                  value={promoCode}
+                  onChange={(e) => setPromoCode(e.target.value)}
+                  placeholder="Enter code"
+                />
+                {promoMypetApplied && (
+                  <small style={{ color: 'var(--pastel-green-dark)', display: 'block', marginTop: '0.35rem', fontWeight: '600' }}>
+                    Promo applied: ~20% off each album (52-photo → $26, 100-photo → $37).
+                  </small>
+                )}
+                {showPromoWrong && (
+                  <small style={{ color: '#e74c3c', display: 'block', marginTop: '0.35rem' }}>
+                    Invalid promo code.
+                  </small>
+                )}
+              </div>
+            )}
+            {promoPeriodActive && is4x100Offer && (
+              <div className="form-group">
+                <label htmlFor="promo-code-4x100">Promo code (optional)</label>
+                <input
+                  type="text"
+                  id="promo-code-4x100"
+                  name="promo-code-4x100"
+                  autoComplete="off"
+                  value={promoCode}
+                  onChange={(e) => setPromoCode(e.target.value)}
+                  placeholder="Not available with 4×100 offer"
+                />
+                {showPromoInactive && (
+                  <small style={{ color: '#e67e22', display: 'block', marginTop: '0.35rem' }}>
+                    The mypet promo cannot be combined with the 4×100 albums special ($149).
+                  </small>
+                )}
+              </div>
+            )}
             <div className="form-group">
               <label htmlFor="delivery-notes">Delivery Notes (Optional)</label>
               <textarea
@@ -282,7 +368,7 @@ function OrderForm({
                     </div>
                     <div className="summary-item">
                       <span>Price:</span>
-                      <span>${album.selectedAlbum?.price.toFixed(2) || '0.00'}</span>
+                      <span>${(getDisplayedAlbumPrice(album) ?? 0).toFixed(2)}</span>
                     </div>
                   </div>
                 ))}
@@ -290,6 +376,12 @@ function OrderForm({
                   <div className="summary-item" style={{ color: 'var(--pastel-green-dark)', fontWeight: '600' }}>
                     <span>4×100 Special Offer:</span>
                     <span>$149 (incl. delivery)</span>
+                  </div>
+                )}
+                {!is4x100Offer && promoMypetApplied && (
+                  <div className="summary-item" style={{ color: 'var(--pastel-green-dark)', fontSize: '0.9rem' }}>
+                    <span>Promo code:</span>
+                    <span>mypet applied</span>
                   </div>
                 )}
                 {!is4x100Offer && (
@@ -302,6 +394,11 @@ function OrderForm({
                       <span>Delivery Charge:</span>
                       <span>${deliveryCharge.toFixed(2)}</span>
                     </div>
+                    {promoMypetApplied && preDiscountSubtotal >= FREE_DELIVERY_SUBTOTAL_USD && (
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-light)', margin: '0.25rem 0 0 0' }}>
+                        Free delivery applies because your pre-discount album total is ${preDiscountSubtotal.toFixed(2)}.
+                      </p>
+                    )}
                   </>
                 )}
                 <div className="summary-total">

@@ -1,18 +1,8 @@
-import { DELIVERY_CHARGE_USD, FREE_DELIVERY_SUBTOTAL_USD } from '../constants/pricing.js';
+import { FREE_DELIVERY_SUBTOTAL_USD } from '../constants/pricing.js';
+import { getOrderPricing } from '../utils/orderPricing.js';
 
 // EmailJS credentials are now handled server-side via Vercel Serverless Functions
 // No credentials needed in frontend - more secure!
-
-/**
- * Get pricing for order (handles 4×100 special offer)
- */
-function getOrderPricing(albums) {
-  const is4x100Offer = albums.length === 4 && albums.every(a => a.album?.size === 100);
-  const subtotal = is4x100Offer ? 149 : albums.reduce((sum, album) => sum + album.album.price, 0);
-  const deliveryCharge = is4x100Offer ? 0 : (subtotal >= FREE_DELIVERY_SUBTOTAL_USD ? 0 : DELIVERY_CHARGE_USD);
-  const total = is4x100Offer ? 149 : subtotal + deliveryCharge;
-  return { subtotal, deliveryCharge, total, is4x100Offer };
-}
 
 /**
  * Initialize EmailJS (no longer needed, but kept for compatibility)
@@ -240,9 +230,10 @@ DELIVERY NOTES:
 ${orderData.notes || 'None'}
 
 ${orderData.valentineGiftWrap ? `VALENTINE GIFT WRAP: Yes, please gift wrap my albums\n\n` : ''}${orderData.notesForUs ? `NOTES FOR US:\n${orderData.notesForUs}\n\n` : ''}${(() => {
-  const { subtotal, deliveryCharge, total, is4x100Offer } = getOrderPricing(orderData.albums);
+  const { subtotal, deliveryCharge, total, is4x100Offer } = getOrderPricing(orderData);
   if (is4x100Offer) return `4×100 SPECIAL OFFER: $149 (incl. delivery)\n\nTOTAL: $${total.toFixed(2)}`;
-  return `SUBTOTAL: $${subtotal.toFixed(2)}\nDELIVERY CHARGE: $${deliveryCharge.toFixed(2)}${deliveryCharge === 0 ? ` (Free delivery on orders above $${FREE_DELIVERY_SUBTOTAL_USD}!)` : ''}\nTOTAL: $${total.toFixed(2)}`;
+  const promoLine = orderData.promoMypetApplied ? `PROMO: mypet (~20% album discount applied)\n` : '';
+  return `${promoLine}SUBTOTAL: $${subtotal.toFixed(2)}\nDELIVERY CHARGE: $${deliveryCharge.toFixed(2)}${deliveryCharge === 0 ? ` (Free delivery on orders above $${FREE_DELIVERY_SUBTOTAL_USD} — based on pre-discount subtotal $${(orderData.preDiscountSubtotal ?? subtotal).toFixed(2)}!)` : ''}\nTOTAL: $${total.toFixed(2)}`;
 })()}
 
 Order Date: ${orderData.timestamp ? new Date(orderData.timestamp).toLocaleString() : new Date().toLocaleString()}
@@ -279,13 +270,13 @@ function formatWhatsAppMessageForBusiness(orderData) {
     albumsText += `• Cover: ${coverInfo}\n`;
   });
 
-  const { subtotal, deliveryCharge, total, is4x100Offer } = getOrderPricing(orderData.albums);
+  const { subtotal, deliveryCharge, total, is4x100Offer } = getOrderPricing(orderData);
   const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || '71532156';
   const cleanWhatsAppNumber = whatsappNumber.replace(/[\s\-+()]/g, '');
 
   const pricingLines = is4x100Offer 
     ? `*4×100 SPECIAL OFFER:* $149 (incl. delivery)\n*TOTAL:* $${total.toFixed(2)}`
-    : `*SUBTOTAL:* $${subtotal.toFixed(2)}\n*DELIVERY CHARGE:* $${deliveryCharge.toFixed(2)}${deliveryCharge === 0 ? ` (Free delivery on orders above $${FREE_DELIVERY_SUBTOTAL_USD}!)` : ''}\n*TOTAL:* $${total.toFixed(2)}`;
+    : `${orderData.promoMypetApplied ? `*PROMO:* mypet (~20% album discount)\n` : ''}*SUBTOTAL:* $${subtotal.toFixed(2)}\n*DELIVERY CHARGE:* $${deliveryCharge.toFixed(2)}${deliveryCharge === 0 ? ` (Free delivery on orders above $${FREE_DELIVERY_SUBTOTAL_USD} — pre-discount subtotal $${(orderData.preDiscountSubtotal ?? subtotal).toFixed(2)}!)` : ''}\n*TOTAL:* $${total.toFixed(2)}`;
 
   // Format WhatsApp message
   const whatsappMessage = `*ORDER CONFIRMATION*
@@ -444,9 +435,10 @@ DELIVERY ADDRESS:
 ${orderData.customer.deliveryTown ? `${orderData.customer.deliveryTown}, ` : ''}${orderData.customer.deliveryAddress}
 
 ${orderData.notes ? `DELIVERY NOTES:\n${orderData.notes}\n\n` : ''}${orderData.valentineGiftWrap ? `VALENTINE GIFT WRAP:\nYes, please gift wrap my albums\n\n` : ''}${orderData.notesForUs ? `NOTES FOR US:\n${orderData.notesForUs}\n\n` : ''}${(() => {
-  const { subtotal, deliveryCharge, total, is4x100Offer } = getOrderPricing(orderData.albums);
+  const { subtotal, deliveryCharge, total, is4x100Offer } = getOrderPricing(orderData);
   if (is4x100Offer) return `4×100 SPECIAL OFFER: $149 (incl. delivery)\nTOTAL: $${total.toFixed(2)}`;
-  return `SUBTOTAL: $${subtotal.toFixed(2)}\nDELIVERY CHARGE: $${deliveryCharge.toFixed(2)}${deliveryCharge === 0 ? ` (Free delivery on orders above $${FREE_DELIVERY_SUBTOTAL_USD}!)` : ''}\nTOTAL: $${total.toFixed(2)}`;
+  const promoLine = orderData.promoMypetApplied ? `PROMO: mypet (~20% album discount applied)\n` : '';
+  return `${promoLine}SUBTOTAL: $${subtotal.toFixed(2)}\nDELIVERY CHARGE: $${deliveryCharge.toFixed(2)}${deliveryCharge === 0 ? ` (Free delivery on orders above $${FREE_DELIVERY_SUBTOTAL_USD} — pre-discount $${(orderData.preDiscountSubtotal ?? subtotal).toFixed(2)}!)` : ''}\nTOTAL: $${total.toFixed(2)}`;
 })()}
 
 PAYMENT: Cash on Delivery

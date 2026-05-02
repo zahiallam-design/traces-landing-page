@@ -11,7 +11,12 @@ import OrderForm from './components/OrderForm';
 import Footer from './components/Footer';
 import WhatsAppButton from './components/WhatsAppButton';
 import { sendOrderEmail, sendCustomerConfirmationEmail } from './services/emailService';
-import { DELIVERY_CHARGE_USD, FREE_DELIVERY_SUBTOTAL_USD } from './constants/pricing.js';
+import { FREE_DELIVERY_SUBTOTAL_USD } from './constants/pricing.js';
+import { getOrderPricing } from './utils/orderPricing.js';
+import {
+  getMypetDiscountedPrice,
+  isMypetPromoEligible,
+} from './constants/promoMypet.js';
 
 // Generate unique order number based on timestamp
 // Uses Unix timestamp in milliseconds - a single number that's always increasing
@@ -354,26 +359,56 @@ function App() {
     // If for some reason it doesn't exist, generate a new one
     const finalOrderNumber = orderNumber || generateOrderNumber();
     
+    const is4x100Offer =
+      albums.length === 4 && albums.every((a) => a.selectedAlbum?.size === 100);
+    const promoMypetApplied = isMypetPromoEligible({
+      promoCodeInput: orderData.promoCode,
+      is4x100Offer,
+      date: new Date(),
+    });
+    const preDiscountSubtotal = is4x100Offer
+      ? undefined
+      : albums.reduce((s, a) => s + (a.selectedAlbum?.price || 0), 0);
+
+    const albumRows = albums.map((album) => ({
+      album: {
+        size: album.selectedAlbum?.size,
+        color: album.selectedColor,
+        price:
+          is4x100Offer
+            ? album.selectedAlbum?.price
+            : promoMypetApplied
+              ? getMypetDiscountedPrice(
+                  album.selectedAlbum?.size,
+                  album.selectedAlbum?.price
+                )
+              : album.selectedAlbum?.price,
+      },
+      photosFolderLink: album.photosFolderLink,
+      albumFolderLink: album.albumFolderLink,
+      fileCount: album.fileCount,
+      cover: album.cover,
+    }));
+
+    const pricing = getOrderPricing({
+      albums: albumRows,
+      preDiscountSubtotal,
+      promoMypetApplied,
+    });
+
     // Combine albums data with customer info
     // IMPORTANT: Include ALL albums in the order - don't filter
     const completeOrderData = {
       ...orderData,
       orderNumber: finalOrderNumber,
       timestamp: new Date().toISOString(),
-      albums: albums.map(album => ({
-        album: {
-          size: album.selectedAlbum?.size,
-          color: album.selectedColor,
-          price: album.selectedAlbum?.price
-        },
-        photosFolderLink: album.photosFolderLink,
-        albumFolderLink: album.albumFolderLink,
-        fileCount: album.fileCount,
-        cover: album.cover
-      })),
+      albums: albumRows,
       notes,
       notesForUs,
-      valentineGiftWrap
+      valentineGiftWrap,
+      preDiscountSubtotal,
+      promoMypetApplied,
+      total: pricing.total,
     };
     
     setIsSubmitting(true);
@@ -441,11 +476,13 @@ ALBUM ${index + 1}:
 `;
     });
 
-    // 4×100 offer: 4 albums of 100 photos each = $149 including delivery
-    const is4x100Offer = orderData.albums.length === 4 && orderData.albums.every(a => a.album?.size === 100);
-    const subtotal = is4x100Offer ? 149 : orderData.albums.reduce((sum, album) => sum + album.album.price, 0);
-    const deliveryCharge = is4x100Offer ? 0 : (subtotal >= FREE_DELIVERY_SUBTOTAL_USD ? 0 : DELIVERY_CHARGE_USD);
-    const total = is4x100Offer ? 149 : subtotal + deliveryCharge;
+    // 4×100 offer & mypet promo: totals via getOrderPricing (uses preDiscountSubtotal for delivery threshold)
+    const { subtotal, deliveryCharge, total, is4x100Offer } = getOrderPricing(orderData);
+    const promoLine = orderData.promoMypetApplied ? 'PROMO: mypet (~20% album discount applied)\n' : '';
+    const freeDeliveryNote =
+      deliveryCharge === 0 && !is4x100Offer
+        ? ` (Free delivery on orders above $${FREE_DELIVERY_SUBTOTAL_USD} — pre-discount subtotal $${(orderData.preDiscountSubtotal ?? subtotal).toFixed(2)}!)`
+        : '';
 
     return `
 NEW ALBUM ORDER
@@ -466,7 +503,7 @@ CUSTOMER DETAILS:
 DELIVERY NOTES:
 ${orderData.notes || 'None'}
 
-${orderData.valentineGiftWrap ? `VALENTINE GIFT WRAP: Yes, please gift wrap my albums\n\n` : ''}${orderData.notesForUs ? `NOTES FOR US:\n${orderData.notesForUs}\n\n` : ''}${is4x100Offer ? `4×100 SPECIAL OFFER: $149 (incl. delivery)\n\n` : ''}${!is4x100Offer ? `SUBTOTAL: $${subtotal.toFixed(2)}\nDELIVERY CHARGE: $${deliveryCharge.toFixed(2)}\n` : ''}TOTAL: $${total.toFixed(2)}
+${orderData.valentineGiftWrap ? `VALENTINE GIFT WRAP: Yes, please gift wrap my albums\n\n` : ''}${orderData.notesForUs ? `NOTES FOR US:\n${orderData.notesForUs}\n\n` : ''}${is4x100Offer ? `4×100 SPECIAL OFFER: $149 (incl. delivery)\n\nTOTAL: $${total.toFixed(2)}` : `${promoLine}SUBTOTAL: $${subtotal.toFixed(2)}\nDELIVERY CHARGE: $${deliveryCharge.toFixed(2)}${freeDeliveryNote}\nTOTAL: $${total.toFixed(2)}`}
 
 Order Date: ${orderData.timestamp ? new Date(orderData.timestamp).toLocaleString() : new Date().toLocaleString()}
 
@@ -624,15 +661,19 @@ DELIVERY TIME: Your order will be delivered to your doorstep within 3 to 5 busin
       }
       
       yPosition += 5;
-      const is4x100Offer = orderData.albums.length === 4 && orderData.albums.every(a => a.album?.size === 100);
-      const subtotal = is4x100Offer ? 149 : orderData.albums.reduce((sum, album) => sum + album.album.price, 0);
-      const deliveryCharge = is4x100Offer ? 0 : (subtotal >= FREE_DELIVERY_SUBTOTAL_USD ? 0 : DELIVERY_CHARGE_USD);
-      const total = is4x100Offer ? 149 : subtotal + deliveryCharge;
+      const { subtotal, deliveryCharge, total, is4x100Offer } = getOrderPricing(orderData);
       if (is4x100Offer) {
         addText('4×100 SPECIAL OFFER: $149 (incl. delivery)', 10);
       } else {
+        if (orderData.promoMypetApplied) {
+          addText('PROMO: mypet (~20% album discount applied)', 10);
+        }
         addText(`SUBTOTAL: $${subtotal.toFixed(2)}`, 10);
-        addText(`DELIVERY CHARGE: $${deliveryCharge.toFixed(2)}`, 10);
+        const deliveryNote =
+          deliveryCharge === 0
+            ? ` (Free over $${FREE_DELIVERY_SUBTOTAL_USD} — pre-discount $${(orderData.preDiscountSubtotal ?? subtotal).toFixed(2)})`
+            : '';
+        addText(`DELIVERY CHARGE: $${deliveryCharge.toFixed(2)}${deliveryNote}`, 10);
       }
       addText(`TOTAL: $${total.toFixed(2)}`, 14, true, [45, 134, 89]);
       
